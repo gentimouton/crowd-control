@@ -33,11 +33,11 @@ def main():
     nwclient = Client('localhost',8080)
     
     clock = pygame.time.Clock()
+    elapsed_frames = 0
     
     #Main Loop
     while 1:
-        clock.tick(config_get_fps()) #number of frames per second
-        print("tick")
+        clock.tick(config_get_fps()) #number of frames per second 
         pygame.display.set_caption(config_get_screencaption() + " --- FPS: " + str(clock.get_fps()))
         
         #Handle Input Events
@@ -49,12 +49,13 @@ def main():
         
         # updates
         nwclient.Loop()
-        nwclient.send_msg("wraaaaa")
+        if elapsed_frames % 30 == 1:
+            nwclient.send_msg("wraaaaa")
         # draws
         screen.blit(bg,(0,0)) #bg is grey with text
         # TODO: display eventual sprites
         pygame.display.flip() #reveal the scene - this is the last thing to do in the loop
-        
+        elapsed_frames += 1
 
 
     

@@ -6,9 +6,7 @@ from PodSixNet.Server import Server
 from PodSixNet.Channel import Channel
 
 class ClientChannel(Channel):
-    """
-    This is the server representation of a single connected client.
-    """
+    """    This is the server representation of a single connected client. """
     def __init__(self, *args, **kwargs):
         self.nickname = "anonymous"
         Channel.__init__(self, *args, **kwargs)
@@ -16,11 +14,10 @@ class ClientChannel(Channel):
     def Close(self):
         self._server.DelPlayer(self)
     
-    ##################################
     ### Network specific callbacks ###
-    ##################################
     
     def Network_message(self, data):
+        print("received message: " + data['message'])
         self._server.SendToAll({"action": "message", "message": data['message'], "who": self.nickname})
     
     def Network_nickname(self, data):
@@ -39,13 +36,13 @@ class ChatServer(Server):
         self.AddPlayer(channel)
     
     def AddPlayer(self, player):
-        print("New Player: " + str(player.addr))
+        print("Add Player: " + str(player.addr))
         self.players[player] = True
         self.SendPlayers()
-        print ("players", [p for p in self.players])
+        #print ("players", [p for p in self.players])
     
     def DelPlayer(self, player):
-        print ("Deleting Player: " + str(player.addr))
+        print ("Del Player: " + str(player.addr))
         del self.players[player]
         self.SendPlayers()
     
@@ -58,7 +55,7 @@ class ChatServer(Server):
     def Launch(self):
         while True:
             self.Pump()
-            sleep(0.0001)
+            sleep(0.001)
 
 # get command line argument of server, port
 if len(sys.argv) != 2:

@@ -30,7 +30,7 @@ class Channel(asynchat.async_chat):
 		self.sendqueue = []
 	
 	def Send(self, data):
-		"""Returns the number of bytes sent after enoding."""
+		"""Returns the number of bytes sent after encoding."""
 		outgoing = dumps(data) + self.endchars.encode()
 		self.sendqueue.append(outgoing)
 		return len(outgoing)

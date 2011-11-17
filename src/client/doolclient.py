@@ -9,7 +9,7 @@ class Client(ConnectionListener):
     
     # app-specific
     
-    def Loop(self): 
+    def Loop(self):
         connection.Pump()
         self.Pump() # why are there 2 pumps here?
     
@@ -20,8 +20,11 @@ class Client(ConnectionListener):
     # built in Network event/message callbacks 
     
     def Network_connected(self, data):
-        print ("You are now connected to the server")
+        print ("Now connected to server")
     
+    def Network_message(self,data):
+        print(data['who'] + ": " + data['message'])
+        
     def Network_error(self, data):
         print('error: ', data['error'][1])
         connection.Close()
