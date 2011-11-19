@@ -2,9 +2,9 @@ import configparser
 
 __dict = {} #store pairs of (config option, value)
 
-def load_config():
+def load_srv_config():
     """ read configs from config file, and simulate a static config class """
-    config_filepath = "client_config.ini"
+    config_filepath = "srv_config.ini"
     config = configparser.ConfigParser()
     config.read(config_filepath)
     for section in config.sections():
@@ -19,22 +19,11 @@ def load_config():
                 __dict[option] = None 
     return
 
-
-# --- graphics config
+# main config
 def config_get_fps():
     return int(__dict['fps'])
 
-def config_get_screencaption():
-    return __dict['screencaption']
-
-def config_get_screenwidth():
-    return int(__dict['screenwidth'])
-
-def config_get_screenheight():
-    return int(__dict['screenheight'])
-
-# --- network
-
+# network
 def config_get_host():
     return __dict['host']
 
