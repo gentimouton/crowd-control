@@ -18,8 +18,9 @@ class ClientChannel(Channel):
         pass
     
     # called when messages of type 'msg' are received
-    def Network_msg(self, data):
-        print("Received msg: " + data['msg'])
+    def Network_chatmsg(self, data):
+        #print("Received chatmsg: " + data['msg'])
+        self._server.send_chatmsg_all(str(self.addr) + ' says: ' + data['msg'])
 
 
 class ServerNetworkEngine(Server):
@@ -48,8 +49,8 @@ class ServerNetworkEngine(Server):
         print ("Del Player: " + str(player.addr))
         del self.players[player]
         
-    def send_all(self,msg):
+    def send_chatmsg_all(self,msg):
         if len(self.players) > 0:
-            print("Send: " + msg)
-            data = {"action": "msg", "msg": msg}
+            #print("Send: " + msg)
+            data = {"action": "chatmsg", "msg": msg}
             [p.Send(data) for p in self.players]     

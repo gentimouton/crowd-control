@@ -52,8 +52,8 @@ def main():
         
         # updates
         nwclient.push_and_pull()
-        if elapsed_frames % 90 == 1:
-            nwclient.send_msg("greeee")
+        if elapsed_frames % 30 == 1:
+            nwclient.send_chatmsg("hello i'm a client")
         # draws
         screen.blit(bg, (0, 0)) #bg is grey with text
         # TODO: display all sprites

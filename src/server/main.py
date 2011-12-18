@@ -24,8 +24,8 @@ def main():
         nEngine.Pump() #pump all channels
         
         # mechanics updates
-        if elapsed_frames % 30 == 1:
-            nEngine.send_all("wraaaaa")
+        #if elapsed_frames % 90 == 1:
+        #    nEngine.send_chatmsg_all("server is alive")
         elapsed_frames += 1
 
         # sending to a client

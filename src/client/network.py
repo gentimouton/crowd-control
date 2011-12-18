@@ -5,7 +5,7 @@ class Client(ConnectionListener):
     def __init__(self, host, port):
         self.Connect((host, port))
         print("Client started")
-        connection.Send({"action": "msg", "msg": "hello!"})
+        #connection.Send({"action": "msg", "msg": "hello!"})
     
     def Network_connected(self, data):
         print("connected to the server")
@@ -19,14 +19,14 @@ class Client(ConnectionListener):
         connection.Close()
         exit()
     
-    def Network_msg(self,data):
-        print("Received msg:"+ data['msg'])
+    def Network_chatmsg(self,data):
+        print(data['msg'])
 
     def push_and_pull(self):
         connection.Pump() #push data to server
         self.Pump() #pull data from the pipe and trigger the Network_* callbacks
         
-    def send_msg(self,msg):
-        print("send msg:" + msg)
-        connection.Send({"action": "msg", "msg": msg})
+    def send_chatmsg(self,msg):
+        print("I say: " + msg)
+        connection.Send({"action": "chatmsg", "msg": msg})
         
