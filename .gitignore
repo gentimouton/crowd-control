@@ -1,2 +1,5 @@
+#python bins 
 *.pyc
 
+#eclipse prefs
+.settings
