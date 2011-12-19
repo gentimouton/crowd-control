@@ -1,0 +1,17 @@
+== Ubuntu ==
+
+install Python 3.2 on top of existing Python 2.7
+http://www.giantflyingsaucer.com/blog/?p=2858
+$ sudo apt-get install build-essential
+$ sudo apt-get install libreadline5-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
+$ wget http://python.org/ftp/python/3.2/Python-3.2.tgz
+$ tar -xvf Python-3.2.tgz && cd Python-3.2/
+$ ./configure
+$ make
+$ sudo make altinstall
+ 
+coloring in terminal
+http://en.newinstance.it/2010/05/23/git-autocompletion-and-enhanced-bash-prompt/
+git config --global color.status auto
+
+
