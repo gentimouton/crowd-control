@@ -1,5 +1,4 @@
-== Ubuntu ==
-
+== python ==
 install Python 3.2 on top of existing Python 2.7
 http://www.giantflyingsaucer.com/blog/?p=2858
 $ sudo apt-get install build-essential
@@ -10,8 +9,36 @@ $ ./configure
 $ make
 $ sudo make altinstall
  
+
+== git ==
 coloring in terminal
 http://en.newinstance.it/2010/05/23/git-autocompletion-and-enhanced-bash-prompt/
 git config --global color.status auto
+
+
+== pydev ==
+add software in Eclipse: http://pydev.org/updates
+
+
+== pygame ==
+http://www.pygame.org/wiki/CompileUbuntu?parent=Compilation
+
+sudo apt-get install python3.2-dev libsdl-image1.2-dev libsdl-mixer1.2-dev libsdl-ttf2.0-dev libsdl1.2-dev libsmpeg-dev python-numpy subversion libportmidi-dev ffmpeg libswscale-dev libavformat-dev libavcodec-dev
+
+hg clone https://bitbucket.org/pygame/pygame
+cd pygame
+python3.2 setup.py build
+sudo python3.2 setup.py install
+
+or:
+
+download 1.9.1 tarball from http://pygame.org/download.shtml
+cd pygame
+python3.2 setup.py build
+sudo python3.2 setup.py install
+
+
+
+
 
 
