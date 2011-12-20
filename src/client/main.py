@@ -1,7 +1,7 @@
-from config import load_config, config_get_fps, config_get_screencaption, \
+from client.config import load_config, config_get_fps, config_get_screencaption, \
     config_get_screenheight, config_get_screenwidth, config_get_host, \
     config_get_port
-from network import Client
+from client.network import Client
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE
 import pygame
 
