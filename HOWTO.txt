@@ -30,15 +30,7 @@ cd pygame
 python3.2 setup.py build
 sudo python3.2 setup.py install
 
-or:
-
-download 1.9.1 tarball from http://pygame.org/download.shtml
-cd pygame
-python3.2 setup.py build
-sudo python3.2 setup.py install
-
-
-
-
+at this point, you should not have any error running:
+python3.2 examples/chimp.py
 
 
