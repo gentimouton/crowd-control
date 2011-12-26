@@ -16,7 +16,7 @@ def main():
     clock = pygame.time.Clock()
     elapsed_frames = 0
     fps = config_get_fps()
-    
+
     #Main Loop
     while 1:     
         clock.tick(fps)
