@@ -1,22 +1,25 @@
 from client.tools import load_image
 import pygame
 
-class HudBtn(pygame.sprite.Sprite):
-    """
-    clickable buttons of the HUD
-    """
+class AbstractHudBtn(pygame.sprite.Sprite):
+    """ Abstract class for clickable HUD buttons """
     
-    def __init__(self):
+    def __init__(self, imgname, topleft, dims):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_image('star.png', (100,100))
+        self.image, self.rect = load_image(imgname, dims)
         screen = pygame.display.get_surface()
         self.area = screen.get_rect()
-        self.rect.topleft = 50, 50
+        self.rect.topleft = topleft
+        self.top, self.left = topleft
+        self.width, self.height = dims
         
-    def isinside(self, xy):
+    def isinside(self, pos):
         """ return whether the given coords are inside the spr """
-        x,y = xy
-        return x <= 50+100 and x >= 50 and y >= 50 and y <= 50+100
+        x, y = pos
+        return (x <= self.left + self.width 
+                and x >= self.left 
+                and y >= self.top 
+                and y <= self.top + self.height)
     
-    def clicked(self):
-        print("clicked")
+    def onclicked(self):
+        raise NotImplementedError("onclicked() should be implemented")

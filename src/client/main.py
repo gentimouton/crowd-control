@@ -1,7 +1,6 @@
 from client.config import load_config, config_get_fps
 from client.controller.inputcontroller import InputController
-from client.simpleview.viewcontroller import SimpleViewCtrler
-from client.simpleview.renderer import Renderer
+from client.simpleview.simpleview import SimpleView
 import pygame
 
 
@@ -10,9 +9,8 @@ def main():
     load_config() #config contains all the constants for the game
     pygame.init()
     # TODO: simply initiate a SimpleView() that handles a ViewController and a TopDownRenderer
-    rdr = Renderer()
-    vc = SimpleViewCtrler(rdr)
-    ictrler = InputController(vc)
+    view = SimpleView()
+    ictrler = InputController(view)
 
     #nwctrler = NetworkController()
     clock = pygame.time.Clock()
@@ -32,7 +30,7 @@ def main():
         #model.update()
         
         # draw every frame
-        rdr.render()
+        view.render()
         
         elapsed_frames += 1
 
