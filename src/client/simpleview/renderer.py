@@ -8,7 +8,10 @@ class SimpleRenderer():
     """ render world and HUD
     - on screen with sprites 
     - in sound with ogg mixer """
-    
+    # TODO: renderer should be split into a HudRenderer and a WorldRenderer,
+    #each with its own sprites
+     
+     
     def __init__(self):
         """define how the HUD should look like, 
         and prepare the game-world rendering """
@@ -19,7 +22,8 @@ class SimpleRenderer():
         self.screen = pygame.display.set_mode(resolution)
         # screen background
         self.bg = pygame.Surface(self.screen.get_size()) 
-        self.bg = self.bg.convert() #see http://pygame.org/docs/ref/surface.html#Surface.convert
+        #see http://pygame.org/docs/ref/surface.html#Surface.convert
+        self.bg = self.bg.convert() 
         self.bg.fill((222, 204, 199)) #greyish
         self.screen.blit(self.bg, (0, 0))
         # HUD sprites

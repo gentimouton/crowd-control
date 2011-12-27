@@ -6,11 +6,11 @@ class SimpleViewCtrler():
         """ create world and HUD sprites """
         self.renderer = rdr
         #set the onClicked behavior of btn1
-        rdr.hudsprs.sprites()[0].onclicked = lambda : print("lambda!")
+        rdr.hudsprs.sprites()[0].onclicked = lambda: print("lambda")
         
                 
     def process_click_event(self, pos):
-        """ find the HUD or game-world element the user clicked on
+        """ find the HUD or game-world UI element the user clicked on
         and trigger the MainController logic tied to the button """
         # TODO: there should be a smarter logic otherwise this is going to 
         #lag with 1k clickable monsters on the screen: first,

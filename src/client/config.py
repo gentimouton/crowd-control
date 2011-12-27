@@ -40,3 +40,6 @@ def config_get_host():
 
 def config_get_port():
     return int(__dict['port'])
+
+def config_get_push_freq():
+    return int(__dict['push_freq'])

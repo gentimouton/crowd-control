@@ -1,5 +1,8 @@
 from client.config import load_config, config_get_fps
-from client.controller.inputcontroller import InputController
+from client.controller.input import InputController
+from client.controller.maincontroller import MainController
+from client.controller.network import NetworkController
+from client.model.chatlog import ChatLog
 from client.simpleview.simpleview import SimpleView
 import pygame
 
@@ -8,28 +11,38 @@ def main():
     #init
     load_config() #config contains all the constants for the game
     pygame.init()
-    # TODO: simply initiate a SimpleView() that handles a ViewController and a TopDownRenderer
     view = SimpleView()
-    ictrler = InputController(view)
-
-    #nwctrler = NetworkController()
+    chatlog = ChatLog()
+    
+    mc = MainController(chatlog)
+    nwctrler = NetworkController(mc)
+    mc.setnwctrler(nwctrler)
+    ictrler = InputController(view, mc)
+    
     clock = pygame.time.Clock()
     elapsed_frames = 0
+    fps = config_get_fps()
     
-    #Main Loop
     game_on = True
     while game_on:
-        clock.tick(config_get_fps()) 
-        if ictrler.process_events() == ictrler.GAME_OVER:
+        
+        # passive wait (TODO: really?)
+        clock.tick(fps)
+        
+        # process user inputs
+        game_state = ictrler.process_events() 
+        if game_state == ictrler.GAME_OVER:
             game_on = False
         
-        # handle network messages
-        # nwctrler.pull()
+        # pull network msgs every frame, push less frequently
+        nwctrler.pull()
+        if elapsed_frames % nwctrler.push_frame_mod == 0:
+            nwctrler.push()
         
         # run game mechanics on game state every frame
-        #model.update()
+        #world.update_state()
         
-        # draw every frame
+        # render the world + HUD every frame
         view.render()
         
         elapsed_frames += 1
