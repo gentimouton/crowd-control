@@ -15,16 +15,20 @@ class InputController():
         left click => check if it's located in the HUD part 
         or the world part of the screen """
         for event in pygame.event.get():
-            if event.type == QUIT:
+            if event.type == QUIT: #window closed 
                 return self.GAME_OVER
-            elif event.type == KEYDOWN and event.key == K_ESCAPE:
-                return self.GAME_OVER
+            elif event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    return self.GAME_OVER
+                else:
+                    self.get_action_from_key(event.dict['key'], 
+                                             event.dict['unicode'])
             elif event.type == MOUSEBUTTONUP:
                 if event.dict['button'] == 1: 
                     # 1= left click, 2 = middle, 3 = right 
                     self.view.process_click_event(event.dict['pos'])
-            elif event.type == KEYDOWN:
-                self.get_action_from_key(event.dict['key'], event.dict['unicode'])
+
+                
             
                 
 

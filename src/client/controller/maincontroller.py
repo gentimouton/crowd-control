@@ -14,11 +14,19 @@ class MainController():
         fullstr = self.chatlog.send_string_typed() 
         self.nwctrler.send_chat(fullstr)
     
+    
+    # network controller callbacks
+    
     def someone_said(self, author, txt):
         self.chatlog.someone_said(author, txt)
+    
+    
             
+    # view controller callbacks
+    
     def greenboxclick(self):
-        # TODO: implement the viewctrler-to-mainctrler logic
+        self.nwctrler.send_chat("* clicked on green button! *")
+        self.chatlog.sent_hello()
         pass
         
         

@@ -2,13 +2,15 @@
 
 class SimpleViewCtrler():
     
-    def __init__(self, rdr):
+    def __init__(self, rdr, mc):
         """ create world and HUD sprites """
         self.renderer = rdr
+        self.mc = mc # main controller
         #set the onClicked behavior of btn1
-        rdr.hudsprs.sprites()[0].onclicked = lambda: print("lambda")
+        def greenfunc():
+            pass
+        rdr.hudsprs.sprites()[0].onclicked = self.mc.greenboxclick
         
-                
     def process_click_event(self, pos):
         """ find the HUD or game-world UI element the user clicked on
         and trigger the MainController logic tied to the button """

@@ -27,8 +27,8 @@ class SimpleRenderer():
         self.bg = self.__defaultbg.copy()
         # HUD sprites
         self.hudsprs = pygame.sprite.Group()
-        btn1 = AbstractHudBtn('square.png', (50,50), (100, 100))
-        self.hudsprs.add(btn1)
+        self.btn1 = AbstractHudBtn('square.png', (50, 50), (100, 100))
+        self.hudsprs.add(self.btn1)
         # world sprites
         self.worldsprs = pygame.sprite.Group()
         
@@ -42,8 +42,11 @@ class SimpleRenderer():
         return bg
  
         
-    def render(self):
+    def render(self, frame_period):
         """ fetch state, update sprites, and render world and HUD on screen"""
+        caption = str(config_get_screencaption()) + " -- " + str(1000/frame_period) + " fps"
+        pygame.display.set_caption(caption)
+        
         # background
         self.bg = self.__defaultbg.copy()
         
@@ -59,7 +62,7 @@ class SimpleRenderer():
         # If the background is transparent a colorkey will be set.
         # see http://pygame.org/docs/ref/font.html#Font.render
         txtsurf = font.render(txt, False, (10, 10, 10))
-        textpos = txtsurf.get_rect(centerx=self.bg.get_width()/2)
+        textpos = txtsurf.get_rect(centerx=self.bg.get_width() / 2)
         self.bg.blit(txtsurf, textpos)
         self.__screen.blit(self.bg, (0, 0))
         
@@ -67,6 +70,10 @@ class SimpleRenderer():
         self.worldsprs.draw(self.__screen)
 
         # add HUD sprs on top of everything
+        if self.chatlog.is_helloed():
+            self.btn1.remove(self.hudsprs)
+        else:
+            self.btn1.add(self.hudsprs)
         self.hudsprs.draw(self.__screen)
         
 
