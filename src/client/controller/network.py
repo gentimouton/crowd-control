@@ -1,7 +1,6 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client.config import config_get_host, config_get_port, config_get_fps, \
-    config_get_push_freq
-from time import sleep
+from client.config import config_get_host, config_get_port
+
     
 
 class NetworkController(ConnectionListener):
@@ -11,21 +10,14 @@ class NetworkController(ConnectionListener):
         if fps < push_freq, then send updates every frame """
         self.mc = mainctrler
         self.connected = False
-        self.Connect((config_get_host(), config_get_port()))        
-        push_freq = config_get_push_freq()
-        fps = config_get_fps()
-        if fps > push_freq: 
-            self.push_frame_mod = fps / push_freq
-        else:
-            self.push_frame_mod = 1
+        host, port = config_get_host(), config_get_port()
+        self.Connect((host, port))        
         print("Client connection started")
         #connection.Send({"action": "msg", "msg": "hello!"})
-        
-
     
     def push(self): 
         """ push data to server """
-        #TODO: log what has been sent here
+        #TODO: log what has been sent 
         connection.Pump()
     
     def pull(self):
@@ -38,7 +30,10 @@ class NetworkController(ConnectionListener):
     
     def Network_chat(self, data):
         # TODO: call mainController to have the msg stored in chatlog
-        print("chat:" + data['txt'])
+        author = data['msg']['author']
+        txt = data['msg']['txt']
+        self.mc.someone_said(author, txt)
+        print(author + " says: " + txt)
         
     def send_chat(self, txt):
         print("Client send chat: " + txt)
@@ -59,11 +54,7 @@ class NetworkController(ConnectionListener):
  
  
     def Network_connected(self, data):
-        if self.connected == True:
-            return
-        else:
-            self.connected = True
-            print("Client connected to the server")
+        print("Client connected to the server")
         
     
     def Network_error(self, data):

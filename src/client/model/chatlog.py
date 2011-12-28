@@ -3,6 +3,9 @@ class ChatLog():
     
     def __init__(self):
         self.typedchars = []
+        self.lastmsg = {}
+    
+    ######### LOCAL TYPING #############
         
     def add_char_typed(self, char):
         self.typedchars.append(char)
@@ -12,3 +15,11 @@ class ChatLog():
         fullstr = ''.join(self.typedchars)
         self.typedchars = []
         return fullstr
+
+    ######### FUL CHAT WINDOW ########
+    
+    def someone_said(self, author, txt):
+        self.lastmsg = {'author': author, 'txt':txt}
+        
+    def get_last_msg(self):
+        return self.lastmsg

@@ -13,7 +13,10 @@ class MainController():
     def send_string_typed(self):
         fullstr = self.chatlog.send_string_typed() 
         self.nwctrler.send_chat(fullstr)
-        
+    
+    def someone_said(self, author, txt):
+        self.chatlog.someone_said(author, txt)
+            
     def greenboxclick(self):
         # TODO: implement the viewctrler-to-mainctrler logic
         pass

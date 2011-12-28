@@ -24,16 +24,16 @@ class InputController():
                     # 1= left click, 2 = middle, 3 = right 
                     self.view.process_click_event(event.dict['pos'])
             elif event.type == KEYDOWN:
-                self.get_action_from_key(event.dict['key'])
+                self.get_action_from_key(event.dict['key'], event.dict['unicode'])
             
                 
 
-    def get_action_from_key(self, key):
+    def get_action_from_key(self, key, char):
         """ translate key to a method from MainController """
         # carriage return to send to server, otherwise append to existing string
         if key == 13:
             self.mc.send_string_typed()
         else:
-            self.mc.add_char_typed(chr(key))
+            self.mc.add_char_typed(char)
         
     

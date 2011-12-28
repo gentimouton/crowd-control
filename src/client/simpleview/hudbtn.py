@@ -7,8 +7,8 @@ class AbstractHudBtn(pygame.sprite.Sprite):
     def __init__(self, imgname, topleft, dims):
         pygame.sprite.Sprite.__init__(self)
         self.image, self.rect = load_image(imgname, dims)
-        screen = pygame.display.get_surface()
-        self.area = screen.get_rect()
+        __screen = pygame.display.get_surface()
+        self.area = __screen.get_rect()
         self.rect.topleft = topleft
         self.top, self.left = topleft
         self.width, self.height = dims

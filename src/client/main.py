@@ -11,9 +11,14 @@ def main():
     #init
     load_config() #config contains all the constants for the game
     pygame.init()
-    view = SimpleView()
+    
+    # model: game mechanics and state
     chatlog = ChatLog()
     
+    # view
+    view = SimpleView(chatlog)
+    
+    # controllers
     mc = MainController(chatlog)
     nwctrler = NetworkController(mc)
     mc.setnwctrler(nwctrler)
@@ -36,8 +41,8 @@ def main():
         
         # pull network msgs every frame, push less frequently
         nwctrler.pull()
-        if elapsed_frames % nwctrler.push_frame_mod == 0:
-            nwctrler.push()
+        nwctrler.push()
+
         
         # run game mechanics on game state every frame
         #world.update_state()
