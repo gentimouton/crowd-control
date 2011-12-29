@@ -12,7 +12,8 @@ def load_image(name, destsize):
         print("Cannot load image: ", fullname)
         raise SystemExit
     image = image.convert()
-    colorkey = image.get_at((0,0)) #the color of top left pixel is considered the transparent color 
+    #consider the color of top left pixel as the transparent color for the img
+    colorkey = image.get_at((0,0))  
     image.set_colorkey(colorkey, RLEACCEL)
     image = pygame.transform.scale(image, destsize)
 

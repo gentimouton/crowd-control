@@ -1,7 +1,6 @@
 from client.config import config_get_screencaption, config_get_screenwidth, \
     config_get_screenheight
-from client.simpleview.hudbtn import AbstractHudBtn
-import pygame.sprite
+import pygame
 
 
 class SimpleRenderer():
@@ -12,10 +11,13 @@ class SimpleRenderer():
     #each with its own sprites
      
      
-    def __init__(self, chatlog):
+    def __init__(self, worldsprites, hudsprites, chatlog):
         """define how the HUD should look like, 
         and prepare the game-world rendering """
         self.chatlog = chatlog
+        # world and hud sprites point to the sprites from simpleview
+        self.worldsprites = worldsprites
+        self.hudsprites = hudsprites
         #create screen
         pygame.display.set_caption(config_get_screencaption())
         pygame.mouse.set_visible(1) #1 == visible, 0==invisible
@@ -23,14 +25,8 @@ class SimpleRenderer():
         self.__screen = pygame.display.set_mode(resolution)
         # defaultbg = background template
         self.__defaultbg = self._make_bg(self.__screen)
-        self.bg = self.__defaultbg.copy() #the running bg  
-        self.bg = self.__defaultbg.copy()
-        # HUD sprites
-        self.hudsprs = pygame.sprite.Group()
-        self.btn1 = AbstractHudBtn('square.png', (50, 50), (100, 100))
-        self.hudsprs.add(self.btn1)
-        # world sprites
-        self.worldsprs = pygame.sprite.Group()
+        self.bg = self.__defaultbg.copy() #the running bg
+  
         
         
     def _make_bg(self, screen):
@@ -40,11 +36,21 @@ class SimpleRenderer():
         #see http://pygame.org/docs/ref/surface.html#Surface.convert
         bg.fill((255, 204, 153))
         return bg
- 
+
+    def build_hud(self):        
+        btn1 = self.hudsprites.sprites()[0] 
+        #TODO: hudprites should be a dict instead of array
+        btn1.setpos((50, 50))
+        btn1.setdims((100, 100))
+        btn1.setimg('square.png')
+        self.alivehudsprites = pygame.sprite.Group()
+        self.alivehudsprites.add(btn1)
+
         
     def render(self, frame_period):
         """ fetch state, update sprites, and render world and HUD on screen"""
-        caption = str(config_get_screencaption()) + " -- " + str(1000/frame_period) + " fps"
+        fps = str(int(1000 / frame_period))
+        caption = str(config_get_screencaption()) + " -- " + fps + " fps"
         pygame.display.set_caption(caption)
         
         # background
@@ -66,17 +72,18 @@ class SimpleRenderer():
         self.bg.blit(txtsurf, textpos)
         self.__screen.blit(self.bg, (0, 0))
         
-        # draw game world on top of the bg
-        self.worldsprs.draw(self.__screen)
-
-        # add HUD sprs on top of everything
-        if self.chatlog.is_helloed():
-            self.btn1.remove(self.hudsprs)
-        else:
-            self.btn1.add(self.hudsprs)
-        self.hudsprs.draw(self.__screen)
         
-
+        # draw game world on top of the bg
+        self.worldsprites.draw(self.__screen)
+        
+        # add HUD sprites on top of everything
+        btn1 = self.hudsprites.sprites()[0]
+        if self.chatlog.is_helloed():
+            btn1.remove(self.alivehudsprites)
+        else:
+            btn1.add(self.alivehudsprites)
+        self.alivehudsprites.draw(self.__screen)
+        
         # reveal the scene - this is the last thing to do 
         pygame.display.flip()
 

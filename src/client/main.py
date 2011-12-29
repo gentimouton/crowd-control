@@ -4,8 +4,8 @@ from client.controller.maincontroller import MainController
 from client.controller.network import NetworkController
 from client.model.chatlog import ChatLog
 from client.simpleview.simpleview import SimpleView
-import pygame
 from pygame.locals import TIMER_RESOLUTION
+import pygame
 
 
 def main():    
@@ -26,10 +26,12 @@ def main():
     clock = pygame.time.Clock()
     elapsed_frames = 0
     fps = config_get_fps()
-    cpu_timer_res = pygame.locals.TIMER_RESOLUTION
+    cpu_timer_res = TIMER_RESOLUTION
     if 1000 / fps < cpu_timer_res:
-        print("Warning:", fps, "fps is higher than the ",
-               "CPU timer resolution of", cpu_timer_res, "ms")
+        print("Warning: The config of ", fps, "frames per second is higher",
+               "than your CPU timer resolution of", cpu_timer_res, "ms")
+        print("Potential consequences: you may not be able to actually refresh",
+              fps, "times per second.")
     
     game_on = True
     while game_on:

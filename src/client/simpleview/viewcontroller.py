@@ -2,14 +2,20 @@
 
 class SimpleViewCtrler():
     
-    def __init__(self, rdr, mc):
-        """ create world and HUD sprites """
-        self.renderer = rdr
+    def __init__(self, worldsprites, hudsprites, mc):
+        """ assign behavior to world and HUD sprites """        
+        # world and hud sprites point to the sprites from simpleview
+        self.worldsprites = worldsprites
+        self.hudsprites = hudsprites        
         self.mc = mc # main controller
+
+
+    def wire_hub(self):
         #set the onClicked behavior of btn1
         def greenfunc():
             pass
-        rdr.hudsprs.sprites()[0].onclicked = self.mc.greenboxclick
+        self.hudsprites.sprites()[0].onclicked = self.mc.greenboxclick
+
         
     def process_click_event(self, pos):
         """ find the HUD or game-world UI element the user clicked on
@@ -23,12 +29,11 @@ class SimpleViewCtrler():
         # within this segment
         # this should limit the search to at most the 30-40 elements in the
         # segment that the click pos falls into
-        print(pos)
-        for btn in self.renderer.hudsprs:
+        for btn in self.hudsprites:
             if btn.isinside(pos):
                 btn.onclicked()
                 return
-        for btn in self.renderer.worldsprs:
+        for btn in self.worldsprites:
             if btn.isinside(pos):
                 btn.onclicked()
                 return

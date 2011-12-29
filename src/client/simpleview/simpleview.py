@@ -1,6 +1,8 @@
 from client.abstractview import AbstractView
+from client.simpleview.hudbtn import AbstractHudBtn
 from client.simpleview.renderer import SimpleRenderer
 from client.simpleview.viewcontroller import SimpleViewCtrler
+import pygame.sprite
 
 class SimpleView(AbstractView):
     """ A simple presentation layer using 2d rendering with sprites.
@@ -11,8 +13,20 @@ class SimpleView(AbstractView):
         self.fps = 60 #render 60 times per sec
         # TODO: this self.fps should be taken into account in self.render()
         # TODO: self.fps should also be fetched from a simpleview config file
-        self.rdrr = SimpleRenderer(chatlog)
-        self.ctrlr = SimpleViewCtrler(self.rdrr, mainctrler)
+
+        self.hudsprites = pygame.sprite.Group() 
+        self.worldsprites = pygame.sprite.Group()
+        # TODO: hudsprs and worldsprs should be dictionaries, not Groups 
+        self.rdrr = SimpleRenderer(self.worldsprites, self.hudsprites, chatlog)
+        self.ctrlr = SimpleViewCtrler(self.worldsprites, self.hudsprites, mainctrler)
+
+        # build the HUD - needs to be done AFTER Renderer()'s display.setmode()
+        self.btn1 = AbstractHudBtn()
+        self.hudsprites.add(self.btn1)
+        self.rdrr.build_hud()
+        self.ctrlr.wire_hub()
+
+
 
     def render(self, frame_delay):
         self.rdrr.render(frame_delay)
