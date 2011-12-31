@@ -8,6 +8,9 @@ class InputController():
         self.GAME_OVER = 1 #constant
         self.view = view
         self.mc = mainctrler
+        #if key pushed for more than 100ms, then send KEYDOWN event every 100ms
+        # TODO: keyboard sensitivity should be configurable
+        pygame.key.set_repeat(100, 100) 
 
     
     def process_events(self):
@@ -21,7 +24,7 @@ class InputController():
                 if event.key == K_ESCAPE:
                     return self.GAME_OVER
                 else:
-                    self.get_action_from_key(event.dict['key'], 
+                    self.get_action_from_key(event.dict['key'],
                                              event.dict['unicode'])
             elif event.type == MOUSEBUTTONUP:
                 if event.dict['button'] == 1: 
@@ -37,6 +40,8 @@ class InputController():
         # carriage return to send to server, otherwise append to existing string
         if key == 13:
             self.mc.send_string_typed()
+        elif key == 8:
+            self.mc.remove_char_typed()
         else:
             self.mc.add_char_typed(char)
         

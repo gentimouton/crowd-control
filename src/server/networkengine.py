@@ -18,7 +18,7 @@ class ClientChannel(Channel):
     
     def Network_chat(self, data):
         """ when chat messages are received, broadcast them to everyone """
-        print("Received chat: " + data['msg'])
+        #print("Received chat: " + data['msg'])
         self._server.send_chat_all(str(self.addr), data['msg'])
 
     def Network_pos(self, data):

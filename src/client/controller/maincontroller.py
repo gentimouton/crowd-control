@@ -10,9 +10,14 @@ class MainController():
     def add_char_typed(self, char):
         self.chatlog.add_char_typed(char)
     
+    def remove_char_typed(self):
+        self.chatlog.remove_char_typed()
+        
     def send_string_typed(self):
-        fullstr = self.chatlog.send_string_typed() 
-        self.nwctrler.send_chat(fullstr)
+        fullstr = self.chatlog.end_of_line()
+        # don't send empty strings
+        if len(fullstr) > 0: 
+            self.nwctrler.send_chat(fullstr)
     
     
     # network controller callbacks
