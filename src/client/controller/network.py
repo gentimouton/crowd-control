@@ -1,6 +1,5 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client.config import config_get_host, config_get_port
-
     
 
 class NetworkController(ConnectionListener):
@@ -11,7 +10,7 @@ class NetworkController(ConnectionListener):
         self.mc = mainctrler
         self.connected = False
         host, port = config_get_host(), config_get_port()
-        self.Connect((host, port))        
+        self.Connect((host, port))
         print("Client connection started")
         #connection.Send({"action": "msg", "msg": "hello!"})
     
@@ -24,39 +23,12 @@ class NetworkController(ConnectionListener):
         """ pull data from the pipe and trigger the Network_* callbacks"""
         self.Pump() 
 
-        
-    ################## GAME-RELATED CALLBACKS ################    
-    
-    
-    def Network_chat(self, data):
-        # TODO: call mainController to have the msg stored in chatlog
-        author = data['msg']['author']
-        txt = data['msg']['txt']
-        self.mc.someone_said(author, txt)
-        print(author + " says: " + txt)
-        
-    def send_chat(self, txt):
-        print("Client send chat: " + txt)
-        connection.Send({"action": "chat", "msg": txt})
-        
-        
-    def Network_pos(self, data):
-        # TODO: call mainController to have the msg stored in chatlog
-        print("chat:" + data['pos'])
-        
-    def send_pos(self, pos):
-        print("Client send pos: " + pos)
-        connection.Send({"action": "pos", "msg": pos})
-    
-    
 
     ################## OTHER CALLBACKS ##########
- 
- 
+  
     def Network_connected(self, data):
         print("Client connected to the server")
         
-    
     def Network_error(self, data):
         print("Error:" + data['error'][1])
         connection.Close()
@@ -68,4 +40,42 @@ class NetworkController(ConnectionListener):
         connection.Close()
         exit()
     
+    ################## GAME-RELATED CALLBACKS ################    
+    
+    # CHAT
+    
+    def Network_chat(self, data):
+        author = data['msg']['author']
+        txt = data['msg']['txt']
+        self.mc.someone_said(author, txt)
+        
+    def send_chat(self, txt):
+        connection.Send({"action": "chat", "msg": txt})
+        
+        
+    # ADMIN 
+    
+    def Network_admin(self, data):
+        # TODO: call mainController to have the msg taken care of
+        actiontype = data['msg']['type']
+        name = data['msg']['name']
+        self.mc.someone_admin(name, actiontype)
+        
+    def send_admin(self, actiontype):
+        print("Client send chat: " + actiontype)
+        connection.Send({"action": 'admin', "type": actiontype})
+        
+    
+    # POSITIONING
+    
+    def Network_pos(self, data):
+        # TODO: call mainController to have the msg stored in chatlog
+        print("chat:" + data['pos'])
+        
+    def send_pos(self, pos):
+        print("Client send pos: " + pos)
+        connection.Send({"action": "pos", "msg": pos})
+    
+    
+
     

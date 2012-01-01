@@ -27,6 +27,10 @@ class ChatLog():
             self.helloed = False
         return line
 
+    def get_typed_line(self):
+        line = ''.join(self.typedchars)
+        return line
+    
     ######### chat log ########
     
     def someone_said(self, author, txt):

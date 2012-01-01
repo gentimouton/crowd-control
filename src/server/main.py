@@ -1,14 +1,16 @@
 from server.config import config_get_fps, load_srv_config
-from server.networkengine import ServerNetworkEngine
+from server.controller.network import NetworkController
 import pygame
-
+from server.controller.mediator import Mediator
 
 def main():
 
     load_srv_config()
+    mediator = Mediator()
     # network
-    nEngine = ServerNetworkEngine()
-    
+    nw = NetworkController(mediator)
+    mediator.setnetwork(nw)
+     
     # mechanics
     clock = pygame.time.Clock()
     elapsed_frames = 0
@@ -18,7 +20,7 @@ def main():
         clock.tick(fps)
         
         # network updates: pump all client channels
-        nEngine.Pump()
+        nw.Pump()
         
         # TODO: NPC and mechanics updates
 

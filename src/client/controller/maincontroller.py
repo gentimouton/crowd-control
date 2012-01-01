@@ -25,7 +25,8 @@ class MainController():
     def someone_said(self, author, txt):
         self.chatlog.someone_said(author, txt)
     
-    
+    def someone_admin(self, name, actiontype):
+        print("admin:", name, actiontype)
             
     # view controller callbacks
     

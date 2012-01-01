@@ -29,7 +29,7 @@ class ChatServer(Server):
     
     def __init__(self, *args, **kwargs):
         Server.__init__(self, *args, **kwargs)
-        self.players = WeakKeyDictionary()
+        self.playernames = WeakKeyDictionary()
         print('Server launched')
     
     def Connected(self, channel, addr):
@@ -37,20 +37,20 @@ class ChatServer(Server):
     
     def AddPlayer(self, player):
         print("Add Player: " + str(player.addr))
-        self.players[player] = True
+        self.playernames[player] = True
         self.SendPlayers()
-        #print ("players", [p for p in self.players])
+        #print ("playernames", [p for p in self.playernames])
     
     def DelPlayer(self, player):
         print ("Del Player: " + str(player.addr))
-        del self.players[player]
+        del self.playernames[player]
         self.SendPlayers()
     
     def SendPlayers(self):
-        self.SendToAll({"action": "players", "players": [p.nickname for p in self.players]})
+        self.SendToAll({"action": "playernames", "playernames": [p.nickname for p in self.playernames]})
     
     def SendToAll(self, data):
-        [p.Send(data) for p in self.players]
+        [p.Send(data) for p in self.playernames]
     
     def Launch(self):
         while True:

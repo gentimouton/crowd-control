@@ -1,5 +1,7 @@
-from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, MOUSEBUTTONUP
+from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, MOUSEBUTTONUP, K_RETURN, \
+    K_BACKSPACE
 import pygame
+
 
 
 class InputController():
@@ -8,9 +10,9 @@ class InputController():
         self.GAME_OVER = 1 #constant
         self.view = view
         self.mc = mainctrler
-        #if key pushed for more than 100ms, then send KEYDOWN event every 100ms
+        #if key pushed for more than 400ms, then send KEYDOWN event every 25ms
         # TODO: keyboard sensitivity should be configurable
-        pygame.key.set_repeat(100, 100) 
+        pygame.key.set_repeat(400, 25) 
 
     
     def process_events(self):
@@ -24,7 +26,7 @@ class InputController():
                 if event.key == K_ESCAPE:
                     return self.GAME_OVER
                 else:
-                    self.get_action_from_key(event.dict['key'],
+                    self.run_action_from_key(event.dict['key'],
                                              event.dict['unicode'])
             elif event.type == MOUSEBUTTONUP:
                 if event.dict['button'] == 1: 
@@ -35,14 +37,17 @@ class InputController():
             
                 
 
-    def get_action_from_key(self, key, char):
+    def run_action_from_key(self, key, unicodechar):
         """ translate key to a method from MainController """
         # carriage return to send to server, otherwise append to existing string
-        if key == 13:
+        if key == K_RETURN:
             self.mc.send_string_typed()
-        elif key == 8:
+        elif key == K_BACKSPACE: 
             self.mc.remove_char_typed()
+        elif unicodechar == '': 
+            # K_LSHIFT, K_F1, K_PAGEUP, K_UP ... should not be added
+            return
         else:
-            self.mc.add_char_typed(char)
+            self.mc.add_char_typed(unicodechar)
         
     

@@ -76,15 +76,23 @@ class SimpleRenderer():
         
     def render_chat(self):
         """ render the chat window on top of the bg """
-        lines = self.chatlog.get_complete_log()
         font = pygame.font.Font(None, 25)
+        # render what i'm currently typing
+        typedline = self.chatlog.get_typed_line()
+        txtsurf = font.render(typedline, False, (0, 0, 0))# no antialiasing, black
+        txtbottom = self.__screen.get_size()[1] - 50
+        txtleft = 10
+        txtpos = txtsurf.get_rect(bottom=txtbottom, left=txtleft)
+        self.bg.blit(txtsurf, txtpos)
+
+        # render the previous messages
+        lines = self.chatlog.get_complete_log()
         for i in range(len(lines)):
             line = lines[i]
             txt = line['author'] + ' says: ' + line['txt']
             txtsurf = font.render(txt, False, (0, 0, 0))# no antialiasing, black
-            # TODO: position the text
-            txtbottom = self.__screen.get_size()[1] - 20 * i - 50
+            txtbottom = self.__screen.get_size()[1] - 20 * i - 75
             txtleft = 10
-            textpos = txtsurf.get_rect(bottom=txtbottom, left=txtleft)
-            self.bg.blit(txtsurf, textpos)
+            txtpos = txtsurf.get_rect(bottom=txtbottom, left=txtleft)
+            self.bg.blit(txtsurf, txtpos)
         

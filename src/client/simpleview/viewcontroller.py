@@ -12,8 +12,6 @@ class SimpleViewCtrler():
 
     def wire_hub(self):
         #set the onClicked behavior of btn1
-        def greenfunc():
-            pass
         self.hudsprites.sprites()[0].onclicked = self.mc.greenboxclick
 
         
@@ -21,7 +19,7 @@ class SimpleViewCtrler():
         """ find the HUD or game-world UI element the user clicked on
         and trigger the MainController logic tied to the button """
         # TODO: there should be a smarter logic otherwise this is going to 
-        #lag with 1k clickable monsters on the screen: first,
+        #lag with 1k clickable monsters on the screen: 
         # if pos falls under a zone usually reserved for the HUD
         # then only parse the HUD sprites,
         # otherwise, cut the screen in a dozen vertical segments 
