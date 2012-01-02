@@ -16,8 +16,16 @@ http://en.newinstance.it/2010/05/23/git-autocompletion-and-enhanced-bash-prompt/
 git config --global color.status auto
 
 
-== pydev ==
-add software in Eclipse: http://pydev.org/updates
+== Eclipse ==
+
+PyDev: Help -> Install new software -> http://pydev.org/updates
+
+Unity hides the scrolling bars of code editor and console: to re-add them:
+- Open /usr/bin/eclipse
+- add below the line 'GDK_NATIVE_WINDOWS=true':
+export UBUNTU_MENUPROXY=0
+export LIBOVERLAY_SCROLLBAR=0
+cf http://askubuntu.com/questions/36448/is-there-a-way-to-blacklist-an-individual-application-from-using-overlay-scrollb
 
 
 == pygame ==
@@ -27,10 +35,14 @@ sudo apt-get install python3.2-dev libsdl-image1.2-dev libsdl-mixer1.2-dev libsd
 
 hg clone https://bitbucket.org/pygame/pygame
 cd pygame
+
+open setup.py and modify line 123: raw_input(...) should instead be input(...)
+
 python3.2 setup.py build
 sudo python3.2 setup.py install
 
 at this point, you should not have any error running:
 python3.2 examples/chimp.py
+
 
 
