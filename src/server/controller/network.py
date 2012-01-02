@@ -21,12 +21,10 @@ class ClientChannel(Channel):
         #print("Received chat: " + data['msg']) 
         self._server.received_chat(self, data['msg'])
 
-
-    ######## TODO: junk
-    def Network_pos(self, data):
-        """ when a pos msg is received from a client, 
-        broadcast an announce to everyone """
-        self._server.send_pos_all(str(self.addr), data['pos'])
+    def Network_admin(self, data):
+        ''' change name messages '''
+        if data['msg']['type'] == 'namechange':
+            self._server.received_name_change(self, data['msg']['newname'])
 
 
 
@@ -40,15 +38,15 @@ class NetworkController(Server):
         host, port = config_get_host(), config_get_port()
         Server.__init__(self, localaddr=(host, port))
         self.mediator = mediator
-        self.playernames = WeakKeyDictionary() #maps channel to name
-        self.playerchannels = WeakValueDictionary() #maps name to channel
+        self.chan_to_name = WeakKeyDictionary() #maps channel to name
+        self.name_to_chan = WeakValueDictionary() #maps name to channel
         #WeakKeyDictionary's key is garbage collected and removed from dictionary 
         # when used nowhere else but in the dict's mapping
         print('Network up')
 
 
 
-    ####### (dis)connection logic called by channel and calling to mediator
+    ####### (dis)connection and name changes 
 
     def Connected(self, channel, addr):
         """ Called by Server.handle_accept() whenever a new client connects 
@@ -60,47 +58,52 @@ class NetworkController(Server):
         # when an actual player connects from 123.145.167.189:1234,
         # he'll use the data left behind by the malicious user
         # solution: do not allow '.' or ':' in user-entered names
-        self.playernames[channel] = name
-        self.playerchannels[name] = channel
+        self.chan_to_name[channel] = name
+        self.name_to_chan[name] = channel
         self.mediator.player_arrived(name)
         
     def channel_closed(self, channel):
         """ when a player logs out, remove his channel from the list """
-        name = self.playernames[channel]
+        name = self.chan_to_name[channel]
         self.mediator.player_left(name)
-        del self.playerchannels[name]
-        del self.playernames[channel]
+        del self.name_to_chan[name]
+        del self.chan_to_name[channel]
 
-    def send_admin(self, status, name):
+    def broadcast_conn_status(self, status, name):
         """ notify clients that a new player just arrived (type='arrived') 
         or left (type='left') """
         data = {"action": 'admin', "msg": {"type":status, "name":name}}
-        [p.Send(data) for p in self.playernames.keys()]
+        [p.Send(data) for p in self.chan_to_name.keys()]
 
+    def received_name_change(self, channel, newname):
+        ''' notify mediator that a player wants to change name '''
+        oldname = self.chan_to_name[channel]
+        self.mediator.handle_name_change(oldname, newname)
         
-    #######  chat logic called by ClientChannel and Mediator        
+    def broadcast_name_change(self, oldname, newname):
+        ''' update name<->channel mappings and notify all players '''
+        channel = self.name_to_chan[oldname]
+        self.chan_to_name[channel] = newname
+        self.name_to_chan[newname] = channel
+        del self.name_to_chan[oldname]
+        msg = {'type':'namechange', 'old':oldname, 'new':newname}
+        [c.Send({'action':'admin', 'msg':msg}) for c in self.chan_to_name.keys()]
+        
+        
+        
+    #######  chat        
         
     def received_chat(self, channel, txt):
         """ send a chat msg to all connected clients """
-        author = self.playernames[channel]
+        author = self.chan_to_name[channel]
         self.mediator.received_chat(txt, author)
         
     def broadcast_chat(self, txt, author):
         data = {"action": "chat", "msg": {"txt":txt, "author":author}}
-        [p.Send(data) for p in self.playernames.keys()]
+        [p.Send(data) for p in self.chan_to_name.keys()]
 
-    def send_chat_to(self, txt, author, dest):
-        pass # TODO: implement send_chat_to
     
     
         
-    ############ TODO: JUNK
-                 
-    def send_pos_all(self, clientid, txt):
-        """ for now, only send a chat msg to say where someone moved to """
-        # TODO: pos msgs to clients should contain {player:id, pos:x,y}
-        if len(self.playernames) > 0:
-            data = {"action": "pos", "coords": txt}
-            [p.Send(data) for p in self.playernames]
             
              

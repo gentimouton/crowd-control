@@ -43,3 +43,6 @@ def config_get_port():
 
 def config_get_push_freq():
     return int(__dict['push_freq'])
+
+def config_get_my_name():
+    return __dict['myname']

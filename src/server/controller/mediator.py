@@ -10,19 +10,23 @@ class Mediator():
         self.network = nw
         
     
-    # (dis)connection
+    # (dis)connection and name changes
     # notifying for pausing/resuming the game could also fit in there
         
     def player_left(self, name):
         """ TODO: remove player's avatar from game state 
         and notify everyone """
         print(name, "disconnected")
-        self.network.send_admin('left', name)
+        self.network.broadcast_conn_status('left', name)
         
     def player_arrived(self, name):
         """ TODO: create player's avatar """
         print(name, "connected") #TODO: log
-        self.network.send_admin('arrived', name)
+        self.network.broadcast_conn_status('arrived', name)
+
+    def handle_name_change(self, oldname, newname):
+        print('change name:', oldname, newname)
+        self.network.broadcast_name_change(oldname, newname)
 
     # CHAT
             

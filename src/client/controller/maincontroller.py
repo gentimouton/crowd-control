@@ -6,6 +6,8 @@ class MainController():
 
     def setnwctrler(self, nwc):
         self.nwctrler = nwc
+    
+    # CHATTING 
         
     def add_char_typed(self, char):
         self.chatlog.add_char_typed(char)
@@ -18,17 +20,22 @@ class MainController():
         # don't send empty strings
         if len(fullstr) > 0: 
             self.nwctrler.send_chat(fullstr)
-    
-    
-    # network controller callbacks
-    
+
     def someone_said(self, author, txt):
         self.chatlog.someone_said(author, txt)
     
+
+    
+    # connection, disconnection and name change
+        
     def someone_admin(self, name, actiontype):
         print("admin:", name, actiontype)
-            
-    # view controller callbacks
+    
+    def someone_changed_name(self, oldname, newname):
+        print('changed name', oldname, newname)
+
+    
+    # HUD callbacks
     
     def greenboxclick(self):
         self.nwctrler.send_chat("* clicked on green button! *")

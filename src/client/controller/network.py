@@ -1,5 +1,5 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client.config import config_get_host, config_get_port
+from client.config import config_get_host, config_get_port, config_get_my_name
     
 
 class NetworkController(ConnectionListener):
@@ -28,6 +28,7 @@ class NetworkController(ConnectionListener):
   
     def Network_connected(self, data):
         print("Client connected to the server")
+        self.send_my_name_change(config_get_my_name())
         
     def Network_error(self, data):
         print("Error:" + data['error'][1])
@@ -53,28 +54,23 @@ class NetworkController(ConnectionListener):
         connection.Send({"action": "chat", "msg": txt})
         
         
-    # ADMIN 
+    # disconnection, connection, name changes 
     
     def Network_admin(self, data):
-        # TODO: call mainController to have the msg taken care of
+        ''' left, join, and namechange messages '''
         actiontype = data['msg']['type']
-        name = data['msg']['name']
-        self.mc.someone_admin(name, actiontype)
-        
-    def send_admin(self, actiontype):
-        print("Client send chat: " + actiontype)
-        connection.Send({"action": 'admin', "type": actiontype})
-        
-    
-    # POSITIONING
-    
-    def Network_pos(self, data):
-        # TODO: call mainController to have the msg stored in chatlog
-        print("chat:" + data['pos'])
-        
-    def send_pos(self, pos):
-        print("Client send pos: " + pos)
-        connection.Send({"action": "pos", "msg": pos})
+        if actiontype == 'namechange':
+            oldname = data['msg']['old']
+            newname = data['msg']['new']
+            self.mc.someone_changed_name(oldname, newname)
+        else: #(dis)connection
+            name = data['msg']['name']
+            self.mc.someone_admin(name, actiontype)
+                
+    def send_my_name_change(self, newname):
+        msg = {'type':'namechange', 'newname':newname}
+        connection.Send({"action": 'admin', "msg":msg})
+
     
     
 
