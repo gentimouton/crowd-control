@@ -8,6 +8,7 @@ class ChatLog():
         self.maxloglen = 5 #chat history of 5 msgs max
         self.helloed = False # whether the last msg on chat is my hello
         # TODO: remove this whole helloed crap
+        self.myname = ''
     
     ######### my local typing of a line #############
         
@@ -33,6 +34,11 @@ class ChatLog():
     
     ######### chat log ########
     
+    def get_my_name(self):
+        return self.myname
+    def set_my_name(self, name):
+        self.myname = name
+        
     def someone_said(self, author, txt):
         self.helloed = False
         msg = {'author': author, 'txt':txt}

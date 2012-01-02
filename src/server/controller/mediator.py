@@ -4,7 +4,8 @@ class Mediator():
     network = None 
     
     def __init__(self):
-        pass
+        self.players = set() # store connected players 
+
     
     def setnetwork(self, nw):
         self.network = nw
@@ -17,17 +18,31 @@ class Mediator():
         """ TODO: remove player's avatar from game state 
         and notify everyone """
         print(name, "disconnected")
+        self.players.discard(name)
         self.network.broadcast_conn_status('left', name)
         
     def player_arrived(self, name):
         """ TODO: create player's avatar """
         print(name, "connected") #TODO: log
-        self.network.broadcast_conn_status('arrived', name)
+        if name not in self.players:
+            self.players.add(name)
+            self.network.greet(name)
+            self.network.broadcast_conn_status('arrived', name)
+        else:
+            print("Warning:", name, 'was already in connected players')
+            print('Possibly, self.players[name] had not been cleaned properly')
 
     def handle_name_change(self, oldname, newname):
-        print('change name:', oldname, newname)
-        self.network.broadcast_name_change(oldname, newname)
-
+        ''' change player's name only if newname not taken already '''
+        if newname not in self.players:
+            self.players.add(newname)
+            self.players.remove(oldname)
+            self.network.broadcast_name_change(oldname, newname)
+        else: 
+            # TODO: send personal notif to the client who failed to change name
+            pass
+    
+    
     # CHAT
             
     def received_chat(self, txt, author):

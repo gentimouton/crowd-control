@@ -15,6 +15,9 @@ coloring in terminal
 http://en.newinstance.it/2010/05/23/git-autocompletion-and-enhanced-bash-prompt/
 git config --global color.status auto
 
+Know the changes in current branch:
+git diff --stat
+
 
 == Eclipse ==
 

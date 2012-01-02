@@ -1,6 +1,6 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client.config import config_get_host, config_get_port, config_get_my_name
-    
+from time import time    
 
 class NetworkController(ConnectionListener):
     
@@ -27,8 +27,8 @@ class NetworkController(ConnectionListener):
     ################## OTHER CALLBACKS ##########
   
     def Network_connected(self, data):
-        print("Client connected to the server")
-        self.send_my_name_change(config_get_my_name())
+        print("Client connected to the server", str(connection.address))
+
         
     def Network_error(self, data):
         print("Error:" + data['error'][1])
@@ -63,11 +63,15 @@ class NetworkController(ConnectionListener):
             oldname = data['msg']['old']
             newname = data['msg']['new']
             self.mc.someone_changed_name(oldname, newname)
+        elif actiontype == 'greet':
+            newname = data['msg']['newname']
+            self.mc.i_changed_name(newname)
+            self.ask_for_name_change(config_get_my_name())
         else: #(dis)connection
             name = data['msg']['name']
             self.mc.someone_admin(name, actiontype)
-                
-    def send_my_name_change(self, newname):
+            
+    def ask_for_name_change(self, newname):
         msg = {'type':'namechange', 'newname':newname}
         connection.Send({"action": 'admin', "msg":msg})
 

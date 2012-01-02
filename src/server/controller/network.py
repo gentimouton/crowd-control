@@ -1,6 +1,8 @@
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
 from server.config import config_get_host, config_get_port
+from time import time
+from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 
 class ClientChannel(Channel):
@@ -49,15 +51,15 @@ class NetworkController(Server):
     ####### (dis)connection and name changes 
 
     def Connected(self, channel, addr):
-        """ Called by Server.handle_accept() whenever a new client connects 
-        channel is a channelClass
-        and addr is [ip,port], which can be obtained from channel.addr too """
-        name = str(channel.addr) #name can be changed by client
-        # TODO: before updating the dicts, check there's no user with that name already
-        # a malicious user could name himself 123.145.167.189:1234,
-        # when an actual player connects from 123.145.167.189:1234,
-        # he'll use the data left behind by the malicious user
-        # solution: do not allow '.' or ':' in user-entered names
+        """ Called by Server.handle_accept() whenever a new client connects. 
+        assign a temporary name to a client, a la IRC. 
+        The client should change user's name automatically if it's not taken
+        already, and clients can use a command to change their name"""
+        name = str(uuid4())[:8] #random 32-hexadigit uuid 
+        # truncated to 8 hexits = 16^8 = 4 billion possibilities
+        # if by chance someone already has this uuid name, repick until unique
+        while name in self.chan_to_name.keys(): 
+            name = str(uuid4())[:8]
         self.chan_to_name[channel] = name
         self.name_to_chan[name] = channel
         self.mediator.player_arrived(name)
@@ -73,13 +75,20 @@ class NetworkController(Server):
         """ notify clients that a new player just arrived (type='arrived') 
         or left (type='left') """
         data = {"action": 'admin', "msg": {"type":status, "name":name}}
-        [p.Send(data) for p in self.chan_to_name.keys()]
+        [chan.Send(data) for chan in self.chan_to_name.keys()]
+
+    def greet(self, name):
+        ''' send greeting data to a player '''
+        data = {"action": 'admin', "msg": {"type":'greet', "newname":name}}
+        chan = self.name_to_chan[name]
+        chan.Send(data)
 
     def received_name_change(self, channel, newname):
         ''' notify mediator that a player wants to change name '''
         oldname = self.chan_to_name[channel]
         self.mediator.handle_name_change(oldname, newname)
-        
+    
+            
     def broadcast_name_change(self, oldname, newname):
         ''' update name<->channel mappings and notify all players '''
         channel = self.name_to_chan[oldname]

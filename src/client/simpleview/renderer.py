@@ -20,7 +20,8 @@ class SimpleRenderer():
         self.hudsprites = hudsprites
         
         #create screen
-        pygame.display.set_caption(config_get_screencaption())
+        caption = config_get_screencaption()
+        pygame.display.set_caption(caption)
         pygame.mouse.set_visible(1) #1 == visible, 0==invisible
         resolution = config_get_screenwidth(), config_get_screenheight() 
         self.__screen = pygame.display.set_mode(resolution)
@@ -52,6 +53,7 @@ class SimpleRenderer():
         """ fetch state, update sprites, and render world and HUD on screen"""
         fps = str(int(1000 / frame_period))
         caption = str(config_get_screencaption()) + " -- " + fps + " fps"
+        caption = caption + '--' + self.chatlog.get_my_name()
         pygame.display.set_caption(caption)
         
         # background
