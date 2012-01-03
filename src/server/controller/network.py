@@ -15,12 +15,11 @@ class ClientChannel(Channel):
     
     def Network(self, data):
         """ called for all received msgs """
-        # TODO: implement a logger, as a view of a mediator
+        # TODO: implement a logger, as a view of the mediator
         pass
     
     def Network_chat(self, data):
-        """ when chat messages are received """
-        #print("Received chat: " + data['msg']) 
+        """ when chat messages are received """ 
         self._server.received_chat(self, data['msg'])
 
     def Network_admin(self, data):
@@ -28,8 +27,10 @@ class ClientChannel(Channel):
         if data['msg']['type'] == 'namechange':
             self._server.received_name_change(self, data['msg']['newname'])
 
-
-
+    def Network_move(self, data):
+        ''' movement messages '''
+        dest = data['msg']['dest'] 
+        self._server.received_move(self, dest)
 
 
 class NetworkController(Server):
@@ -44,7 +45,7 @@ class NetworkController(Server):
         self.name_to_chan = WeakValueDictionary() #maps name to channel
         #WeakKeyDictionary's key is garbage collected and removed from dictionary 
         # when used nowhere else but in the dict's mapping
-        print('Network up')
+        print('Server Network up')
 
 
 
@@ -77,11 +78,12 @@ class NetworkController(Server):
         data = {"action": 'admin', "msg": {"type":status, "name":name}}
         [chan.Send(data) for chan in self.chan_to_name.keys()]
 
-    def greet(self, name):
+    def greet(self, name, pos, onlineppl):
         ''' send greeting data to a player '''
-        data = {"action": 'admin', "msg": {"type":'greet', "newname":name}}
+        msg = {"type":'greet', "newname":name, 'newpos':pos,
+               'onlineppl':onlineppl}
         chan = self.name_to_chan[name]
-        chan.Send(data)
+        chan.Send({"action": 'admin', "msg": msg})
 
     def received_name_change(self, channel, newname):
         ''' notify mediator that a player wants to change name '''
@@ -109,10 +111,17 @@ class NetworkController(Server):
         
     def broadcast_chat(self, txt, author):
         data = {"action": "chat", "msg": {"txt":txt, "author":author}}
-        [p.Send(data) for p in self.chan_to_name.keys()]
+        [chan.Send(data) for chan in self.chan_to_name.keys()]
 
     
+    ###### movement
     
+    def received_move(self, channel, dest):
+        pname = self.chan_to_name[channel]
+        self.mediator.player_moved(pname, dest)
         
-            
-             
+    def broadcast_move(self, name, dest):
+        msg = {"author":name, "dest":dest}
+        data = {"action": "move", "msg": msg}
+        [chan.Send(data) for chan in self.chan_to_name.keys()]
+ 

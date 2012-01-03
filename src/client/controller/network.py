@@ -1,19 +1,17 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client.config import config_get_host, config_get_port, config_get_my_name
+from client.config import config_get_host, config_get_port
 from time import time    
 
 class NetworkController(ConnectionListener):
     
     def __init__(self, mainctrler):
-        """ send updates to the server push_freq times per sec
-        if fps < push_freq, then send updates every frame """
+        ''' open connection to the server '''
         self.mc = mainctrler
-        self.connected = False
         host, port = config_get_host(), config_get_port()
         self.Connect((host, port))
-        print("Client connection started")
-        #connection.Send({"action": "msg", "msg": "hello!"})
-    
+        #print("Client connection started")
+        
+        
     def push(self): 
         """ push data to server """
         #TODO: log what has been sent 
@@ -52,8 +50,20 @@ class NetworkController(ConnectionListener):
         
     def send_chat(self, txt):
         connection.Send({"action": "chat", "msg": txt})
+    
+    # MOVEMENT 
         
+    def send_move(self, dest):
+        connection.Send({'action':'move', 'msg':{'dest':dest}})
+    
+    def Network_move(self, data):
+        author = data['msg']['author']
+        dest = data['msg']['dest']
+        self.mc.someone_moved(author, dest)
         
+    
+    
+                
     # disconnection, connection, name changes 
     
     def Network_admin(self, data):
@@ -65,8 +75,11 @@ class NetworkController(ConnectionListener):
             self.mc.someone_changed_name(oldname, newname)
         elif actiontype == 'greet':
             newname = data['msg']['newname']
+            newpos = data['msg']['newpos']
+            onlineppl = data['msg']['onlineppl']
+            self.mc.init_players(onlineppl)
             self.mc.i_changed_name(newname)
-            self.ask_for_name_change(config_get_my_name())
+            self.mc.set_startpos(newpos)
         else: #(dis)connection
             name = data['msg']['name']
             self.mc.someone_admin(name, actiontype)

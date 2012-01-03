@@ -1,8 +1,10 @@
+from client.config import config_get_my_name
 
 class MainController():
     
-    def __init__(self, chatlog):
+    def __init__(self, chatlog, world):
         self.chatlog = chatlog
+        self.world = world
 
     def setnwctrler(self, nwc):
         self.nwctrler = nwc
@@ -12,10 +14,10 @@ class MainController():
     def add_char_typed(self, char):
         self.chatlog.add_char_typed(char)
     
-    def remove_char_typed(self):
+    def backspace(self):
         self.chatlog.remove_char_typed()
         
-    def send_string_typed(self):
+    def validate(self):
         fullstr = self.chatlog.end_of_line()
         # don't send empty strings
         if len(fullstr) > 0: 
@@ -24,6 +26,11 @@ class MainController():
     def someone_said(self, author, txt):
         self.chatlog.someone_said(author, txt)
     
+    
+    # MOVEMENT
+    
+    def someone_moved(self, author, dest):
+        self.world.someone_moved(author, dest)
 
     
     # connection, disconnection and name change
@@ -43,6 +50,9 @@ class MainController():
 
     def i_changed_name(self, newname):
         self.chatlog.set_my_name(newname)
+        self.world.set_myname(newname)
+        self.nwctrler.ask_for_name_change(config_get_my_name())
+
 
     def someone_changed_name(self, oldname, newname):
         if self.chatlog.get_my_name() == oldname:
@@ -53,7 +63,9 @@ class MainController():
         else:
             txt = oldname + ' is now known as ' + newname
             self.chatlog.someone_said('server', txt)
-        
+    
+    def init_players(self, onlineppl):
+        self.world.init_playerlist(onlineppl)
     
     # HUD callbacks
     
@@ -62,4 +74,25 @@ class MainController():
         self.chatlog.sent_hello()
         pass
         
+    # movement
+    
+    def someone_changed_pos(self, name, pos):
+        self.world.someone_moved(name, pos)
+    
+    def set_startpos(self,pos):
+        ''' should only happen at start, not during the game '''
+        self.world.set_start_pos(pos)    
         
+    ''' TODO: factorize go_up and go_down together into movement('up'/'down') '''
+    
+    def go_up(self):
+        newpos = self.world.i_go_up()
+        if newpos: # legal move
+            self.nwctrler.send_move(newpos)
+        # TODO: send 'i'm moving towards newpos' to the server
+    def go_down(self):
+        newpos = self.world.i_go_down()
+        if newpos: # legal move
+            self.nwctrler.send_move(newpos)
+        # TODO: send msg to server
+    

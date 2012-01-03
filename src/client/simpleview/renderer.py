@@ -11,10 +11,11 @@ class SimpleRenderer():
     #each with its own sprites
      
      
-    def __init__(self, worldsprites, hudsprites, chatlog):
+    def __init__(self, worldsprites, hudsprites, chatlog, world):
         """define how the HUD should look like, 
         and prepare the game-world rendering """
         self.chatlog = chatlog
+        self.world = world
         # world and hud sprites point to the sprites from simpleview
         self.worldsprites = worldsprites
         self.hudsprites = hudsprites
@@ -42,12 +43,18 @@ class SimpleRenderer():
     def build_hud(self):        
         btn1 = self.hudsprites.sprites()[0] 
         #TODO: hudprites should be a dict instead of array
-        btn1.setpos((50, 50))
-        btn1.setdims((100, 100))
-        btn1.setimg('square.png')
+        btn1.set_topleft((50, 100))
+        btn1.set_widtheight((100, 100))
+        btn1.set_img('star.png')
         self.alivehudsprites = pygame.sprite.Group()
         self.alivehudsprites.add(btn1)
-
+    
+    def build_world(self):   
+        av = self.worldsprites.sprites()[0] 
+        #TODO: hudprites should be a dict instead of array
+        av.set_topleft((50, 50))
+        av.set_widtheight((50, 50))
+        av.set_img('square.png')
         
     def render(self, frame_period):
         """ fetch state, update sprites, and render world and HUD on screen"""
@@ -60,18 +67,10 @@ class SimpleRenderer():
         self.bg = self.__defaultbg.copy()
         self.render_chat()
         self.__screen.blit(self.bg, (0, 0))
-        
         # draw game world on top of the bg
-        self.worldsprites.draw(self.__screen)
-        
+        self.render_world()
         # add HUD sprites on top of everything
-        btn1 = self.hudsprites.sprites()[0]
-        if self.chatlog.is_helloed():
-            btn1.remove(self.alivehudsprites)
-        else:
-            btn1.add(self.alivehudsprites)
-        self.alivehudsprites.draw(self.__screen)
-        
+        self.render_hud()
         # reveal the scene - this is the last thing to do 
         pygame.display.flip()
 
@@ -98,3 +97,21 @@ class SimpleRenderer():
             txtpos = txtsurf.get_rect(bottom=txtbottom, left=txtleft)
             self.bg.blit(txtsurf, txtpos)
         
+    
+    def render_hud(self):
+        ''' fetch HUD state and display it '''
+        btn1 = self.hudsprites.sprites()[0]
+        if self.chatlog.is_helloed():
+            btn1.remove(self.alivehudsprites)
+        else:
+            btn1.add(self.alivehudsprites)
+        self.alivehudsprites.draw(self.__screen)
+        
+    def render_world(self):
+        ''' fetch game state and display it '''
+        my_spr = self.worldsprites.sprites()[0]
+        pos = self.world.get_mypos()
+        if pos: # at init, no pos means start pos not received from server yet 
+            my_spr.set_topleft(pos)
+        other_players = self.world.get_other_players() 
+        self.worldsprites.draw(self.__screen)

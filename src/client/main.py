@@ -5,6 +5,7 @@ from client.controller.network import NetworkController
 from client.model.chatlog import ChatLog
 from client.simpleview.simpleview import SimpleView
 from pygame.locals import TIMER_RESOLUTION
+from client.model.world import World
 import pygame
 
 
@@ -15,10 +16,11 @@ def main():
     
     # model: game mechanics and state
     chatlog = ChatLog()
+    world = World()
     
     # view and controllers
-    mc = MainController(chatlog)
-    view = SimpleView(chatlog, mc)    
+    mc = MainController(chatlog, world)
+    view = SimpleView(chatlog, world, mc)    
     nwctrler = NetworkController(mc)
     mc.setnwctrler(nwctrler)
     ictrler = InputController(view, mc)

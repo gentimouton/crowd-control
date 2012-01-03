@@ -10,9 +10,9 @@ class AvatarSprite(Sprite):
         self.top, self.left = topleft
         self.rect.topleft = self.left, self.top
          
-    def set_topleft(self, topleft):
-        self.top, self.left = topleft
-        self.rect.topleft = self.left, self.top
+    def set_topleft(self, pos):
+        self.left, self.top = pos
+        self.rect.topleft = pos
         
     def set_img(self, imgname):
         self.image, self.rect = load_image(imgname, (self.width, self.height))

@@ -1,7 +1,8 @@
 from client.abstractview import AbstractView
-from client.simpleview.hudbtn import AbstractHudBtn
+from client.simpleview.hudbtn import HudBtn
 from client.simpleview.renderer import SimpleRenderer
 from client.simpleview.viewcontroller import SimpleViewCtrler
+from client.simpleview.avatar import AvatarSprite
 import pygame.sprite
 
 class SimpleView(AbstractView):
@@ -9,7 +10,7 @@ class SimpleView(AbstractView):
     Contains sprites to be rendered. Those sprites are also added 
     triggers to MainController behavior by the viewcontroller. """
     
-    def __init__(self, chatlog, mainctrler):
+    def __init__(self, chatlog, world, mainctrler):
         self.fps = 60 #render 60 times per sec
         # TODO: this self.fps should be taken into account in self.render()
         # TODO: self.fps should also be fetched from a simpleview config file
@@ -17,13 +18,19 @@ class SimpleView(AbstractView):
         self.hudsprites = pygame.sprite.Group() 
         self.worldsprites = pygame.sprite.Group()
         # TODO: hudsprs and worldsprs should be dictionaries, not Groups 
-        self.rdrr = SimpleRenderer(self.worldsprites, self.hudsprites, chatlog)
-        self.ctrlr = SimpleViewCtrler(self.worldsprites, self.hudsprites, mainctrler)
+        self.rdrr = SimpleRenderer(self.worldsprites,
+                                   self.hudsprites,
+                                   chatlog,
+                                   world)
+        self.ctrlr = SimpleViewCtrler(self.worldsprites,
+                                      self.hudsprites,
+                                      mainctrler)
 
         # build the HUD - needs to be done AFTER Renderer()'s display.setmode()
-        self.btn1 = AbstractHudBtn()
-        self.hudsprites.add(self.btn1)
+        self.btn1 = HudBtn('star.png', (-1, -1), (0, 0), self.hudsprites)
+        self.avatar = AvatarSprite('square.png', (-1, -1), (0, 0), self.worldsprites)
         self.rdrr.build_hud()
+        self.rdrr.build_world()
         self.ctrlr.wire_hub()
 
 
