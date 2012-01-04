@@ -1,6 +1,5 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client.config import config_get_host, config_get_port
-from time import time    
 
 class NetworkController(ConnectionListener):
     

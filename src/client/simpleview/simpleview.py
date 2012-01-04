@@ -1,8 +1,9 @@
 from client.abstractview import AbstractView
+from client.simpleview.avatar import AvatarSprite
 from client.simpleview.hudbtn import HudBtn
 from client.simpleview.renderer import SimpleRenderer
 from client.simpleview.viewcontroller import SimpleViewCtrler
-from client.simpleview.avatar import AvatarSprite
+from weakref import WeakValueDictionary
 import pygame.sprite
 
 class SimpleView(AbstractView):
@@ -17,12 +18,16 @@ class SimpleView(AbstractView):
 
         self.hudsprites = pygame.sprite.Group() 
         self.worldsprites = pygame.sprite.Group()
+        self.avatarsprites = WeakValueDictionary() 
+        
         # TODO: hudsprs and worldsprs should be dictionaries, not Groups 
         self.rdrr = SimpleRenderer(self.worldsprites,
+                                   self.avatarsprites,
                                    self.hudsprites,
                                    chatlog,
                                    world)
         self.ctrlr = SimpleViewCtrler(self.worldsprites,
+                                      self.avatarsprites,
                                       self.hudsprites,
                                       mainctrler)
 

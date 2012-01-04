@@ -2,7 +2,7 @@
 
 class SimpleViewCtrler():
     
-    def __init__(self, worldsprites, hudsprites, mc):
+    def __init__(self, worldsprites, avatarsprites, hudsprites, mc):
         """ assign behavior to world and HUD sprites """        
         # world and hud sprites point to the sprites from simpleview
         self.worldsprites = worldsprites

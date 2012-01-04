@@ -1,5 +1,6 @@
 from client.config import config_get_screencaption, config_get_screenwidth, \
     config_get_screenheight
+from client.simpleview.avatar import AvatarSprite
 import pygame
 
 
@@ -11,13 +12,14 @@ class SimpleRenderer():
     #each with its own sprites
      
      
-    def __init__(self, worldsprites, hudsprites, chatlog, world):
+    def __init__(self, worldsprites, avatarsprites, hudsprites, chatlog, world):
         """define how the HUD should look like, 
         and prepare the game-world rendering """
         self.chatlog = chatlog
         self.world = world
         # world and hud sprites point to the sprites from simpleview
         self.worldsprites = worldsprites
+        self.avatarsprites = avatarsprites
         self.hudsprites = hudsprites
         
         #create screen
@@ -113,5 +115,11 @@ class SimpleRenderer():
         pos = self.world.get_mypos()
         if pos: # at init, no pos means start pos not received from server yet 
             my_spr.set_topleft(pos)
+        # draw other players
         other_players = self.world.get_other_players() 
+        self.avatarsprites = dict()
+        for name in other_players.keys():
+            pos = other_players[name]
+            pspr = AvatarSprite('square.png', pos, (10, 10), self.avatarsprites)
+            self.__screen.blit(pspr.image, pspr.rect)
         self.worldsprites.draw(self.__screen)

@@ -29,6 +29,23 @@ class MainController():
     
     # MOVEMENT
     
+    def set_startpos(self,pos):
+        ''' should only happen at start, not during the game '''
+        self.world.set_start_pos(pos)    
+        
+    ''' TODO: factorize go_up and go_down together into movement('up'/'down') '''
+    
+    def go_up(self):
+        newpos = self.world.i_go_up()
+        if newpos: # legal move
+            self.nwctrler.send_move(newpos)
+        # TODO: send 'i'm moving towards newpos' to the server
+    def go_down(self):
+        newpos = self.world.i_go_down()
+        if newpos: # legal move
+            self.nwctrler.send_move(newpos)
+        # TODO: send msg to server
+    
     def someone_moved(self, author, dest):
         self.world.someone_moved(author, dest)
 
@@ -73,26 +90,3 @@ class MainController():
         self.nwctrler.send_chat("* clicked on green button! *")
         self.chatlog.sent_hello()
         pass
-        
-    # movement
-    
-    def someone_changed_pos(self, name, pos):
-        self.world.someone_moved(name, pos)
-    
-    def set_startpos(self,pos):
-        ''' should only happen at start, not during the game '''
-        self.world.set_start_pos(pos)    
-        
-    ''' TODO: factorize go_up and go_down together into movement('up'/'down') '''
-    
-    def go_up(self):
-        newpos = self.world.i_go_up()
-        if newpos: # legal move
-            self.nwctrler.send_move(newpos)
-        # TODO: send 'i'm moving towards newpos' to the server
-    def go_down(self):
-        newpos = self.world.i_go_down()
-        if newpos: # legal move
-            self.nwctrler.send_move(newpos)
-        # TODO: send msg to server
-    

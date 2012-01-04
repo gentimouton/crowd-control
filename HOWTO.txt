@@ -48,4 +48,7 @@ at this point, you should not have any error running:
 python3.2 examples/chimp.py
 
 
+== tutos and docs ==
 
+using sprites in pygame - http://www.sacredchao.net/~piman/writing/sprite-tutorial.shtml
+list of pygame tutuos - http://www.pygame.org/wiki/tutorials?parent=tut_design
