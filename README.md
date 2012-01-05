@@ -24,7 +24,7 @@ Tools
 
 See `HOWTO-Ubuntu.txt` to setup your dev platform.
 
-GRAPHICS
+Graphics
 ==========
 
 * http://openclipart.org/
