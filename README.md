@@ -10,9 +10,9 @@ todo
 Inspirations
 ===========
 
-Natural Selection
-DOTA
-WoW
+* Natural Selection
+* DOTA
+* WoW
 
 
 Tools
@@ -22,13 +22,13 @@ Tools
 * Pygame1.9.2
 * Eclipse + PyDev
 
-See HOWTO-Ubuntu.txt to setup your dev platform.
+See `HOWTO-Ubuntu.txt` to setup your dev platform.
 
 GRAPHICS
 ==========
 
-http://openclipart.org/
-
+* http://openclipart.org/
+* newsground?
 
 License
 ==========
