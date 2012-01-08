@@ -1,6 +1,6 @@
 from client2.events import CharactorMoveEvent, MapBuiltEvent, TickEvent, \
     CharactorPlaceEvent, QuitEvent
-from client2.widgets import ButtonWidget
+from client2.widgets import ButtonWidget, TextBoxWidget
 from pygame.locals import *
 from pygame.sprite import RenderUpdates
 import pygame
@@ -22,19 +22,23 @@ class MasterView:
         self.background = pygame.Surface(self.window.get_size())
         self.background.fill((0, 0, 0)) #black
         self.window.blit(self.background, (0, 0))
+
+        self.gui_sprites = RenderUpdates()        
         
         # add quit button at bottom 
-        rect = pygame.Rect((151, 301), (99, 49)) #bottom-right of the screen
-        self.gui_sprites = RenderUpdates()
+        rect = pygame.Rect((231, 301), (69, 49)) #bottom-right of the screen
+
         quitEvent = QuitEvent()
         bquit = ButtonWidget(evManager, "Quit", rect=rect,
                              onUpClickEvent=quitEvent)
+        # TODO: chatbox
+        chatbox = TextBoxWidget(evManager, 100)
         
         pygame.display.flip()
 
         self.backSprites = pygame.sprite.RenderUpdates()
         self.frontSprites = pygame.sprite.RenderUpdates()
-        self.backSprites.add(bquit)
+        self.gui_sprites.add(bquit)
 
     
     def show_map(self, gameMap):
@@ -56,7 +60,7 @@ class MasterView:
                 column = 0
                 squareRect = squareRect.move(-(100 * 2), 100)
             column += 1
-            newSprite = CellSprite(sector, self.backSprites)
+            newSprite = SectorSprite(sector, self.backSprites)
             newSprite.rect = squareRect
             newSprite = None
 
@@ -86,24 +90,31 @@ class MasterView:
     
     def get_sector_sprite(self, sector):
         for s in self.backSprites:
-            if isinstance(s, CellSprite) and s.sector == sector:
+            if isinstance(s, SectorSprite) and s.sector == sector:
                 return s
 
 
     
     def notify(self, event):
+        """ At clock ticks, draw what needs to be drawn.
+        When the game is loaded, display it. 
+        """
+        
         if isinstance(event, TickEvent):
-            #Draw Everything
+            # clear the window from all the sprites, replacing them with the bg
             self.backSprites.clear(self.window, self.background)
             self.frontSprites.clear(self.window, self.background)
-
+            self.gui_sprites.clear(self.window, self.background)
+            # update all the sprites - calls update() on each sprite of the groups
             self.backSprites.update()
             self.frontSprites.update()
-
-            dirtyRects1 = self.backSprites.draw(self.window)
-            dirtyRects2 = self.frontSprites.draw(self.window)
-            
-            dirtyRects = dirtyRects1 + dirtyRects2
+            self.gui_sprites.update()
+            # collect the display areas that have changed
+            dirtyRectsB = self.backSprites.draw(self.window)
+            dirtyRectsF = self.frontSprites.draw(self.window)
+            dirtyRectsG = self.gui_sprites.draw(self.window)
+            # and redisplay those areas only
+            dirtyRects = dirtyRectsB + dirtyRectsF + dirtyRectsG
             pygame.display.update(dirtyRects)
 
 
@@ -122,7 +133,7 @@ class MasterView:
 
 
 
-class CellSprite(pygame.sprite.Sprite):
+class SectorSprite(pygame.sprite.Sprite):
     """ The representation of a map cell """
     def __init__(self, sector, group=None):
         pygame.sprite.Sprite.__init__(self, group)

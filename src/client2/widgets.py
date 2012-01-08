@@ -143,13 +143,13 @@ class ButtonWidget(Widget):
 
 
 class TextBoxWidget(Widget):
-    """ widget where user can enter text. 
-    It loses focus when the user clicks somewhere else. 
+    """ widget where the user can enter text. 
+    The widget loses focus when the user clicks somewhere else. 
     TODO: when focused, K_ENTER should do a 'submit' of some sort, and unfocus
     """
     
     def __init__(self, evManager, width, container=None):
-        Widget.__init__(self, evManager, container)
+        Widget.__init__(self, evManager)
 
         self.font = pygame.font.Font(None, 30)
         linesize = self.font.get_linesize() #height
