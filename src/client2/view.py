@@ -1,8 +1,8 @@
 from client2.events import CharactorMoveEvent, MapBuiltEvent, TickEvent, \
     CharactorPlaceEvent, QuitEvent
 from client2.widgets import ButtonWidget, TextBoxWidget
-from pygame.locals import *
 from pygame.sprite import RenderUpdates
+from pygame.rect import Rect
 import pygame
 
 
@@ -26,19 +26,20 @@ class MasterView:
         self.gui_sprites = RenderUpdates()        
         
         # add quit button at bottom 
-        rect = pygame.Rect((231, 301), (69, 49)) #bottom-right of the screen
-
+        rect = Rect((231, 301), (69, 49)) #bottom-right of the screen
         quitEvent = QuitEvent()
         bquit = ButtonWidget(evManager, "Quit", rect=rect,
                              onUpClickEvent=quitEvent)
         # TODO: chatbox
-        chatbox = TextBoxWidget(evManager, 100)
+        rect = Rect((0, 301), (230, 49)) #bottom-left of the screen
+        chatbox = TextBoxWidget(evManager, rect=rect)
         
         pygame.display.flip()
 
         self.backSprites = pygame.sprite.RenderUpdates()
         self.frontSprites = pygame.sprite.RenderUpdates()
         self.gui_sprites.add(bquit)
+        self.gui_sprites.add(chatbox)
 
     
     def show_map(self, gameMap):
@@ -50,7 +51,7 @@ class MasterView:
         # use this squareRect as a cursor and go through the
         # columns and rows and assign the rect 
         # positions of the SectorSprites
-        squareRect = pygame.Rect((-99, 1, 100, 100))
+        squareRect = Rect((-99, 1, 100, 100))
 
         column = 0
         for sector in gameMap.sectors:

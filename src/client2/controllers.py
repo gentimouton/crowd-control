@@ -1,7 +1,8 @@
 from client2.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
 from client2.events import CharactorMoveRequest, TickEvent, QuitEvent, \
-    UpClickEvent, DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent
+    UpClickEvent, DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, \
+    BackspaceKeyPushedEvent
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, \
     K_BACKSPACE, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION
 from pygame.time import Clock

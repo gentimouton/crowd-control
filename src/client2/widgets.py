@@ -1,8 +1,9 @@
 from client2.events import GUIFocusThisWidgetEvent, DownClickEvent, UpClickEvent, \
-    MoveMouseEvent
+    MoveMouseEvent, UnicodeKeyPushedEvent, BackspaceKeyPushedEvent
 from pygame.rect import Rect
 from pygame.sprite import Sprite
 from pygame.surface import Surface
+from pygame.font import Font
 import pygame
 
 
@@ -50,14 +51,14 @@ class ButtonWidget(Widget):
         # will be done in ButtonWidget.update(), called by the view renderer.
         
         self.text = text
-        self.font = pygame.font.Font(None, 40) #default font, 40 pixels high
-        txtimg = self.font.render(self.text, True, (0, 0, 0))
-
+        self.font = Font(None, 40) #default font, 40 pixels high
+        
         if rect:
             self.rect = rect
             self.image = Surface(self.rect.size) #container size from specified rect
             # if txtimg does not fit in rect, it'll get cut (good thing) 
         else:
+            txtimg = self.font.render(self.text, True, (0, 0, 0))
             self.rect = txtimg.get_rect()
             self.image = Surface(self.rect.size) #container size from rendered text
             # if txt changes, the size of the button will stay the same
@@ -79,10 +80,11 @@ class ButtonWidget(Widget):
             color = (0, 0, 255) #blue when not focused
             bgcolor = (100, 100, 0)
         
+        # TODO: is bliting on existing faster than creating a new surface?
         self.image = Surface(self.rect.size) #rectangle container for the text
         self.image.fill(bgcolor)
         txtimg = self.font.render(self.text, True, color)
-        textpos = txtimg.get_rect(centerx=self.image.get_width() / 2, 
+        textpos = txtimg.get_rect(centerx=self.image.get_width() / 2,
                                   centery=self.image.get_height() / 2)
         self.image.blit(txtimg, textpos)
         
@@ -98,14 +100,12 @@ class ButtonWidget(Widget):
         self.evManager.post(focus_event)
         
         if self.onDownClickEvent:
-            print('button down clicked!')
             self.evManager.post(self.onDownClickEvent)
             
                       
     def onupclick(self):
         #self.dirty = True
         if self.onUpClickEvent and self.focused:
-            print('button up clicked!')
             self.evManager.post(self.onUpClickEvent)
 
 
@@ -147,42 +147,67 @@ class TextBoxWidget(Widget):
     The widget loses focus when the user clicks somewhere else. 
     TODO: when focused, K_ENTER should do a 'submit' of some sort, and unfocus
     """
-    
-    def __init__(self, evManager, width, container=None):
+        
+    def __init__(self, evManager, rect=None):
         Widget.__init__(self, evManager)
-
-        self.font = pygame.font.Font(None, 30)
-        linesize = self.font.get_linesize() #height
-
-        self.rect = pygame.Rect((0, 0, width, linesize + 4))
-        boxImg = pygame.Surface(self.rect.size).convert_alpha()
-        bgcolor = (255, 255, 255) #white
-        pygame.draw.rect(boxImg, bgcolor, self.rect, 4)
-
-        self.emptyImg = boxImg.convert_alpha()
-        self.image = boxImg
+        # Widget init sets dirty to true, hence the actual rendering 
+        # will be done in TextBoxWidget.update(), called by the view renderer.
 
         self.text = ''
-        self.textPos = (22, 2) #TODO: why 22?
-        self.textColor = (0, 0, 0) #black
+        self.font = Font(None, 25)
+        
+        if rect:
+            self.rect = rect
+        else:
+            self.rect = Rect((0, 0), (100, 25 + 4)) #default width = 100px,
+            # 25px = font height, 
+            # 4px = border bottom + padding bottom + padding top + border top  
+        
+        # rectangle to be drawn around the box as border 
+        border_rect = Rect((0, 0), self.rect.size)
+        # draw and store unfocused empty box
+        emptyboxImg = Surface(self.rect.size)
+        self.unfocused_bgcolor = (111, 111, 111) #grey
+        self.unfocused_txtcolor = (255, 255, 255) #white
+        emptyboxImg.fill(self.unfocused_bgcolor)
+        pygame.draw.rect(emptyboxImg, self.unfocused_txtcolor, border_rect, 2)
+        self.unfocused_emptyboxImg = emptyboxImg.convert_alpha()
+        self.image = emptyboxImg
+        # draw and store focused empty box
+        emptyboxImg = Surface(self.rect.size)
+        self.focused_bgcolor = (255, 255, 255) #white
+        self.focused_txtcolor = (0, 0, 0) #black
+        emptyboxImg.fill(self.focused_bgcolor)
+        pygame.draw.rect(emptyboxImg, self.focused_txtcolor, border_rect, 2)
+        self.focused_emptyboxImg = emptyboxImg.convert_alpha()
+        
+        self.textPos = (4, 2) # 4px padding-left and 2px padding-top 
 
 
     def update(self):
+        """ render the text in the box """
         if not self.dirty:
             return
 
         text = self.text
         if self.focused:
             text += '|'
-
-        textImg = self.font.render(text, 1, textColor)
-        self.image.blit(self.emptyImg, (0, 0))
+            txtcolor = self.focused_txtcolor
+            emptyboximg = self.focused_emptyboxImg
+        else:
+            txtcolor = self.unfocused_txtcolor
+            emptyboximg = self.unfocused_emptyboxImg
+                        
+        textImg = self.font.render(text, True, txtcolor)
+        # cover the previous img instead of creating a new one
+        # TODO: is bliting on existing faster than creating a new surface?
+        self.image.blit(emptyboximg, (0, 0))
         self.image.blit(textImg, self.textPos)
 
         self.dirty = False
 
 
-    def onclick(self):
+    def ondownclick(self):
         self.focused = True
         self.dirty = True
 
@@ -194,18 +219,18 @@ class TextBoxWidget(Widget):
 
     def notify(self, event):
 
-        if isinstance(event, ClickEvent): 
+        if isinstance(event, DownClickEvent): 
             if self.rect.collidepoint(event.pos):
-                self.onclick()
+                self.ondownclick()
             elif self.focused: #user clicked on something else
                 self.set_focus(False)
 
         elif isinstance(event, UnicodeKeyPushedEvent) and self.focused:
             # add visible characters at the end of existing string
-            newtxt = self.text + event.key
+            newtxt = self.text + event.unicode
             self.set_text(newtxt)
         elif isinstance(event, BackspaceKeyPushedEvent) and self.focused:
-            #strip last character
+            # erase last character
             newtxt = self.text[:(len(self.text) - 1)]
             self.set_text(newtxt)
 
