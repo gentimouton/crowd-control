@@ -1,20 +1,20 @@
 #! /usr/bin/env python3
 
-from client2.controllers import InputController, CPUSpinnerController
+from client2.controllers import InputController, ClockController
 from client2.events import EventManager
 from client2.model import Game
-from client2.view import GameView
+from client2.view import MasterView
+
 
 def main():
-    """..."""
     evManager = EventManager()
 
     kb = InputController(evManager)
-    spinner = CPUSpinnerController(evManager)
-    v = GameView(evManager)
+    clock = ClockController(evManager) #the main loop is in there
+    mv = MasterView(evManager)
     g = Game(evManager)
 
-    spinner.run()
+    clock.run()
 
 if __name__ == "__main__":
     main()

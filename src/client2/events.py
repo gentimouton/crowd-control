@@ -45,12 +45,23 @@ class GUIFocusThisWidgetEvent(Event):
         self.name = "Activate particular widget Event"
         self.widget = widget
 
-class ClickEvent(Event):
-    """..."""
+class DownClickEvent(Event):
+    """ When a button of the mouse is pushed down """
     def __init__(self, pos):
-        self.name = "Mouse Click Event"
+        self.name = "Mouse DownClick Event"
         self.pos = pos
-        
+class UpClickEvent(Event):
+    """ When a button of the mouse is raised up """
+    def __init__(self, pos):
+        self.name = "Mouse UpClick Event"
+        self.pos = pos
+
+class MoveMouseEvent(Event):
+    """ When the mouse moves """
+    def __init__(self, pos):
+        self.name = "Mouse Move Event"
+        self.pos = pos
+
 class UnicodeKeyPushedEvent(Event):
     """ only concerns keys with visible representation
     (letters, numbers, ...) """
