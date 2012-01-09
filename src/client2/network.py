@@ -1,6 +1,7 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client2.config import config_get_host, config_get_port, config_get_my_name
-from client2.events import TickEvent, SendChatEvent, ReceivedChatEvent
+from client2.events import TickEvent, SendChatEvent, NetworkReceivedChatEvent, \
+    ServerGreetEvent
 
 class NetworkController(ConnectionListener):
     
@@ -52,7 +53,7 @@ class NetworkController(ConnectionListener):
     def Network_chat(self, data):
         author = data['msg']['author']
         txt = data['msg']['txt']
-        ev = ReceivedChatEvent(author, txt)
+        ev = NetworkReceivedChatEvent(author, txt)
         self.evManager.post(ev)
         
         
@@ -85,28 +86,32 @@ class NetworkController(ConnectionListener):
     The client knows if the server accepted the
     name change by a server broadcast which triggers 
     someone_changed_name(oldname=server-given-name). 
-    TODO: if the name change was rejected, client should be notified
-    and user should be told that the preferred name is already in use.
-     """
+    TODO: if the name change was rejected, the client should be notified
+    and the user should be told that his preferred name is already in use.
+    """
         
     def Network_admin(self, data):
-        """ left, join, and namechange messages """
+        """ greeting, left, join, and name change messages """
         actiontype = data['msg']['type']
-        if actiontype == 'namechange':
+
+        if actiontype == 'greet':
+            newname = data['msg']['newname']
+            newpos = data['msg']['newpos']
+            onlineppl = data['msg']['onlineppl']
+            print('greet', newname, newpos, onlineppl)
+            preferred_name = config_get_my_name()
+            if newname is not preferred_name:
+                self.ask_for_name_change(preferred_name)
+            ev = ServerGreetEvent(newname, newpos, onlineppl)
+            self.evManager.post(ev)
+
+        elif actiontype == 'namechange':
             oldname = data['msg']['old']
             newname = data['msg']['new']
             #self.mc.someone_changed_name(oldname, newname)
             print('namechange', oldname, newname)
             # TODO: send msg to evtMgr
-        elif actiontype == 'greet':
-            newname = data['msg']['newname']
-            newpos = data['msg']['newpos']
-            onlineppl = data['msg']['onlineppl']
-            print('greet', newname, newpos, onlineppl)
-            name_i_want = config_get_my_name()
-            if newname is not name_i_want:
-                self.ask_for_name_change(name_i_want)
-            # TODO: send msg to evtMgr
+        
         else: #(dis)connection
             name = data['msg']['name']
             #self.mc.someone_admin(name, actiontype) #TODO: send to evtMgr

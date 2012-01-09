@@ -90,15 +90,34 @@ class SendChatEvent(Event):
         self.name = "Ask to send a chat message to the server"
         self.txt = txt
 
-class ReceivedChatEvent(Event):
+class NetworkReceivedChatEvent(Event):
     def __init__(self, author, txt):
         self.name = "Received a chat message from the server"
         self.author = author
         self.text = txt
-        
+
+class ChatlogUpdatedEvent(Event):
+    """ The model asks the view to refresh the chatlog """
+    def __init__(self, author, txt):
+        self.name = "Chatlog model has been updated"
+        self.author = author
+        self.text = txt
+
 
 ##############################################################################
+""" NETWORK """
 
+
+class ServerGreetEvent(Event):
+    def __init__(self, newname, newpos, onlineppl):
+        self.name = "Received a greeting message from the server"
+        self.newname = newname
+        self.newpos = newpos
+        self.onlineppl = onlineppl
+        
+
+
+##############################################################################
 
         
 class EventManager:
@@ -120,7 +139,7 @@ class EventManager:
         
 
     def post(self, event):
-        for listener in self.listeners:
+        for listener in self.listeners.copy(): #shallow copy 
             #NOTE: If the weakref has died, it will be 
             #automatically removed, so we don't have 
             #to worry about it.

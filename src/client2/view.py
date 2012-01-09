@@ -1,6 +1,7 @@
 from client2.events import CharactorMoveEvent, MapBuiltEvent, TickEvent, \
     CharactorPlaceEvent, QuitEvent
-from client2.widgets import ButtonWidget, InputFieldWidget, TextLabelWidget
+from client2.widgets import ButtonWidget, InputFieldWidget, TextLabelWidget, \
+    ChatLogWidget
 from pygame.rect import Rect
 from pygame.sprite import RenderUpdates
 import pygame
@@ -34,8 +35,10 @@ class MasterView:
         # TODO: chatbox
         rect = Rect((0, 361), (230, 19)) #bottom and bottom-left of the screen
         chatbox = InputFieldWidget(evManager, rect=rect)
-        rect = Rect((0, 301), (230, 19)) #bottom and bottom-left of the screen
-        chatlabel = TextLabelWidget(evManager, '', rect=rect)
+        #rect = Rect((0, 301), (230, 19)) 
+        #chatlabel = TextLabelWidget(evManager, '', rect=rect)
+        rect = Rect((0, 301), (230, 60)) # just above the chat input field
+        chatwindow = ChatLogWidget(evManager, numlines=3, rect=rect)
         
         pygame.display.flip()
 
@@ -45,7 +48,8 @@ class MasterView:
         self.gui_sprites.add(bquit)
         self.gui_sprites.add(placeholder)
         self.gui_sprites.add(chatbox)
-        self.gui_sprites.add(chatlabel)
+        #self.gui_sprites.add(chatlabel)
+        self.gui_sprites.add(chatwindow)
 
     
     def show_map(self, gameMap):
@@ -103,7 +107,8 @@ class MasterView:
 
     
     def notify(self, event):
-        """ At clock ticks, draw what needs to be drawn.
+        """ At the beginning, display the map.
+        At clock ticks, draw what needs to be drawn.
         When the game is loaded, display it. 
         """
         

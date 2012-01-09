@@ -1,39 +1,66 @@
 from client2.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
 from client2.events import CharactorMoveEvent, GameStartedEvent, \
-    CharactorMoveRequest, TickEvent, MapBuiltEvent, CharactorPlaceEvent
+    CharactorMoveRequest, MapBuiltEvent, CharactorPlaceEvent, \
+    NetworkReceivedChatEvent, ChatlogUpdatedEvent
+from collections import deque
 
 
 
 class Game:
-    """..."""
-
-    STATE_PREPARING = 'preparing'
-    STATE_RUNNING = 'running'
-    STATE_PAUSED = 'paused'
-
+    """ The top of the model. Contains players and map. """
 
     def __init__(self, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
-
-        self.state = Game.STATE_PREPARING
         
         self.players = [ Player(evManager) ]
         self.map = Map(evManager)
-
-
-    def start(self):
-        self.map.build()
-        self.state = Game.STATE_RUNNING
+        self.chatlog = ChatLog(evManager)
         ev = GameStartedEvent(self)
         self.evManager.post(ev)
 
 
     def notify(self, event):
-        if isinstance(event, TickEvent):
-            if self.state == Game.STATE_PREPARING:
-                self.start()
+        pass
+
+
+
+
+##############################################################################
+
+
+class ChatLog(object):
+    """ store all that deals with the chat window """
+    
+    def __init__(self, evManager):
+        self.evManager = evManager
+        self.evManager.register_listener(self)
+        
+        #double-ended queue to remember the most recent 30 messages
+        self.chatlog = deque(maxlen=30) 
+
+
+    def notify(self, event):
+        """ """
+        if isinstance(event, NetworkReceivedChatEvent):
+            msg = {'author':event.author, 'text':event.text}
+            self.add_chatmsg(msg)
+            
+            
+    def add_chatmsg(self, msg):
+        """ add a message to the chatlog.
+        if full, remove oldest message 
+        """
+        self.chatlog.appendleft(msg)
+        
+        ev = ChatlogUpdatedEvent(msg['author'], msg['text'])
+        self.evManager.post(ev)
+
+
+
+##############################################################################
+
 
 
 class Player(object):
@@ -54,6 +81,10 @@ class Player(object):
 
     def notify(self, event):
         pass
+
+
+
+##############################################################################
 
 
 class Charactor:
@@ -102,25 +133,23 @@ class Charactor:
             self.move(event.direction)
 
 
+
+##############################################################################
+
+
+
 class Map:
     """..."""
 
-    STATE_PREPARING = 0
-    STATE_BUILT = 1
-
-
-
     def __init__(self, evManager):
-        self.evManager = evManager
-        #self.evManager.register_listener( self )
+        """ make a 3x3 map, and connect the sectors to each other """
 
-        self.state = Map.STATE_PREPARING
+        self.evManager = evManager
+        #self.evManager.register_listener(self)
 
         self.sectors = []
         self.startSectorIndex = 0
-
-
-    def build(self):
+        
         for i in range(9):
             self.sectors.append(Sector(self.evManager))
 
@@ -152,10 +181,12 @@ class Map:
         self.sectors[6].neighbors[DIRECTION_RIGHT] = self.sectors[7]
         self.sectors[7].neighbors[DIRECTION_RIGHT] = self.sectors[8]
 
-        self.state = Map.STATE_BUILT
-
         ev = MapBuiltEvent(self)
         self.evManager.post(ev)
+
+
+##############################################################################
+
 
 
 class Sector:

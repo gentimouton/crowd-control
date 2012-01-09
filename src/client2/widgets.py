@@ -1,12 +1,12 @@
 from client2.events import DownClickEvent, UpClickEvent, MoveMouseEvent, \
-    UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ReceivedChatEvent
+    UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ChatlogUpdatedEvent
 from pygame.font import Font
 from pygame.locals import K_BACKSPACE, K_RETURN
 from pygame.rect import Rect
-from pygame.sprite import Sprite
+from pygame.sprite import Sprite, RenderUpdates
 from pygame.surface import Surface
 import pygame
-
+from collections import deque
 
 
 class Widget(Sprite):
@@ -255,7 +255,8 @@ class InputFieldWidget(Widget):
 class TextLabelWidget(Widget):
     """ display static text """ 
     
-    def __init__(self, evManager, text, rect=None):
+    def __init__(self, evManager, text, rect=None, txtcolor=(255, 255, 0),
+                 bgcolor=(111, 111, 0)):
         Widget.__init__(self, evManager)
 
         self.font = Font(None, 22)
@@ -266,8 +267,8 @@ class TextLabelWidget(Widget):
             # 22px = font height, 4px from 1px each of  border bottom,
             # padding bottom, padding top, and border top 
         
-        self.txtcolor = (255, 255, 0) #yellow
-        self.bgcolor = (111, 111, 0) #brown
+        self.txtcolor = txtcolor 
+        self.bgcolor = bgcolor
         self.text = text
         self.image = Surface(self.rect.size)
         
@@ -276,6 +277,9 @@ class TextLabelWidget(Widget):
         self.text = text
         self.dirty = True
 
+    def get_text(self):
+        return self.text
+    
 
     def update(self):
         if not self.dirty:
@@ -293,6 +297,86 @@ class TextLabelWidget(Widget):
         
 
     def notify(self, event):
-        if isinstance(event, ReceivedChatEvent):
-            self.set_text(event.author + ': ' + event.text)
         Widget.notify(self, event)
+
+
+############################################################################
+
+
+
+class ChatLogWidget(Widget):
+    """ display static text """ 
+    
+    def __init__(self, evManager, numlines=3, rect=None):
+        Widget.__init__(self, evManager)
+
+        self.font = Font(None, 22)
+        if rect:
+            self.rect = rect
+        else:
+            self.rect = Rect((0, 0), (100, (22 + 4) * numlines)) 
+            #100px = default width,
+            # 22px = font height, 4px = 1px for each of border bottom,
+            # padding bottom, padding top, and border top, 
+        
+        self.txtcolor = (255, 255, 0) #yellow
+        self.bgcolor = (111, 111, 0) #brown
+        self.image = Surface(self.rect.size).fill(self.bgcolor)
+        
+        self.maxnumlines = numlines
+        self.linewidgets = deque(maxlen=numlines) # deque of TextLabelWidgets
+        
+        
+        
+    def addline(self, linetxt):
+        """ If there's room, add a line on top, and then shift all widget texts upwards.
+        If there's no room, only shift the texts upwards (don't add new widgets). 
+        """
+        
+        if len(self.linewidgets) < self.maxnumlines: 
+            # there's room to add another text widget on top of existing ones
+            lines_from_top = self.maxnumlines - len(self.linewidgets)
+            line_height = self.rect.height / self.maxnumlines
+            newline_top = (lines_from_top - 1) * line_height
+            newline_rect = Rect(0, newline_top, self.rect.width, line_height)
+            txtwidget = TextLabelWidget(self.evManager, '', newline_rect)
+            # this empty text will be replaced when we shift all the texts upwards
+            self.linewidgets.append(txtwidget)
+        
+        # shift the widgets' texts to their upper neighbor
+        nextlinetxt = linetxt
+        for wid in self.linewidgets:
+            # swap nextlinetxt with widget's text
+            tmptxt = wid.get_text()
+            wid.set_text(nextlinetxt) #makes the widget dirty  
+            nextlinetxt = tmptxt
+        
+        self.dirty = True # causes all linewidgets to be updated
+        
+    
+    def update(self):
+        """ update all the contained linewidgets """
+        
+        if not self.dirty:
+            return
+        
+        self.image = Surface(self.rect.size) 
+        self.image.fill(self.bgcolor)
+        
+        for wid in self.linewidgets:
+            wid.update()
+            self.image.blit(wid.image, wid.rect)
+
+        self.dirty = False
+        
+        
+        
+    def notify(self, event):
+        if isinstance(event, ChatlogUpdatedEvent):
+            self.addline(event.author + ': ' + event.text)
+            
+        Widget.notify(self, event)
+        
+
+
+
