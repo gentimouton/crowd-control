@@ -1,8 +1,8 @@
 from client2.events import CharactorMoveEvent, MapBuiltEvent, TickEvent, \
     CharactorPlaceEvent, QuitEvent
-from client2.widgets import ButtonWidget, TextBoxWidget
-from pygame.sprite import RenderUpdates
+from client2.widgets import ButtonWidget, InputFieldWidget, TextLabelWidget
 from pygame.rect import Rect
+from pygame.sprite import RenderUpdates
 import pygame
 
 
@@ -16,30 +16,36 @@ class MasterView:
         self.evManager.register_listener(self)
 
         pygame.init() #calling this multiple times has no effect
-        self.window = pygame.display.set_mode((300, 350))
+        self.window = pygame.display.set_mode((300, 380))
         pygame.display.set_caption('CC')
         
         self.background = pygame.Surface(self.window.get_size())
         self.background.fill((0, 0, 0)) #black
         self.window.blit(self.background, (0, 0))
-
-        self.gui_sprites = RenderUpdates()        
+     
         
-        # add quit button at bottom 
-        rect = Rect((231, 301), (69, 49)) #bottom-right of the screen
+        # add quit button and placeholder at bottom-right 
+        rect = Rect((231, 341), (69, 39)) 
         quitEvent = QuitEvent()
         bquit = ButtonWidget(evManager, "Quit", rect=rect,
                              onUpClickEvent=quitEvent)
+        rect = Rect((231, 301), (69, 39)) 
+        placeholder = ButtonWidget(evManager, "Meh.", rect=rect)
         # TODO: chatbox
-        rect = Rect((0, 301), (230, 49)) #bottom-left of the screen
-        chatbox = TextBoxWidget(evManager, rect=rect)
+        rect = Rect((0, 361), (230, 19)) #bottom and bottom-left of the screen
+        chatbox = InputFieldWidget(evManager, rect=rect)
+        rect = Rect((0, 301), (230, 19)) #bottom and bottom-left of the screen
+        chatlabel = TextLabelWidget(evManager, '', rect=rect)
         
         pygame.display.flip()
 
         self.backSprites = pygame.sprite.RenderUpdates()
         self.frontSprites = pygame.sprite.RenderUpdates()
+        self.gui_sprites = RenderUpdates()   
         self.gui_sprites.add(bquit)
+        self.gui_sprites.add(placeholder)
         self.gui_sprites.add(chatbox)
+        self.gui_sprites.add(chatlabel)
 
     
     def show_map(self, gameMap):

@@ -1,10 +1,12 @@
-from client2.events import GUIFocusThisWidgetEvent, DownClickEvent, UpClickEvent, \
-    MoveMouseEvent, UnicodeKeyPushedEvent, BackspaceKeyPushedEvent
+from client2.events import DownClickEvent, UpClickEvent, MoveMouseEvent, \
+    UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ReceivedChatEvent
+from pygame.font import Font
+from pygame.locals import K_BACKSPACE, K_RETURN
 from pygame.rect import Rect
 from pygame.sprite import Sprite
 from pygame.surface import Surface
-from pygame.font import Font
 import pygame
+
 
 
 class Widget(Sprite):
@@ -26,17 +28,12 @@ class Widget(Sprite):
 
 
     def notify(self, event):
-        """ Focus me if I was the target """
-        if isinstance(event, GUIFocusThisWidgetEvent):
-            if event.widget is self:
-                self.set_focus(True)
-            elif self.focused: #user clicked on an other widget
-                self.set_focus(False)
+        pass
             
             
             
 
-
+#############################################################################
 
 
 
@@ -92,32 +89,34 @@ class ButtonWidget(Widget):
 
 
     def ondownclick(self):
-        """ button down focuses the widget"""
-        self.dirty = True
-        focus_event = GUIFocusThisWidgetEvent(self) 
-        # this event will be caught by Widget.notify() 
-        # when it comes back to that ButtonWidget 
-        self.evManager.post(focus_event)
+        """ button down focuses and triggers eventual behavior """
+        self.dirty = True 
+        self.set_focus(True)
         
         if self.onDownClickEvent:
             self.evManager.post(self.onDownClickEvent)
             
                       
     def onupclick(self):
-        #self.dirty = True
-        if self.onUpClickEvent and self.focused:
-            self.evManager.post(self.onUpClickEvent)
+        """ button up loses focus and triggers eventual behavior """
+        if self.focused:
+            self.dirty = True
+            self.set_focus(False)
+            
+            if self.onUpClickEvent:
+                self.evManager.post(self.onUpClickEvent)
 
 
     def onmousemovein(self):
         pass
     
+    
     def onmousemoveout(self):
-        """ default behavior: unfocus the button 
-        when the mouse moves out of it 
-        """ 
-        if not self.onMouseMoveOutEvent: #default behavior
-            self.set_focus(False)
+        """ if focused, lose focus when the mouse moves out """ 
+        if self.focused:
+            if not self.onMouseMoveOutEvent: #default behavior
+                self.set_focus(False)
+        
         
     def notify(self, event):
         if isinstance(event, DownClickEvent):
@@ -139,10 +138,10 @@ class ButtonWidget(Widget):
 
 
 
+#############################################################################
 
 
-
-class TextBoxWidget(Widget):
+class InputFieldWidget(Widget):
     """ widget where the user can enter text. 
     The widget loses focus when the user clicks somewhere else. 
     TODO: when focused, K_ENTER should do a 'submit' of some sort, and unfocus
@@ -151,17 +150,17 @@ class TextBoxWidget(Widget):
     def __init__(self, evManager, rect=None):
         Widget.__init__(self, evManager)
         # Widget init sets dirty to true, hence the actual rendering 
-        # will be done in TextBoxWidget.update(), called by the view renderer.
+        # will be done in InputFieldWidget.update(), called by the view renderer.
 
         self.text = ''
-        self.font = Font(None, 25)
+        self.font = Font(None, 22)
         
         if rect:
             self.rect = rect
         else:
-            self.rect = Rect((0, 0), (100, 25 + 4)) #default width = 100px,
-            # 25px = font height, 
-            # 4px = border bottom + padding bottom + padding top + border top  
+            self.rect = Rect((0, 0), (100, 22 + 4)) #100px = default width,
+            # 25px = font height, 4px = 1 px for each of border-bottom, 
+            # padding bottom, padding top, and border top.  
         
         # rectangle to be drawn around the box as border 
         border_rect = Rect((0, 0), self.rect.size)
@@ -208,31 +207,92 @@ class TextBoxWidget(Widget):
 
 
     def ondownclick(self):
-        self.focused = True
+        """ when down click, focus widget """
+        self.set_focus(True)
         self.dirty = True
 
 
     def set_text(self, newtext):
+        """ change the content of the text input field """
         self.text = newtext
         self.dirty = True
 
 
+    def submit_text(self):
+        """ send the string typed, and reset the text input field """
+        ev = SendChatEvent(self.text)
+        self.set_text('')
+        self.evManager.post(ev)
+        
+        
     def notify(self, event):
-
+        # get focus if clicked, lose focus if something else is clicked
         if isinstance(event, DownClickEvent): 
             if self.rect.collidepoint(event.pos):
                 self.ondownclick()
             elif self.focused: #user clicked on something else
                 self.set_focus(False)
 
+        # add/remove characters and 'submit' the string
         elif isinstance(event, UnicodeKeyPushedEvent) and self.focused:
             # add visible characters at the end of existing string
             newtxt = self.text + event.unicode
             self.set_text(newtxt)
-        elif isinstance(event, BackspaceKeyPushedEvent) and self.focused:
-            # erase last character
-            newtxt = self.text[:(len(self.text) - 1)]
-            self.set_text(newtxt)
-
+        elif isinstance(event, NonprintableKeyEvent) and self.focused:
+            if event.key == K_BACKSPACE:# erase last character
+                newtxt = self.text[:(len(self.text) - 1)]
+                self.set_text(newtxt)
+            elif event.key == K_RETURN: #submit string
+                self.submit_text()
+            
         Widget.notify(self, event)
 
+
+
+############################################################################
+
+
+class TextLabelWidget(Widget):
+    """ display static text """ 
+    
+    def __init__(self, evManager, text, rect=None):
+        Widget.__init__(self, evManager)
+
+        self.font = Font(None, 22)
+        if rect:
+            self.rect = rect
+        else:
+            self.rect = Rect((0, 0), (100, 22 + 4)) #default width = 100px,
+            # 22px = font height, 4px from 1px each of  border bottom,
+            # padding bottom, padding top, and border top 
+        
+        self.txtcolor = (255, 255, 0) #yellow
+        self.bgcolor = (111, 111, 0) #brown
+        self.text = text
+        self.image = Surface(self.rect.size)
+        
+
+    def set_text(self, text):
+        self.text = text
+        self.dirty = True
+
+
+    def update(self):
+        if not self.dirty:
+            return
+        
+        # TODO: is bliting on existing surf faster than creating a new surface?
+        self.image = Surface(self.rect.size) #rectangle container for the text
+        self.image.fill(self.bgcolor)
+        txtimg = self.font.render(self.text, True, self.txtcolor)
+        textpos = txtimg.get_rect(left=2,
+                                  centery=self.image.get_height() / 2)
+        self.image.blit(txtimg, textpos)
+        
+        self.dirty = False
+        
+
+    def notify(self, event):
+        if isinstance(event, ReceivedChatEvent):
+            self.set_text(event.author + ': ' + event.text)
+        Widget.notify(self, event)

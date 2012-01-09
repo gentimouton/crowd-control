@@ -4,6 +4,11 @@ class Event:
     def __init__(self):
         self.name = "Generic Event"
 
+
+##############################################################################
+""" INPUT CONTROLLER EVENTS """
+
+
 class TickEvent(Event):
     def __init__(self):
         self.name = "CPU Tick Event"
@@ -11,6 +16,44 @@ class TickEvent(Event):
 class QuitEvent(Event):
     def __init__(self):
         self.name = "Program Quit Event"
+
+class DownClickEvent(Event):
+    """ When a button of the mouse is pushed down """
+    def __init__(self, pos):
+        self.name = "Mouse DownClick Event"
+        self.pos = pos
+        
+class UpClickEvent(Event):
+    """ When a button of the mouse is raised up """
+    def __init__(self, pos):
+        self.name = "Mouse UpClick Event"
+        self.pos = pos
+
+class MoveMouseEvent(Event):
+    """ When the mouse moves """
+    def __init__(self, pos):
+        self.name = "Mouse Move Event"
+        self.pos = pos
+
+class UnicodeKeyPushedEvent(Event):
+    """ only concerns keys with visible representation
+    (letters, numbers, ...) """
+    def __init__(self, key, unicode):
+        self.name = "Pushed key with visible representation Event "
+        self.key = key
+        self.unicode = unicode
+
+class NonprintableKeyEvent(Event):
+    """ Triggered by enter, backspace, control, delete, and other keys 
+    that are not letters, numbers, or punctuation 
+    """
+    def __init__(self, key):
+        self.name = "Non-Printablekey pressed Event"
+        self.key = key
+        
+        
+##############################################################################
+""" GAME LOGIC """
 
 class MapBuiltEvent(Event):
     def __init__(self, gameMap):
@@ -39,41 +82,22 @@ class CharactorMoveEvent(Event):
         self.name = "Charactor Move Event"
         self.charactor = charactor
 
-class GUIFocusThisWidgetEvent(Event):
-    """ TODO: is this necessary from ButtonWidget to Widget? """
-    def __init__(self, widget):
-        self.name = "Activate particular widget Event"
-        self.widget = widget
+##############################################################################
+""" CHAT """
 
-class DownClickEvent(Event):
-    """ When a button of the mouse is pushed down """
-    def __init__(self, pos):
-        self.name = "Mouse DownClick Event"
-        self.pos = pos
-class UpClickEvent(Event):
-    """ When a button of the mouse is raised up """
-    def __init__(self, pos):
-        self.name = "Mouse UpClick Event"
-        self.pos = pos
+class SendChatEvent(Event):
+    def __init__(self, txt):
+        self.name = "Ask to send a chat message to the server"
+        self.txt = txt
 
-class MoveMouseEvent(Event):
-    """ When the mouse moves """
-    def __init__(self, pos):
-        self.name = "Mouse Move Event"
-        self.pos = pos
+class ReceivedChatEvent(Event):
+    def __init__(self, author, txt):
+        self.name = "Received a chat message from the server"
+        self.author = author
+        self.text = txt
+        
 
-class UnicodeKeyPushedEvent(Event):
-    """ only concerns keys with visible representation
-    (letters, numbers, ...) """
-    def __init__(self, key, unicode):
-        self.name = "Pushed key with visible representation Event "
-        self.key = key
-        self.unicode = unicode
-
-class BackspaceKeyPushedEvent(Event):
-    ''' TODO: refactor this to also include shift, control, alt, etc...'''
-    def __init__(self):
-        self.name = "Pushed backspace key Event "
+##############################################################################
 
 
         

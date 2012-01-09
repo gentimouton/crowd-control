@@ -2,9 +2,9 @@ from client2.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
 from client2.events import CharactorMoveRequest, TickEvent, QuitEvent, \
     UpClickEvent, DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, \
-    BackspaceKeyPushedEvent
+    NonprintableKeyEvent
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, \
-    K_BACKSPACE, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION
+    K_BACKSPACE, K_RETURN, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION
 from pygame.time import Clock
 import pygame
 
@@ -17,6 +17,8 @@ class InputController:
     def __init__(self, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
+        
+        self.nonprintable_keys = (K_RETURN, K_BACKSPACE) #non-printable keys to detect
 
 
     def notify(self, event):
@@ -33,8 +35,8 @@ class InputController:
                 elif event.type == KEYDOWN:
                     if event.key == K_ESCAPE:
                         ev = QuitEvent()
-                    elif event.key == K_BACKSPACE:
-                        ev = BackspaceKeyPushedEvent()
+                    elif event.key in self.nonprintable_keys: 
+                        ev = NonprintableKeyEvent(event.key)
                     elif event.key == K_UP:
                         ev = CharactorMoveRequest(DIRECTION_UP)
                     elif event.key == K_DOWN:
@@ -82,4 +84,6 @@ class ClockController:
         if isinstance(event, QuitEvent):
             # stop the while loop from running
             self.keep_going = False
+
+
 
