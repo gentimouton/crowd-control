@@ -1,8 +1,8 @@
 from client2.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
-from client2.events import CharactorMoveEvent, GameStartedEvent, \
-    CharactorMoveRequest, MapBuiltEvent, CharactorPlaceEvent, \
-    NetworkReceivedChatEvent, ChatlogUpdatedEvent
+from client2.events import CharactorMoveRequest, ModelBuiltMapEvent, \
+    CharactorPlaceEvent, NetworkReceivedChatEvent, ChatlogUpdatedEvent, \
+    CharactorMoveEvent
 from collections import deque
 
 
@@ -17,8 +17,6 @@ class Game:
         self.players = [ Player(evManager) ]
         self.map = Map(evManager)
         self.chatlog = ChatLog(evManager)
-        ev = GameStartedEvent(self)
-        self.evManager.post(ev)
 
 
     def notify(self, event):
@@ -125,8 +123,11 @@ class Charactor:
 
 
     def notify(self, event):
-        if isinstance(event, GameStartedEvent):
-            gameMap = event.game.map
+        # When the map has been conceived by the model, 
+        # the view is supposed to be notified right away.
+        # Hence, it's safe to place the charactor and notify it.  
+        if isinstance(event, ModelBuiltMapEvent):
+            gameMap = event.map
             self.place(gameMap.sectors[gameMap.startSectorIndex])
 
         elif isinstance(event, CharactorMoveRequest):
@@ -181,7 +182,7 @@ class Map:
         self.sectors[6].neighbors[DIRECTION_RIGHT] = self.sectors[7]
         self.sectors[7].neighbors[DIRECTION_RIGHT] = self.sectors[8]
 
-        ev = MapBuiltEvent(self)
+        ev = ModelBuiltMapEvent(self)
         self.evManager.post(ev)
 
 

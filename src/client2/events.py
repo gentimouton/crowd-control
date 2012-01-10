@@ -1,3 +1,5 @@
+import copy
+from collections import deque
 
 class Event:
     """superclass for events sent to the EventManager"""
@@ -55,15 +57,10 @@ class NonprintableKeyEvent(Event):
 ##############################################################################
 """ GAME LOGIC """
 
-class MapBuiltEvent(Event):
+class ModelBuiltMapEvent(Event):
     def __init__(self, gameMap):
         self.name = "Map Finished Building Event"
         self.map = gameMap
-
-class GameStartedEvent(Event):
-    def __init__(self, game):
-        self.name = "Game Started Event"
-        self.game = game
 
 class CharactorMoveRequest(Event):
     def __init__(self, direction):
@@ -126,21 +123,59 @@ class EventManager:
     def __init__(self):
         from weakref import WeakKeyDictionary
         self.listeners = WeakKeyDictionary()
-        self.eventQueue = []
-
+        self.eventdq = deque()
+        
+        # Rationale: a dict can't change size when iterated
+        #Hence, 1) when a listener is added during a loop iteration over the
+        # existing listeners, add temporarily that new listener to a dict
+        self.newlisteners = WeakKeyDictionary()
+        # 2) same when a listener should be removed during a loop iteration
+        self.oldlisteners = WeakKeyDictionary()
 
     def register_listener(self, listener):
-        self.listeners[ listener ] = 1
+        self.newlisteners[listener] = True
 
 
     def unregister_listener(self, listener):
         if listener in self.listeners:
-            del self.listeners[ listener ]
+            self.oldlisteners[listener] = True
         
 
     def post(self, event):
-        for listener in self.listeners.copy(): #shallow copy 
-            #NOTE: If the weakref has died, it will be 
-            #automatically removed, so we don't have 
-            #to worry about it.
-            listener.notify(event)
+        """ do housekeeping of the listeners (remove/add those who requested it)
+        then wait for clock ticks to notify listeners of all events 
+        in chronological order 
+        """
+        
+        # add new listeners    
+        for newlistener in self.newlisteners:
+            self.listeners[newlistener] = True
+        self.newlisteners.clear()    
+        
+        # remove old listeners
+        for oldlistener in self.oldlisteners:
+            del self.oldlisteners[oldlistener]
+        self.oldlisteners.clear()
+                
+        # at each clock tick, notify all listeners of all the events 
+        # in the order those events were received,
+        if isinstance(event, TickEvent):
+            events = copy.copy(self.eventdq) #shallow copy, only copies object references
+            self.eventdq.clear() #only removes references from the deque
+            
+            while len(events) > 0:
+                ev = events.popleft()    
+                for listener in self.listeners:
+                    listener.notify(ev)
+
+            # don't forget to notify the listeners of the Tick event too
+            for listener in self.listeners:
+                listener.notify(event)
+
+        else: # non-tick events get stacked; they are processed at clock ticks
+            self.eventdq.append(event)
+        
+        
+        
+        
+        

@@ -1,7 +1,6 @@
-from client2.events import CharactorMoveEvent, MapBuiltEvent, TickEvent, \
+from client2.events import CharactorMoveEvent, ModelBuiltMapEvent, TickEvent, \
     CharactorPlaceEvent, QuitEvent
-from client2.widgets import ButtonWidget, InputFieldWidget, TextLabelWidget, \
-    ChatLogWidget
+from client2.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget
 from pygame.rect import Rect
 from pygame.sprite import RenderUpdates
 import pygame
@@ -16,7 +15,7 @@ class MasterView:
         self.evManager = evManager
         self.evManager.register_listener(self)
 
-        pygame.init() #calling this multiple times has no effect
+        pygame.init() #calling init() multiple times does not mess anything
         self.window = pygame.display.set_mode((300, 380))
         pygame.display.set_caption('CC')
         
@@ -130,7 +129,7 @@ class MasterView:
             pygame.display.update(dirtyRects)
 
 
-        elif isinstance(event, MapBuiltEvent):
+        elif isinstance(event, ModelBuiltMapEvent):
             gameMap = event.map
             self.show_map(gameMap)
 
