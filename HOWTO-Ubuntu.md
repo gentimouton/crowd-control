@@ -80,7 +80,7 @@ sudo python3.2 setup.py install
 ````
 
 Now, you should not have any error running:
-````bash
+````
 python3.2 examples/chimp.py
 ````
 
