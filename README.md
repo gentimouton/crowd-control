@@ -13,6 +13,8 @@ Inspirations
 * Natural Selection
 * DOTA
 * WoW
+* the movie 300
+* tower defense games
 
 
 Tools
