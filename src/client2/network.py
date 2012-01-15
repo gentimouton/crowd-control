@@ -128,7 +128,7 @@ class NetworkController(ConnectionListener):
      
     def notify(self, event):
         # TODO: only push and pull every once in a while, not every game loop
-        if isinstance(event, TickEvent): 
+        if isinstance(event, TickEvent):
             self.pull()
             self.push()
         elif isinstance(event, SendChatEvent):

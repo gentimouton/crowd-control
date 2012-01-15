@@ -61,6 +61,7 @@ class InputController:
                     self.evManager.post(ev)
 
 
+###########################################################################
 
 
 class ClockController:
@@ -75,7 +76,7 @@ class ClockController:
     def run(self):
         clock = Clock()
         while self.keep_going:
-            clock.tick(100) # 100 fps to save CPU
+            clock.tick() # 100 fps to save CPU
             event = TickEvent()
             self.evManager.post(event)
             
@@ -87,3 +88,4 @@ class ClockController:
 
 
 
+            

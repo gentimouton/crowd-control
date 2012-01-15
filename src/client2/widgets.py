@@ -3,7 +3,7 @@ from client2.events import DownClickEvent, UpClickEvent, MoveMouseEvent, \
 from pygame.font import Font
 from pygame.locals import K_BACKSPACE, K_RETURN
 from pygame.rect import Rect
-from pygame.sprite import Sprite, RenderUpdates
+from pygame.sprite import Sprite
 from pygame.surface import Surface
 import pygame
 from collections import deque

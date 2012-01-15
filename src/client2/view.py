@@ -1,5 +1,5 @@
 from client2.events import CharactorMoveEvent, ModelBuiltMapEvent, TickEvent, \
-    CharactorPlaceEvent, QuitEvent
+    CharactorPlaceEvent, QuitEvent, SendChatEvent
 from client2.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget
 from pygame.rect import Rect
 from pygame.sprite import RenderUpdates
@@ -24,18 +24,23 @@ class MasterView:
         self.window.blit(self.background, (0, 0))
      
         
-        # add quit button and placeholder at bottom-right 
+        # add quit button and meh_btn at bottom-right 
         rect = Rect((231, 341), (69, 39)) 
         quitEvent = QuitEvent()
-        bquit = ButtonWidget(evManager, "Quit", rect=rect,
+        quit_btn = ButtonWidget(evManager, "Quit", rect=rect,
                              onUpClickEvent=quitEvent)
+        
         rect = Rect((231, 301), (69, 39)) 
-        placeholder = ButtonWidget(evManager, "Meh.", rect=rect)
-        # TODO: chatbox
+        msgEvent = SendChatEvent('meh...') #ask to send 'meh' to the server
+        meh_btn = ButtonWidget(evManager, "Meh.", rect=rect,
+                                   onUpClickEvent=msgEvent)
+        
+        
+        # chat box input
         rect = Rect((0, 361), (230, 19)) #bottom and bottom-left of the screen
         chatbox = InputFieldWidget(evManager, rect=rect)
-        #rect = Rect((0, 301), (230, 19)) 
-        #chatlabel = TextLabelWidget(evManager, '', rect=rect)
+
+        # chat window display
         rect = Rect((0, 301), (230, 60)) # just above the chat input field
         chatwindow = ChatLogWidget(evManager, numlines=3, rect=rect)
         
@@ -44,10 +49,9 @@ class MasterView:
         self.backSprites = pygame.sprite.RenderUpdates()
         self.frontSprites = pygame.sprite.RenderUpdates()
         self.gui_sprites = RenderUpdates()   
-        self.gui_sprites.add(bquit)
-        self.gui_sprites.add(placeholder)
+        self.gui_sprites.add(quit_btn)
+        self.gui_sprites.add(meh_btn)
         self.gui_sprites.add(chatbox)
-        #self.gui_sprites.add(chatlabel)
         self.gui_sprites.add(chatwindow)
 
     
@@ -104,7 +108,24 @@ class MasterView:
                 return s
 
 
-    
+    def render_dirty_sprites(self):    
+        # clear the window from all the sprites, replacing them with the bg
+        self.backSprites.clear(self.window, self.background)
+        self.frontSprites.clear(self.window, self.background)
+        self.gui_sprites.clear(self.window, self.background)
+        # update all the sprites - calls update() on each sprite of the groups
+        self.backSprites.update()
+        self.frontSprites.update()
+        self.gui_sprites.update()
+        # collect the display areas that have changed
+        dirtyRectsB = self.backSprites.draw(self.window)
+        dirtyRectsF = self.frontSprites.draw(self.window)
+        dirtyRectsG = self.gui_sprites.draw(self.window)
+        # and redisplay those areas only
+        dirtyRects = dirtyRectsB + dirtyRectsF + dirtyRectsG
+        pygame.display.update(dirtyRects)
+
+
     def notify(self, event):
         """ At the beginning, display the map.
         At clock ticks, draw what needs to be drawn.
@@ -112,27 +133,12 @@ class MasterView:
         """
         
         if isinstance(event, TickEvent):
-            # clear the window from all the sprites, replacing them with the bg
-            self.backSprites.clear(self.window, self.background)
-            self.frontSprites.clear(self.window, self.background)
-            self.gui_sprites.clear(self.window, self.background)
-            # update all the sprites - calls update() on each sprite of the groups
-            self.backSprites.update()
-            self.frontSprites.update()
-            self.gui_sprites.update()
-            # collect the display areas that have changed
-            dirtyRectsB = self.backSprites.draw(self.window)
-            dirtyRectsF = self.frontSprites.draw(self.window)
-            dirtyRectsG = self.gui_sprites.draw(self.window)
-            # and redisplay those areas only
-            dirtyRects = dirtyRectsB + dirtyRectsF + dirtyRectsG
-            pygame.display.update(dirtyRects)
-
+            self.render_dirty_sprites()
 
         elif isinstance(event, ModelBuiltMapEvent):
             gameMap = event.map
             self.show_map(gameMap)
-
+            
         elif isinstance(event, CharactorPlaceEvent):
             self.show_charactor(event.charactor)
 

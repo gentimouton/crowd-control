@@ -1,5 +1,6 @@
-import copy
+from _weakrefset import WeakSet
 from collections import deque
+
 
 class Event:
     """superclass for events sent to the EventManager"""
@@ -7,6 +8,7 @@ class Event:
         self.name = "Generic Event"
 
 
+        
 ##############################################################################
 """ INPUT CONTROLLER EVENTS """
 
@@ -79,6 +81,7 @@ class CharactorMoveEvent(Event):
         self.name = "Charactor Move Event"
         self.charactor = charactor
 
+
 ##############################################################################
 """ CHAT """
 
@@ -121,61 +124,59 @@ class EventManager:
     """this object is responsible for coordinating most communication
     between the Model, View, and Controller."""
     def __init__(self):
-        from weakref import WeakKeyDictionary
-        self.listeners = WeakKeyDictionary()
+        self.listeners = WeakSet()
         self.eventdq = deque()
         
-        # Rationale: a dict can't change size when iterated
-        #Hence, 1) when a listener is added during a loop iteration over the
-        # existing listeners, add temporarily that new listener to a dict
-        self.newlisteners = WeakKeyDictionary()
-        # 2) same when a listener should be removed during a loop iteration
-        self.oldlisteners = WeakKeyDictionary()
+        # Since a dict can't change size when iterated, when a listener is 
+        # added during a loop iteration over the existing listeners,
+        #  add temporarily that new listener to the newlisteners dict.
+        self.newlisteners = WeakSet() 
+
 
     def register_listener(self, listener):
-        self.newlisteners[listener] = True
+        self.newlisteners.add(listener)
 
 
-    def unregister_listener(self, listener):
-        if listener in self.listeners:
-            self.oldlisteners[listener] = True
-        
+    def join_new_listeners(self):
+        """ add new listeners to the actual listeners """
+        if len(self.newlisteners):
+            for newlistener in self.newlisteners:
+                self.listeners.add(newlistener)
+            self.newlisteners.clear() 
 
+            
     def post(self, event):
         """ do housekeeping of the listeners (remove/add those who requested it)
         then wait for clock ticks to notify listeners of all events 
         in chronological order 
         """
         
-        # add new listeners    
-        for newlistener in self.newlisteners:
-            self.listeners[newlistener] = True
-        self.newlisteners.clear()    
+        if isinstance(event, MoveMouseEvent):
+            pass
+        elif isinstance(event, TickEvent):
+            pass
+        else:
+            print('  Evt -- ', event.name)
         
-        # remove old listeners
-        for oldlistener in self.oldlisteners:
-            del self.oldlisteners[oldlistener]
-        self.oldlisteners.clear()
-                
         # at each clock tick, notify all listeners of all the events 
-        # in the order those events were received,
+        # in the order these events were received
         if isinstance(event, TickEvent):
-            events = copy.copy(self.eventdq) #shallow copy, only copies object references
-            self.eventdq.clear() #only removes references from the deque
-            
-            while len(events) > 0:
-                ev = events.popleft()    
-                for listener in self.listeners:
-                    listener.notify(ev)
-
-            # don't forget to notify the listeners of the Tick event too
+            while len(self.eventdq):
+                ev = self.eventdq.popleft()
+                self.join_new_listeners()
+                for listener in self.listeners: 
+                    #some of those listeners may enqueue events on the fly
+                    # those events will be treated within this while loop,
+                    # they don't have to wait for the next tick event
+                    listener.notify(ev) 
+                    
+                self.join_new_listeners()
+                
+            # post tick event
             for listener in self.listeners:
                 listener.notify(event)
-
-        else: # non-tick events get stacked; they are processed at clock ticks
+            self.join_new_listeners()
+            
+        else:
             self.eventdq.append(event)
-        
-        
-        
-        
-        
+            
