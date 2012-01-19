@@ -139,6 +139,6 @@ class NetworkController(ConnectionListener):
             self.send_chat(event.txt)
         elif isinstance(event, CharactorMoveEvent):
             #self.send_move(event.charactor.sector)
-            print('should send position')
+            print('should send position', event.coords)
     
             

@@ -79,7 +79,7 @@ class MasterView:
 
     
     def show_map(self, gmap):
-        """ blit hte map on the screen.
+        """ blit the map on the screen.
         The pixel width and height of map cells is supposed to be constant.
         The map is always centered on the avatar (unless when avatar is near
         edges) and scrolls to follow the movement of the player's avatar.
@@ -95,25 +95,24 @@ class MasterView:
             for j in range(gmap.height):
                 # TODO: distinguish between entrance and lair and normal cells
                 cellrect = Rect(i * 100, j * 100, 99, 99)
-                cellspr = SectorSprite(gmap.get_sector(i, j), self.backSprites)
+                cellspr = CellSprite(gmap.get_cell(j, i), self.backSprites)
                 cellspr.rect = cellrect
                 # cellspr = None # that was in shandy's code ... why?
 
     
     def show_charactor(self, charactor):
-        sector = charactor.sector
+        cell = charactor.cell
         charactorSprite = CharactorSprite(charactor, self.charactorSprites)
-        sectorSprite = self.get_sector_sprite(sector)
-        charactorSprite.rect.center = sectorSprite.rect.center
+        cell_spr = self.get_cell_sprite(cell)
+        charactorSprite.rect.center = cell_spr.rect.center
 
     
     def move_charactor(self, charactor):
         charactorSprite = self.get_charactor_sprite(charactor)
 
-        sector = charactor.sector
-        sectorSprite = self.get_sector_sprite(sector)
+        cell_spr = self.get_cell_sprite(charactor.cell)
 
-        charactorSprite.moveTo = sectorSprite.rect.center
+        charactorSprite.moveTo = cell_spr.rect.center
 
     
     def get_charactor_sprite(self, charactor):
@@ -121,9 +120,9 @@ class MasterView:
             return s #TODO: there's only one for now
         
     
-    def get_sector_sprite(self, sector):
+    def get_cell_sprite(self, cell):
         for s in self.backSprites:
-            if isinstance(s, SectorSprite) and s.sector == sector:
+            if isinstance(s, CellSprite) and s.cell == cell:
                 return s
 
 
@@ -173,14 +172,14 @@ class MasterView:
 ###########################################################################
 
 
-class SectorSprite(Sprite):
+class CellSprite(Sprite):
     """ The representation of a map cell """
-    def __init__(self, sector, group=None):
+    def __init__(self, cell, group=None):
         Sprite.__init__(self, group)
         self.image = pygame.Surface((99, 99))
         self.image.fill((139, 119, 101))
 
-        self.sector = sector
+        self.cell = cell
 
 
 

@@ -74,17 +74,18 @@ class CharactorMoveRequest(Event):
         self.direction = direction
 
 class CharactorPlaceEvent(Event):
-    """this event occurs when a Charactor is *placed* in a sector,
-    ie it doesn't move there from an adjacent sector."""
-    def __init__(self, charactor, sector):
+    """this event occurs when a Charactor is *placed* in a cell,
+    ie it doesn't move there from an adjacent cell."""
+    def __init__(self, charactor, cell):
         self.name = "Charactor Placement Event"
         self.charactor = charactor
-        self.sector= sector
+        self.cell= cell
 
 class CharactorMoveEvent(Event):
-    def __init__(self, charactor):
+    def __init__(self, charactor, coords):
         self.name = "Charactor Move Event"
         self.charactor = charactor
+        self.coords = coords
 
 class NetworkReceivedCharactorMoveEvent(Event):
     def __init__(self, author, dest):

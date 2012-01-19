@@ -6,7 +6,6 @@ from client2.events import CharactorMoveRequest, ModelBuiltMapEvent, \
     CharactorMoveEvent, ServerGreetEvent, ServerNameChange, ServerPlayerArrived, \
     ServerPlayerLeft
 from collections import deque
-from weakref import WeakValueDictionary
 import os
 
 
@@ -19,14 +18,14 @@ class Game:
         self.evManager.register_listener(self)
         
         self.players = dict()
-        self.map = Map(evManager)
+        self.map = World(evManager)
         self.chatlog = ChatLog(evManager)
 
 
     def add_player(self, name, pos):
         """ add a new player to the list of connected players """
-        sector = self.map.get_sector(pos)
-        newplayer = Player(name, sector, self.evManager)       
+        cell = self.map.get_cell(pos)
+        newplayer = Player(name, cell, self.evManager)       
         self.players[name] = newplayer
         
         
@@ -126,12 +125,12 @@ class Player(object):
     """ the model structure for a person playing the game 
     It has name, score, etc. 
     """
-    def __init__(self, name, sector, evManager):
+    def __init__(self, name, cell, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
 
         self.name = name
-        self.charactors = [ Charactor(sector, evManager) ]
+        self.charactors = [ Charactor(cell, evManager) ]
 
 
     def __str__(self):
@@ -150,15 +149,14 @@ class Player(object):
 class Charactor:
     """ An entity controlled by a player """
 
-    def __init__(self, sector, evManager):
+    def __init__(self, cell, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
 
-        self.sector = sector        
-        ev = CharactorPlaceEvent(self, sector)
+        self.cell = cell        
+        ev = CharactorPlaceEvent(self, cell)
         self.evManager.post(ev)
         
-
 
 
     def __str__(self):
@@ -167,11 +165,13 @@ class Charactor:
 
     def move_if_allowed(self, direction):
         """ move towards that direction if possible """
-        if self.sector.move_possible(direction):
-            newSector = self.sector.neighbors[direction]
-            self.sector = newSector
-            ev = CharactorMoveEvent(self)
+        dest_cell = self.cell.get_adjacent_cell(direction)
+        if dest_cell:
+            self.cell = dest_cell
+            ev = CharactorMoveEvent(self, dest_cell.coords)
             self.evManager.post(ev)
+        else:
+            pass #TODO: give (audio?) feedback that move is not possible
 
 
 
@@ -186,7 +186,7 @@ class Charactor:
 
 
 
-class Map:
+class World:
     """..."""
 
     def __init__(self, evManager):
@@ -196,7 +196,15 @@ class Map:
         #self.evManager.register_listener(self)
         
         
-        
+    def matrix_transpose(self, a):
+        """ matrix transposition: return matrix_transpose(a)
+        TODO: move this into tools, or better: build the map correctly directly
+         """
+        assert(a[0] and a)
+        return [[a[i][j] for i in range(len(a))] for j in range(len(a[0]))]
+    
+    
+    
     def build_world(self, mapname):
         """ open map file and build the map from it
         TODO: this should be shared between server and client 
@@ -225,14 +233,15 @@ class Map:
                 coords = i, j
                 if cellvalue == 'E':#entrance is walkable
                     self.entrance_coords = coords
-                    tmprow.append(Sector(coords, 1, self.evManager)) 
+                    tmprow.append(Cell(self, coords, 1, self.evManager)) 
                 elif cellvalue == 'L':#lair is walkable
                     self.lair_coords = coords
-                    tmprow.append(Sector(coords, 1, self.evManager)) 
+                    tmprow.append(Cell(self, coords, 1, self.evManager)) 
                 else:
-                    tmprow.append(Sector(coords, line[i], self.evManager))
+                    tmprow.append(Cell(self, coords, line[i], self.evManager))
             
             self.cellgrid.append(tmprow)
+        self.cellgrid = self.matrix_transpose(self.cellgrid)
         
         ev = ModelBuiltMapEvent(self)
         self.evManager.post(ev)
@@ -248,52 +257,64 @@ class Map:
 
         def recursive_dist_fill(cell, newdist):
             """ only assign distance to walkable cells """
-            if cell.iswalkable() and cell.get_dist_from_entrance() > newdist:
+            if cell.iswalkable and cell.get_dist_from_entrance() > newdist:
                 cell.set_dist_from_entrance(newdist)
                 for neighborcell in self._get_adjacent_walkable_cells(cell):
                     recursive_dist_fill(neighborcell, newdist + 1)
             return
         
         # start filling from the entrance with distance=0
-        recursive_dist_fill(self.get_sector(self.entrance_coords), 0)
+        recursive_dist_fill(self.get_cell(self.entrance_coords), 0)
         return
 
 
 
-    def get_sector(self, xy, y=None):
+    def get_cell(self, tl, left=None):
         """ cell from coords;
-        accepts get_sector(x,y) or get_sector(coords)
+        accepts get_cell(top,left) or get_cell(coords)
         """ 
-        if y is not None: #y can be 0
-            return self.cellgrid[xy][y]
-        else:
-            x, y = xy
-            return self.cellgrid[x][y]
-        
+        try:
+            if left is not None: #left can be 0, and 0 != None
+                return self.cellgrid[tl][left]
+            else:
+                top, left = tl
+                return self.cellgrid[top][left]
+        except IndexError: #outside of the map
+            return None
+
 
 ##############################################################################
 
 
 
-class Sector:
+class Cell:
     """..."""
-    def __init__(self, coords, walkable, evManager):
+    def __init__(self, world, coords, walkable, evManager):
         self.evManager = evManager
         #self.evManager.register_listener( self )
-
+        self.top, self.left = self.coords = coords
+        self.world = world
         self.iswalkable = walkable
-        
-        self.neighbors = dict()
-
-        self.neighbors[DIRECTION_UP] = None
-        self.neighbors[DIRECTION_DOWN] = None
-        self.neighbors[DIRECTION_LEFT] = None
-        self.neighbors[DIRECTION_RIGHT] = None
-
-    def iswalkable(self):
-        return self.iswalkable
+                    
     
-    def move_possible(self, direction):
-        if self.neighbors[direction]:
-            return True
-
+    def __str__(self):
+        return '<Cell %s %s>' % (self.coords, id(self))
+    
+    
+    def get_adjacent_cell(self, direction):
+        if direction == DIRECTION_UP: # TODO: use 'is' instead of '=='?
+            dest_coords = self.top - 1, self.left
+        elif direction == DIRECTION_DOWN:
+            dest_coords = self.top + 1, self.left
+        elif direction == DIRECTION_LEFT:
+            dest_coords = self.top, self.left - 1
+        elif direction == DIRECTION_RIGHT:
+            dest_coords = self.top, self.left + 1
+        
+        dest_cell = self.world.get_cell(dest_coords) 
+        if dest_cell and dest_cell.iswalkable:
+            return dest_cell
+        else: #non walkable or out of grid
+            return None
+            
+                
