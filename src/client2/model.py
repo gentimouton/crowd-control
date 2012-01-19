@@ -275,10 +275,16 @@ class World:
         """ 
         try:
             if left is not None: #left can be 0, and 0 != None
-                return self.cellgrid[tl][left]
+                if -1 in [tl, left]: # outside of the map
+                    return None
+                else:
+                    return self.cellgrid[tl][left]
             else:
-                top, left = tl
-                return self.cellgrid[top][left]
+                if -1 in tl:
+                    return None
+                else:
+                    top, left = tl
+                    return self.cellgrid[top][left]
         except IndexError: #outside of the map
             return None
 
