@@ -22,6 +22,8 @@ def load_srv_config():
 # main config
 def config_get_fps():
     return int(__dict['fps'])
+def config_get_mapname():
+    return __dict['mapname']
 
 # network
 def config_get_host():

@@ -1,12 +1,35 @@
 from client2.events import CharactorMoveEvent, ModelBuiltMapEvent, TickEvent, \
-    CharactorPlaceEvent, QuitEvent, SendChatEvent
+    CharactorPlaceEvent, QuitEvent, SendChatEvent, NetworkReceivedCharactorMoveEvent
 from client2.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget
 from pygame.rect import Rect
-from pygame.sprite import RenderUpdates
+from pygame.sprite import RenderUpdates, Sprite
+from weakref import WeakValueDictionary
 import pygame
 
 
+class IndexableSprite(Sprite):
+    """ Sprite that can be fetched from a RenderUpdatesDict"""
+    def __init__(self, key=None):
+        Sprite.__init__(self)
+        self.key = key
+    
+class RenderUpdatesDict(RenderUpdates):
+    """ Group class that extends RenderUpdates to enable associating a spr 
+    to a user name """
+     
+    def __init__(self, *sprites):
+        RenderUpdates.__init__(self, *sprites)
+        self.__dict = WeakValueDictionary()
 
+    def add_internal(self, spr):
+        """ add sprite to the group,
+        and index it if it's an IndexableSprite """
+        RenderUpdates.add_internal(self, spr)
+        if isinstance(spr, IndexableSprite):
+            self.__dict[spr.key] = spr
+
+        
+###########################################################################
 
 class MasterView:
     """ links to presentations of game world and HUD """
@@ -46,8 +69,8 @@ class MasterView:
         
         pygame.display.flip()
 
-        self.backSprites = pygame.sprite.RenderUpdates()
-        self.frontSprites = pygame.sprite.RenderUpdates()
+        self.backSprites = RenderUpdates()
+        self.charactorSprites = RenderUpdatesDict()
         self.gui_sprites = RenderUpdates()   
         self.gui_sprites.add(quit_btn)
         self.gui_sprites.add(meh_btn)
@@ -55,33 +78,31 @@ class MasterView:
         self.gui_sprites.add(chatwindow)
 
     
-    def show_map(self, gameMap):
+    def show_map(self, gmap):
+        """ blit hte map on the screen.
+        The pixel width and height of map cells is supposed to be constant.
+        The map is always centered on the avatar (unless when avatar is near
+        edges) and scrolls to follow the movement of the player's avatar.
+        """
+        
         # clear the screen first
         self.background.fill((11, 11, 0))
         self.window.blit(self.background, (0, 0))
-        pygame.display.flip()
-
-        # use this squareRect as a cursor and go through the
-        # columns and rows and assign the rect 
-        # positions of the SectorSprites
-        squareRect = Rect((-99, 1, 100, 100))
-
-        column = 0
-        for sector in gameMap.sectors:
-            if column < 3:
-                squareRect = squareRect.move(100, 0)
-            else:
-                column = 0
-                squareRect = squareRect.move(-(100 * 2), 100)
-            column += 1
-            newSprite = SectorSprite(sector, self.backSprites)
-            newSprite.rect = squareRect
-            newSprite = None
+        pygame.display.flip() 
+        
+        # iterate over cell rows and columns
+        for i in range(gmap.width):
+            for j in range(gmap.height):
+                # TODO: distinguish between entrance and lair and normal cells
+                cellrect = Rect(i * 100, j * 100, 99, 99)
+                cellspr = SectorSprite(gmap.get_sector(i, j), self.backSprites)
+                cellspr.rect = cellrect
+                # cellspr = None # that was in shandy's code ... why?
 
     
     def show_charactor(self, charactor):
         sector = charactor.sector
-        charactorSprite = CharactorSprite(self.frontSprites)
+        charactorSprite = CharactorSprite(charactor, self.charactorSprites)
         sectorSprite = self.get_sector_sprite(sector)
         charactorSprite.rect.center = sectorSprite.rect.center
 
@@ -96,11 +117,9 @@ class MasterView:
 
     
     def get_charactor_sprite(self, charactor):
-        #there will be only one
-        for s in self.frontSprites:
-            return s
-        return None
-
+        for s in self.charactorSprites:
+            return s #TODO: there's only one for now
+        
     
     def get_sector_sprite(self, sector):
         for s in self.backSprites:
@@ -111,15 +130,15 @@ class MasterView:
     def render_dirty_sprites(self):    
         # clear the window from all the sprites, replacing them with the bg
         self.backSprites.clear(self.window, self.background)
-        self.frontSprites.clear(self.window, self.background)
+        self.charactorSprites.clear(self.window, self.background)
         self.gui_sprites.clear(self.window, self.background)
         # update all the sprites - calls update() on each sprite of the groups
         self.backSprites.update()
-        self.frontSprites.update()
+        self.charactorSprites.update()
         self.gui_sprites.update()
         # collect the display areas that have changed
         dirtyRectsB = self.backSprites.draw(self.window)
-        dirtyRectsF = self.frontSprites.draw(self.window)
+        dirtyRectsF = self.charactorSprites.draw(self.window)
         dirtyRectsG = self.gui_sprites.draw(self.window)
         # and redisplay those areas only
         dirtyRects = dirtyRectsB + dirtyRectsF + dirtyRectsG
@@ -127,7 +146,7 @@ class MasterView:
 
 
     def notify(self, event):
-        """ At the beginning, display the map.
+        """ Display the map when it has been built by the model.
         At clock ticks, draw what needs to be drawn.
         When the game is loaded, display it. 
         """
@@ -145,15 +164,19 @@ class MasterView:
         elif isinstance(event, CharactorMoveEvent):
             self.move_charactor(event.charactor)
 
+        elif isinstance(event, NetworkReceivedCharactorMoveEvent):
+            #self.move_charactor(event.charactor)
+            print('should move ', event.author, 'to', event.dest)
 
 
 
+###########################################################################
 
 
-class SectorSprite(pygame.sprite.Sprite):
+class SectorSprite(Sprite):
     """ The representation of a map cell """
     def __init__(self, sector, group=None):
-        pygame.sprite.Sprite.__init__(self, group)
+        Sprite.__init__(self, group)
         self.image = pygame.Surface((99, 99))
         self.image.fill((139, 119, 101))
 
@@ -161,13 +184,16 @@ class SectorSprite(pygame.sprite.Sprite):
 
 
 
+###########################################################################
 
-class CharactorSprite(pygame.sprite.Sprite):
-    """ representation of a character """
+
+
+class CharactorSprite(Sprite):
+    """ The representation of a character """
     
-    def __init__(self, group=None):
-        pygame.sprite.Sprite.__init__(self, group)
-
+    def __init__(self, charactor, group=None):
+        Sprite.__init__(self, group)
+        
         charactorSurf = pygame.Surface((64, 64))
         charactorSurf = charactorSurf.convert_alpha()
         charactorSurf.fill((0, 0, 0, 0)) #make transparent
@@ -175,10 +201,12 @@ class CharactorSprite(pygame.sprite.Sprite):
         self.image = charactorSurf
         self.rect = charactorSurf.get_rect()
 
+        self.charactor = charactor
         self.moveTo = None
 
     
     def update(self):
+        """ TODO: movement could be smoother and last for longer than 1 frame """
         if self.moveTo:
             self.rect.center = self.moveTo
             self.moveTo = None

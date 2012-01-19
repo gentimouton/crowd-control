@@ -1,7 +1,8 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client2.config import config_get_host, config_get_port, config_get_my_name
 from client2.events import TickEvent, SendChatEvent, NetworkReceivedChatEvent, \
-    ServerGreetEvent
+    ServerGreetEvent, CharactorMoveEvent, ServerNameChange, ServerPlayerArrived, \
+    ServerPlayerLeft
 
 class NetworkController(ConnectionListener):
     
@@ -95,27 +96,30 @@ class NetworkController(ConnectionListener):
         actiontype = data['msg']['type']
 
         if actiontype == 'greet':
+            mapname = data['msg']['mapname']
             newname = data['msg']['newname']
             newpos = data['msg']['newpos']
             onlineppl = data['msg']['onlineppl']
-            print('greet', newname, newpos, onlineppl)
             preferred_name = config_get_my_name()
             if newname is not preferred_name:
                 self.ask_for_name_change(preferred_name)
-            ev = ServerGreetEvent(newname, newpos, onlineppl)
+            ev = ServerGreetEvent(mapname, newname, newpos, onlineppl)
             self.evManager.post(ev)
 
         elif actiontype == 'namechange':
             oldname = data['msg']['old']
             newname = data['msg']['new']
-            #self.mc.someone_changed_name(oldname, newname)
-            print('namechange', oldname, newname)
-            # TODO: send msg to evtMgr
-        
+            ev = ServerNameChange(oldname, newname)
+            self.evManager.post(ev)
+
         else: #(dis)connection
             name = data['msg']['name']
-            #self.mc.someone_admin(name, actiontype) #TODO: send to evtMgr
-            print('admindefault', name, actiontype)
+            if actiontype == 'arrived':
+                pos = data['msg']['newpos']
+                ev = ServerPlayerArrived(name, pos)
+            elif actiontype == 'left':
+                ev = ServerPlayerLeft(name)
+            self.evManager.post(ev)
             
             
     def ask_for_name_change(self, newname):
@@ -133,6 +137,8 @@ class NetworkController(ConnectionListener):
             self.push()
         elif isinstance(event, SendChatEvent):
             self.send_chat(event.txt)
-            
+        elif isinstance(event, CharactorMoveEvent):
+            #self.send_move(event.charactor.sector)
+            print('should send position')
     
             

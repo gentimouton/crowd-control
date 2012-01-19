@@ -1,9 +1,13 @@
+from client2.config import config_get_mapname
 from client2.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
 from client2.events import CharactorMoveRequest, ModelBuiltMapEvent, \
     CharactorPlaceEvent, NetworkReceivedChatEvent, ChatlogUpdatedEvent, \
-    CharactorMoveEvent
+    CharactorMoveEvent, ServerGreetEvent, ServerNameChange, ServerPlayerArrived, \
+    ServerPlayerLeft
 from collections import deque
+from weakref import WeakValueDictionary
+import os
 
 
 
@@ -14,14 +18,71 @@ class Game:
         self.evManager = evManager
         self.evManager.register_listener(self)
         
-        self.players = [ Player(evManager) ]
+        self.players = dict()
         self.map = Map(evManager)
         self.chatlog = ChatLog(evManager)
 
 
-    def notify(self, event):
-        pass
+    def add_player(self, name, pos):
+        """ add a new player to the list of connected players """
+        sector = self.map.get_sector(pos)
+        newplayer = Player(name, sector, self.evManager)       
+        self.players[name] = newplayer
+        
+        
+    def remove_player(self, name):
+        """ remove a player """
+        del self.players[name]
+    
+    
+    def update_player_name(self, oldname, newname):
+        """ update a player's name """ 
+        if newname in self.players:
+            print('Warning from model:', oldname, 'changed name to', newname,
+                  'which was already in use')
+        
+        player = self.players[oldname]
+        player.name = newname # TODO: setter instead?
+        self.players[newname] = player
+        del self.players[oldname]
 
+
+    
+    def start_map(self, mapname):
+        """ load map from file """
+        self.mapname = mapname
+        if config_get_mapname() != self.mapname:
+            print('---- Warning: the server map (', self.mapname ,
+                   ') is not the client map (', config_get_mapname(), ')') 
+        self.map.build_world(self.mapname)
+        #self.map.make_path() # TODO: make path
+
+    
+    
+    def notify(self, event):
+        # add/remove players when they join in/leave
+        if isinstance(event, ServerPlayerArrived):
+            self.add_player(event.playername, event.pos)
+        if isinstance(event, ServerPlayerLeft):
+            self.remove_player(event.playername)
+        # update players' names when they change it
+        if isinstance(event, ServerNameChange):
+            self.update_player_name(event.oldname, event.newname)
+            
+        # when the server greets me, build map and set my name 
+        if isinstance(event, ServerGreetEvent):
+            # map stuffs
+            self.start_map(event.mapname)
+            
+            # players stuff
+            for name, pos in event.onlineppl.items():
+                self.add_player(name, pos)
+            self.myname = event.newname 
+            # TODO: self.myname is going to be needed to know which avatar this client can move
+            self.add_player(event.newname, event.newpos)
+            
+
+        
 
 
 
@@ -62,14 +123,15 @@ class ChatLog(object):
 
 
 class Player(object):
-    """..."""
-    def __init__(self, evManager):
+    """ the model structure for a person playing the game 
+    It has name, score, etc. 
+    """
+    def __init__(self, name, sector, evManager):
         self.evManager = evManager
-        self.game = None
-        self.name = ""
         self.evManager.register_listener(self)
 
-        self.charactors = [ Charactor(evManager) ]
+        self.name = name
+        self.charactors = [ Charactor(sector, evManager) ]
 
 
     def __str__(self):
@@ -86,27 +148,25 @@ class Player(object):
 
 
 class Charactor:
-    """..."""
+    """ An entity controlled by a player """
 
-    STATE_INACTIVE = 0
-    STATE_ACTIVE = 1
-
-    def __init__(self, evManager):
+    def __init__(self, sector, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
 
-        self.sector = None
-        self.state = Charactor.STATE_INACTIVE
+        self.sector = sector        
+        ev = CharactorPlaceEvent(self, sector)
+        self.evManager.post(ev)
+        
+
 
 
     def __str__(self):
         return '<Charactor %s>' % id(self)
 
 
-    def move(self, direction):
-        if self.state == Charactor.STATE_INACTIVE:
-            return
-
+    def move_if_allowed(self, direction):
+        """ move towards that direction if possible """
         if self.sector.move_possible(direction):
             newSector = self.sector.neighbors[direction]
             self.sector = newSector
@@ -114,24 +174,11 @@ class Charactor:
             self.evManager.post(ev)
 
 
-    def place(self, sector):
-        self.sector = sector
-        self.state = Charactor.STATE_ACTIVE
-
-        ev = CharactorPlaceEvent(self)
-        self.evManager.post(ev)
-
 
     def notify(self, event):
-        # When the map has been conceived by the model, 
-        # the view is supposed to be notified right away.
-        # Hence, it's safe to place the charactor and notify it.  
-        if isinstance(event, ModelBuiltMapEvent):
-            gameMap = event.map
-            self.place(gameMap.sectors[gameMap.startSectorIndex])
-
-        elif isinstance(event, CharactorMoveRequest):
-            self.move(event.direction)
+        """ ... """
+        if isinstance(event, CharactorMoveRequest):
+            self.move_if_allowed(event.direction)
 
 
 
@@ -143,48 +190,86 @@ class Map:
     """..."""
 
     def __init__(self, evManager):
-        """ make a 3x3 map, and connect the sectors to each other """
+        """ ... """
 
         self.evManager = evManager
         #self.evManager.register_listener(self)
-
-        self.sectors = []
-        self.startSectorIndex = 0
         
-        for i in range(9):
-            self.sectors.append(Sector(self.evManager))
+        
+        
+    def build_world(self, mapname):
+        """ open map file and build the map from it
+        TODO: this should be shared between server and client 
+        """
+        
+        f = open(os.path.join(os.pardir, 'maps', mapname))
+        lines = f.readlines() #might be optimized: for line in open("file.txt"):
+        self.cellgrid = [] #contains game board
 
-        self.sectors[3].neighbors[DIRECTION_UP] = self.sectors[0]
-        self.sectors[4].neighbors[DIRECTION_UP] = self.sectors[1]
-        self.sectors[5].neighbors[DIRECTION_UP] = self.sectors[2]
-        self.sectors[6].neighbors[DIRECTION_UP] = self.sectors[3]
-        self.sectors[7].neighbors[DIRECTION_UP] = self.sectors[4]
-        self.sectors[8].neighbors[DIRECTION_UP] = self.sectors[5]
-
-        self.sectors[0].neighbors[DIRECTION_DOWN] = self.sectors[3]
-        self.sectors[1].neighbors[DIRECTION_DOWN] = self.sectors[4]
-        self.sectors[2].neighbors[DIRECTION_DOWN] = self.sectors[5]
-        self.sectors[3].neighbors[DIRECTION_DOWN] = self.sectors[6]
-        self.sectors[4].neighbors[DIRECTION_DOWN] = self.sectors[7]
-        self.sectors[5].neighbors[DIRECTION_DOWN] = self.sectors[8]
-
-        self.sectors[1].neighbors[DIRECTION_LEFT] = self.sectors[0]
-        self.sectors[2].neighbors[DIRECTION_LEFT] = self.sectors[1]
-        self.sectors[4].neighbors[DIRECTION_LEFT] = self.sectors[3]
-        self.sectors[5].neighbors[DIRECTION_LEFT] = self.sectors[4]
-        self.sectors[7].neighbors[DIRECTION_LEFT] = self.sectors[6]
-        self.sectors[8].neighbors[DIRECTION_LEFT] = self.sectors[7]
-
-        self.sectors[0].neighbors[DIRECTION_RIGHT] = self.sectors[1]
-        self.sectors[1].neighbors[DIRECTION_RIGHT] = self.sectors[2]
-        self.sectors[3].neighbors[DIRECTION_RIGHT] = self.sectors[4]
-        self.sectors[4].neighbors[DIRECTION_RIGHT] = self.sectors[5]
-        self.sectors[6].neighbors[DIRECTION_RIGHT] = self.sectors[7]
-        self.sectors[7].neighbors[DIRECTION_RIGHT] = self.sectors[8]
-
+        # sanity checks on map width and height
+        self.width = len(lines)
+        if self.width == 0:
+            print('Warning: map', mapname, 'has no lines.')
+        else:
+            self.height = len(lines[0].strip().split(','))
+            if self.height == 0:
+                print('Waning: the first line of map', mapname, 'has no cells.')
+        
+        # build the cell matrix
+        for j in range(self.width): 
+            tmprow = []
+            line = lines[j].strip().split(',')
+            
+            for i in range(len(line)):
+                cellvalue = line[i]
+                coords = i, j
+                if cellvalue == 'E':#entrance is walkable
+                    self.entrance_coords = coords
+                    tmprow.append(Sector(coords, 1, self.evManager)) 
+                elif cellvalue == 'L':#lair is walkable
+                    self.lair_coords = coords
+                    tmprow.append(Sector(coords, 1, self.evManager)) 
+                else:
+                    tmprow.append(Sector(coords, line[i], self.evManager))
+            
+            self.cellgrid.append(tmprow)
+        
         ev = ModelBuiltMapEvent(self)
         self.evManager.post(ev)
 
+        
+        
+    def make_path(self):  
+        """ assign to each cell a distance from the entrance: 
+        distance(entrance) = 0,
+        and then have each cell with an assigned distance 
+        sets recursively its neighbors' distance   
+        """
+
+        def recursive_dist_fill(cell, newdist):
+            """ only assign distance to walkable cells """
+            if cell.iswalkable() and cell.get_dist_from_entrance() > newdist:
+                cell.set_dist_from_entrance(newdist)
+                for neighborcell in self._get_adjacent_walkable_cells(cell):
+                    recursive_dist_fill(neighborcell, newdist + 1)
+            return
+        
+        # start filling from the entrance with distance=0
+        recursive_dist_fill(self.get_sector(self.entrance_coords), 0)
+        return
+
+
+
+    def get_sector(self, xy, y=None):
+        """ cell from coords;
+        accepts get_sector(x,y) or get_sector(coords)
+        """ 
+        if y is not None: #y can be 0
+            return self.cellgrid[xy][y]
+        else:
+            x, y = xy
+            return self.cellgrid[x][y]
+        
 
 ##############################################################################
 
@@ -192,10 +277,12 @@ class Map:
 
 class Sector:
     """..."""
-    def __init__(self, evManager):
+    def __init__(self, coords, walkable, evManager):
         self.evManager = evManager
         #self.evManager.register_listener( self )
 
+        self.iswalkable = walkable
+        
         self.neighbors = dict()
 
         self.neighbors[DIRECTION_UP] = None
@@ -203,7 +290,9 @@ class Sector:
         self.neighbors[DIRECTION_LEFT] = None
         self.neighbors[DIRECTION_RIGHT] = None
 
-
+    def iswalkable(self):
+        return self.iswalkable
+    
     def move_possible(self, direction):
         if self.neighbors[direction]:
             return True

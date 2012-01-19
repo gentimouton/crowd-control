@@ -33,6 +33,9 @@ def config_get_screenwidth():
 def config_get_screenheight():
     return int(__dict['screenheight'])
 
+def config_get_mapname():
+    return __dict['mapname']
+
 # --- network
 
 def config_get_host():

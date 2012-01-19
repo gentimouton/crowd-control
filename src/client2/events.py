@@ -64,6 +64,10 @@ class ModelBuiltMapEvent(Event):
         self.name = "Map Finished Building Event"
         self.map = gameMap
 
+
+###############################################################################
+""" MOVEMENT """
+
 class CharactorMoveRequest(Event):
     def __init__(self, direction):
         self.name = "Charactor Move Request"
@@ -72,16 +76,23 @@ class CharactorMoveRequest(Event):
 class CharactorPlaceEvent(Event):
     """this event occurs when a Charactor is *placed* in a sector,
     ie it doesn't move there from an adjacent sector."""
-    def __init__(self, charactor):
+    def __init__(self, charactor, sector):
         self.name = "Charactor Placement Event"
         self.charactor = charactor
+        self.sector= sector
 
 class CharactorMoveEvent(Event):
     def __init__(self, charactor):
         self.name = "Charactor Move Event"
         self.charactor = charactor
 
-
+class NetworkReceivedCharactorMoveEvent(Event):
+    def __init__(self, author, dest):
+        self.name = "Network received movement Event"
+        self.author = author
+        self.dest = dest
+        
+        
 ##############################################################################
 """ CHAT """
 
@@ -109,12 +120,28 @@ class ChatlogUpdatedEvent(Event):
 
 
 class ServerGreetEvent(Event):
-    def __init__(self, newname, newpos, onlineppl):
+    def __init__(self, mapname, newname, newpos, onlineppl):
         self.name = "Received a greeting message from the server"
+        self.mapname = mapname
         self.newname = newname
         self.newpos = newpos
         self.onlineppl = onlineppl
-        
+
+class ServerNameChange(Event):
+    def __init__(self, oldname, newname):
+        self.name = "The server notified that " + oldname + " changed named to " + newname
+        self.oldname = oldname
+        self.newname = newname
+    
+class ServerPlayerArrived(Event):
+    def __init__(self, playername, pos):
+        self.name = "The server notified that " + playername + " connected"
+        self.playername = playername
+        self.pos = pos
+class ServerPlayerLeft(Event):
+    def __init__(self, playername):
+        self.name = "The server notified that " + playername + " left"
+        self.playername = playername
 
 
 ##############################################################################

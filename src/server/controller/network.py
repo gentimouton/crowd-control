@@ -1,7 +1,6 @@
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
 from server.config import config_get_host, config_get_port
-from time import time
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 
@@ -72,15 +71,27 @@ class NetworkController(Server):
         del self.name_to_chan[name]
         del self.chan_to_name[channel]
 
-    def broadcast_conn_status(self, status, name):
+
+    def broadcast_conn_status(self, status, name, pos=None):
         """ notify clients that a new player just arrived (type='arrived') 
         or left (type='left') """
         data = {"action": 'admin', "msg": {"type":status, "name":name}}
-        [chan.Send(data) for chan in self.chan_to_name.keys()]
+        
+        # user joined = broadcast his name and pos to all but him
+        if pos is not None:
+            data['msg']['newpos'] = pos
+            for chan in self.chan_to_name:
+                if self.chan_to_name[chan] != name:
+                    chan.Send(data) 
+        
+        else: # user left: notify everyone
+            for chan in self.chan_to_name:
+                chan.Send(data) 
+                
 
-    def greet(self, name, pos, onlineppl):
+    def greet(self, mapname, name, pos, onlineppl):
         ''' send greeting data to a player '''
-        msg = {"type":'greet', "newname":name, 'newpos':pos,
+        msg = {"type":'greet', 'mapname':mapname, "newname":name, 'newpos':pos,
                'onlineppl':onlineppl}
         chan = self.name_to_chan[name]
         chan.Send({"action": 'admin', "msg": msg})
@@ -98,7 +109,9 @@ class NetworkController(Server):
         self.name_to_chan[newname] = channel
         del self.name_to_chan[oldname]
         msg = {'type':'namechange', 'old':oldname, 'new':newname}
-        [c.Send({'action':'admin', 'msg':msg}) for c in self.chan_to_name.keys()]
+        for c in self.chan_to_name:
+            c.Send({'action':'admin', 'msg':msg}) 
+
         
         
         
@@ -111,7 +124,8 @@ class NetworkController(Server):
         
     def broadcast_chat(self, txt, author):
         data = {"action": "chat", "msg": {"txt":txt, "author":author}}
-        [chan.Send(data) for chan in self.chan_to_name.keys()]
+        for chan in self.chan_to_name:
+            chan.Send(data) 
 
     
     ###### movement
@@ -123,5 +137,6 @@ class NetworkController(Server):
     def broadcast_move(self, name, dest):
         msg = {"author":name, "dest":dest}
         data = {"action": "move", "msg": msg}
-        [chan.Send(data) for chan in self.chan_to_name.keys()]
+        for chan in self.chan_to_name:
+            chan.Send(data) 
  
