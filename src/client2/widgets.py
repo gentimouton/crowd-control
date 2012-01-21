@@ -19,12 +19,12 @@ class Widget(Sprite):
         self.evManager.register_listener(self)
 
         self.focused = False
-        self.dirty = True
+        self.dirty = 1
 
 
     def set_focus(self, val):
         self.focused = val
-        self.dirty = True
+        self.dirty = 1
 
 
     def notify(self, event):
@@ -67,7 +67,7 @@ class ButtonWidget(Widget):
 
 
     def update(self):
-        if not self.dirty:
+        if self.dirty == 0:
             return
 
         if self.focused:
@@ -85,12 +85,12 @@ class ButtonWidget(Widget):
                                   centery=self.image.get_height() / 2)
         self.image.blit(txtimg, textpos)
         
-        self.dirty = False
+        self.dirty = 0
 
 
     def ondownclick(self):
         """ button down focuses and triggers eventual behavior """
-        self.dirty = True 
+        self.dirty = 1 
         self.set_focus(True)
         
         if self.onDownClickEvent:
@@ -100,7 +100,7 @@ class ButtonWidget(Widget):
     def onupclick(self):
         """ button up loses focus and triggers eventual behavior """
         if self.focused:
-            self.dirty = True
+            self.dirty = 1
             self.set_focus(False)
             
             if self.onUpClickEvent:
@@ -185,7 +185,7 @@ class InputFieldWidget(Widget):
 
     def update(self):
         """ render the text in the box """
-        if not self.dirty:
+        if self.dirty == 0:
             return
 
         text = self.text
@@ -203,19 +203,19 @@ class InputFieldWidget(Widget):
         self.image.blit(emptyboximg, (0, 0))
         self.image.blit(textImg, self.textPos)
 
-        self.dirty = False
+        self.dirty = 0
 
 
     def ondownclick(self):
         """ when down click, focus widget """
         self.set_focus(True)
-        self.dirty = True
+        self.dirty = 1
 
 
     def set_text(self, newtext):
         """ change the content of the text input field """
         self.text = newtext
-        self.dirty = True
+        self.dirty = 1
 
 
     def submit_text(self):
@@ -275,14 +275,14 @@ class TextLabelWidget(Widget):
 
     def set_text(self, text):
         self.text = text
-        self.dirty = True
+        self.dirty = 1
 
     def get_text(self):
         return self.text
     
 
     def update(self):
-        if not self.dirty:
+        if self.dirty == 0:
             return
         
         # TODO: is bliting on existing surf faster than creating a new surface?
@@ -293,7 +293,7 @@ class TextLabelWidget(Widget):
                                   centery=self.image.get_height() / 2)
         self.image.blit(txtimg, textpos)
         
-        self.dirty = False
+        self.dirty = 0
         
 
     def notify(self, event):
@@ -351,13 +351,13 @@ class ChatLogWidget(Widget):
             wid.set_text(nextlinetxt) #makes the widget dirty  
             nextlinetxt = tmptxt
         
-        self.dirty = True # causes all linewidgets to be updated
+        self.dirty = 1 # causes all linewidgets to be updated
         
     
     def update(self):
         """ update all the contained linewidgets """
         
-        if not self.dirty:
+        if self.dirty == 0:
             return
         
         self.image = Surface(self.rect.size) 
@@ -367,7 +367,7 @@ class ChatLogWidget(Widget):
             wid.update()
             self.image.blit(wid.image, wid.rect)
 
-        self.dirty = False
+        self.dirty = 0
         
         
         

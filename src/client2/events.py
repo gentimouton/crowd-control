@@ -68,28 +68,46 @@ class ModelBuiltMapEvent(Event):
 ###############################################################################
 """ MOVEMENT """
 
-class CharactorMoveRequest(Event):
+class MyCharactorMoveRequest(Event):
+    """ sent from controller to model """
     def __init__(self, direction):
-        self.name = "Charactor Move Request"
+        self.name = "Move my charactor towards " + str(direction)
         self.direction = direction
+
 
 class CharactorPlaceEvent(Event):
     """this event occurs when a Charactor is *placed* in a cell,
     ie it doesn't move there from an adjacent cell."""
     def __init__(self, charactor, cell):
-        self.name = "Charactor Placement Event"
+        self.name = "Charactor Placement - " + str(charactor)
         self.charactor = charactor
-        self.cell= cell
+        self.cell = cell
+
+class CharactorRemoveEvent(Event):
+    """this event occurs when a Charactor is removed from the model, 
+    and the view needs to be notified of that removal """
+    def __init__(self, charactor):
+        self.name = "Charactor Removal - " + str(charactor)
+        self.charactor = charactor
+        
 
 class CharactorMoveEvent(Event):
+    """ sent from model to view """
     def __init__(self, charactor, coords):
-        self.name = "Charactor Move Event"
+        self.name = "Charactor Move - " + str(charactor)
+        self.charactor = charactor
+        self.coords = coords
+
+class SendCharactorMoveEvent(CharactorMoveEvent):
+    """ sent from model to network controller """
+    def __init__(self, charactor, coords):
+        self.name = "Send Charactor Move - " + str(charactor)
         self.charactor = charactor
         self.coords = coords
 
 class NetworkReceivedCharactorMoveEvent(Event):
     def __init__(self, author, dest):
-        self.name = "Network received movement Event"
+        self.name = "Network received move - " + author + ' to ' + str(dest)
         self.author = author
         self.dest = dest
         
@@ -128,7 +146,7 @@ class ServerGreetEvent(Event):
         self.newpos = newpos
         self.onlineppl = onlineppl
 
-class ServerNameChange(Event):
+class ServerNameChangeEvent(Event):
     def __init__(self, oldname, newname):
         self.name = "The server notified that " + oldname + " changed named to " + newname
         self.oldname = oldname

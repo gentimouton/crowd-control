@@ -1,12 +1,13 @@
 from client2.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
-from client2.events import CharactorMoveRequest, TickEvent, QuitEvent, \
+from client2.events import MyCharactorMoveRequest, TickEvent, QuitEvent, \
     UpClickEvent, DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, \
     NonprintableKeyEvent
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, \
     K_BACKSPACE, K_RETURN, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION
 from pygame.time import Clock
 import pygame
+from client2.config import config_get_fps
 
 
 class InputController:
@@ -38,13 +39,13 @@ class InputController:
                     elif event.key in self.nonprintable_keys: 
                         ev = NonprintableKeyEvent(event.key)
                     elif event.key == K_UP:
-                        ev = CharactorMoveRequest(DIRECTION_UP)
+                        ev = MyCharactorMoveRequest(DIRECTION_UP)
                     elif event.key == K_DOWN:
-                        ev = CharactorMoveRequest(DIRECTION_DOWN)
+                        ev = MyCharactorMoveRequest(DIRECTION_DOWN)
                     elif event.key == K_LEFT:
-                        ev = CharactorMoveRequest(DIRECTION_LEFT)
+                        ev = MyCharactorMoveRequest(DIRECTION_LEFT)
                     elif event.key == K_RIGHT:
-                        ev = CharactorMoveRequest(DIRECTION_RIGHT)
+                        ev = MyCharactorMoveRequest(DIRECTION_RIGHT)
                     elif event.unicode is not '': 
                         # visible chars: letters, numbers, punctuation, space
                         ev = UnicodeKeyPushedEvent(event.key, event.unicode)
@@ -76,7 +77,7 @@ class ClockController:
     def run(self):
         clock = Clock()
         while self.keep_going:
-            clock.tick() # 100 fps to save CPU
+            clock.tick(config_get_fps()) # 100 fps to save CPU
             event = TickEvent()
             self.evManager.post(event)
             

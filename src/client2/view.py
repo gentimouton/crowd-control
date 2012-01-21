@@ -1,9 +1,9 @@
 from client2.events import CharactorMoveEvent, ModelBuiltMapEvent, TickEvent, \
-    CharactorPlaceEvent, QuitEvent, SendChatEvent, NetworkReceivedCharactorMoveEvent
+    CharactorPlaceEvent, QuitEvent, SendChatEvent, NetworkReceivedCharactorMoveEvent, \
+    CharactorRemoveEvent
 from client2.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget
 from pygame.rect import Rect
 from pygame.sprite import RenderUpdates, Sprite
-from weakref import WeakValueDictionary
 import pygame
 
 
@@ -19,7 +19,7 @@ class RenderUpdatesDict(RenderUpdates):
      
     def __init__(self, *sprites):
         RenderUpdates.__init__(self, *sprites)
-        self.__dict = WeakValueDictionary()
+        self.__dict = dict() 
 
     def add_internal(self, spr):
         """ add sprite to the group,
@@ -27,6 +27,9 @@ class RenderUpdatesDict(RenderUpdates):
         RenderUpdates.add_internal(self, spr)
         if isinstance(spr, IndexableSprite):
             self.__dict[spr.key] = spr
+            
+    def get_spr(self, key):
+        return self.__dict[key]
 
         
 ###########################################################################
@@ -69,7 +72,7 @@ class MasterView:
         
         pygame.display.flip()
 
-        self.backSprites = RenderUpdates()
+        self.backSprites = RenderUpdates() # TODO: this should actually be the BG
         self.charactorSprites = RenderUpdatesDict()
         self.gui_sprites = RenderUpdates()   
         self.gui_sprites.add(quit_btn)
@@ -100,24 +103,24 @@ class MasterView:
                 # cellspr = None # that was in shandy's code ... why?
 
     
-    def show_charactor(self, charactor):
-        cell = charactor.cell
+    def add_charactor(self, charactor):
+        """ Make a sprite and center the sprite based on cell location. """
         charactorSprite = CharactorSprite(charactor, self.charactorSprites)
+        # center in middle of cell
+        cell = charactor.cell
         cell_spr = self.get_cell_sprite(cell)
         charactorSprite.rect.center = cell_spr.rect.center
 
+    def remove_charactor(self, charactor):
+        char_spr = self.charactorSprites.get_spr(charactor)
+        char_spr.kill() # remove from all sprite groups
+        del char_spr
     
     def move_charactor(self, charactor):
-        charactorSprite = self.get_charactor_sprite(charactor)
-
+        charactorSprite = self.charactorSprites.get_spr(charactor)
         cell_spr = self.get_cell_sprite(charactor.cell)
+        charactorSprite.dest = cell_spr.rect.center
 
-        charactorSprite.moveTo = cell_spr.rect.center
-
-    
-    def get_charactor_sprite(self, charactor):
-        for s in self.charactorSprites:
-            return s #TODO: there's only one for now
         
     
     def get_cell_sprite(self, cell):
@@ -131,17 +134,21 @@ class MasterView:
         self.backSprites.clear(self.window, self.background)
         self.charactorSprites.clear(self.window, self.background)
         self.gui_sprites.clear(self.window, self.background)
+        
         # update all the sprites - calls update() on each sprite of the groups
         self.backSprites.update()
         self.charactorSprites.update()
         self.gui_sprites.update()
+        
         # collect the display areas that have changed
         dirtyRectsB = self.backSprites.draw(self.window)
         dirtyRectsF = self.charactorSprites.draw(self.window)
         dirtyRectsG = self.gui_sprites.draw(self.window)
+        
         # and redisplay those areas only
         dirtyRects = dirtyRectsB + dirtyRectsF + dirtyRectsG
         pygame.display.update(dirtyRects)
+
 
 
     def notify(self, event):
@@ -158,10 +165,16 @@ class MasterView:
             self.show_map(gameMap)
             
         elif isinstance(event, CharactorPlaceEvent):
-            self.show_charactor(event.charactor)
+            self.add_charactor(event.charactor)
+            
+        elif isinstance(event, CharactorRemoveEvent):
+            charactor = event.charactor
+            self.remove_charactor(charactor)
 
+            
         elif isinstance(event, CharactorMoveEvent):
             self.move_charactor(event.charactor)
+            #coords = event.coords
 
         elif isinstance(event, NetworkReceivedCharactorMoveEvent):
             #self.move_charactor(event.charactor)
@@ -178,20 +191,22 @@ class CellSprite(Sprite):
         Sprite.__init__(self, group)
         self.image = pygame.Surface((99, 99))
         self.image.fill((139, 119, 101))
-
+        
         self.cell = cell
 
+        
 
 
 ###########################################################################
 
 
 
-class CharactorSprite(Sprite):
+class CharactorSprite(IndexableSprite):
     """ The representation of a character """
     
-    def __init__(self, charactor, group=None):
-        Sprite.__init__(self, group)
+    def __init__(self, charactor, groups=None):
+        self.key = charactor # must be set before adding the spr to group(s)
+        Sprite.__init__(self, groups)
         
         charactorSurf = pygame.Surface((64, 64))
         charactorSurf = charactorSurf.convert_alpha()
@@ -201,14 +216,14 @@ class CharactorSprite(Sprite):
         self.rect = charactorSurf.get_rect()
 
         self.charactor = charactor
-        self.moveTo = None
+        self.dest = None
 
     
     def update(self):
         """ TODO: movement could be smoother and last for longer than 1 frame """
-        if self.moveTo:
-            self.rect.center = self.moveTo
-            self.moveTo = None
+        if self.dest:
+            self.rect.center = self.dest
+            self.dest = None
 
 
 

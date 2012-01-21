@@ -1,8 +1,8 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client2.config import config_get_host, config_get_port, config_get_my_name
 from client2.events import TickEvent, SendChatEvent, NetworkReceivedChatEvent, \
-    ServerGreetEvent, CharactorMoveEvent, ServerNameChange, ServerPlayerArrived, \
-    ServerPlayerLeft
+    ServerGreetEvent, ServerNameChangeEvent, ServerPlayerArrived, \
+    ServerPlayerLeft, NetworkReceivedCharactorMoveEvent, SendCharactorMoveEvent
 
 class NetworkController(ConnectionListener):
     
@@ -13,7 +13,6 @@ class NetworkController(ConnectionListener):
         
         host, port = config_get_host(), config_get_port()
         self.Connect((host, port))
-        #print("Client connection initiated.")
         
         
     def push(self): 
@@ -23,6 +22,7 @@ class NetworkController(ConnectionListener):
     
     def pull(self):
         """ pull data from the pipe and trigger the Network_* callbacks"""
+        # TODO: log what's been received
         self.Pump() 
 
 
@@ -71,28 +71,28 @@ class NetworkController(ConnectionListener):
     def Network_move(self, data):
         author = data['msg']['author']
         dest = data['msg']['dest']
-        #self.mc.someone_moved(author, dest)
-        print('move', author, dest)
-        # TODO: send msg to evtMgr
+        ev = NetworkReceivedCharactorMoveEvent(author, dest)
+        self.evManager.post(ev)
+
         
             
              
     ################## (DIS)CONNECTION + NAME CHANGE CALLBACKS ################    
     
-    """ connection and name changing protocol:
-    When the server end detects a client connection, 
+    """ PROTOCOL for (dis)connections and name changes:
+    When the server detects a client connection, 
     the server sends to the client a greeting containing that client's 
     temporary name (an hexa string). When the greet msg is received,
     the client asks the server to change to its preferred name. 
     The client knows if the server accepted the
     name change by a server broadcast which triggers 
-    someone_changed_name(oldname=server-given-name). 
+    a ServerNameChangeEvent(oldname, newname). 
     TODO: if the name change was rejected, the client should be notified
     and the user should be told that his preferred name is already in use.
     """
         
     def Network_admin(self, data):
-        """ greeting, left, join, and name change messages """
+        """ greeting, left, arrived, and name change messages """
         actiontype = data['msg']['type']
 
         if actiontype == 'greet':
@@ -109,7 +109,7 @@ class NetworkController(ConnectionListener):
         elif actiontype == 'namechange':
             oldname = data['msg']['old']
             newname = data['msg']['new']
-            ev = ServerNameChange(oldname, newname)
+            ev = ServerNameChangeEvent(oldname, newname)
             self.evManager.post(ev)
 
         else: #(dis)connection
@@ -137,8 +137,6 @@ class NetworkController(ConnectionListener):
             self.push()
         elif isinstance(event, SendChatEvent):
             self.send_chat(event.txt)
-        elif isinstance(event, CharactorMoveEvent):
-            #self.send_move(event.charactor.sector)
-            print('should send position', event.coords)
-    
+        elif isinstance(event, SendCharactorMoveEvent):
+            self.send_move(event.coords)
             

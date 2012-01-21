@@ -22,12 +22,12 @@ class ClientChannel(Channel):
         self._server.received_chat(self, data['msg'])
 
     def Network_admin(self, data):
-        ''' change name messages '''
+        """ change name messages """
         if data['msg']['type'] == 'namechange':
             self._server.received_name_change(self, data['msg']['newname'])
 
     def Network_move(self, data):
-        ''' movement messages '''
+        """ movement messages """
         dest = data['msg']['dest'] 
         self._server.received_move(self, dest)
 
@@ -90,20 +90,20 @@ class NetworkController(Server):
                 
 
     def greet(self, mapname, name, pos, onlineppl):
-        ''' send greeting data to a player '''
+        """ send greeting data to a player """
         msg = {"type":'greet', 'mapname':mapname, "newname":name, 'newpos':pos,
                'onlineppl':onlineppl}
         chan = self.name_to_chan[name]
         chan.Send({"action": 'admin', "msg": msg})
 
     def received_name_change(self, channel, newname):
-        ''' notify mediator that a player wants to change name '''
+        """ notify mediator that a player wants to change name """
         oldname = self.chan_to_name[channel]
         self.mediator.handle_name_change(oldname, newname)
     
             
     def broadcast_name_change(self, oldname, newname):
-        ''' update name<->channel mappings and notify all players '''
+        """ update name<->channel mappings and notify all players """
         channel = self.name_to_chan[oldname]
         self.chan_to_name[channel] = newname
         self.name_to_chan[newname] = channel

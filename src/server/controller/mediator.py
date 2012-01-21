@@ -97,13 +97,12 @@ class Mediator():
     
     def player_moved(self, pname, dest):
         """ when a player moves, notify all of them """
-        if self.is_walkable(dest):
-            self.player_positions[pname] = dest
-            self.network.broadcast_move(pname, dest)
+        #if self.is_walkable(dest): 
+        # iswalkable should come from package common to client and server
+        self.player_positions[pname] = dest
+        self.network.broadcast_move(pname, dest)
+#        else:
+#            print('Warning/Cheat: player', pname,
+#                  'walks in non-walkable area', dest)
+#            
         
-    def is_walkable(self, pos):
-        """ TODO: duplicated from client.cellgrid; should use a common package instead """
-        return (pos[0] > 0 
-            and pos[1] > 0 
-            and pos[0] < self.boundaries[0] 
-            and pos[1] < self.boundaries[1])
