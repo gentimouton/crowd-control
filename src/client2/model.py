@@ -171,6 +171,7 @@ class Charactor:
 
 
     def move_absolute(self, destcell):
+        # TODO: check that moving to destcell is a legal move
         self.cell = destcell
         ev = CharactorMoveEvent(self, destcell.coords)
         self.evManager.post(ev)
@@ -226,14 +227,9 @@ class World:
         self.evManager = evManager
         #self.evManager.register_listener(self)
         
-        
-    def matrix_transpose(self, a):
-        """ matrix transposition: return matrix_transpose(a)
-        TODO: move this into tools, or better: build the map correctly directly
-         """
-        assert(a[0] and a)
-        return [[a[i][j] for i in range(len(a))] for j in range(len(a[0]))]
-    
+    def __str__(self):
+        return '<World %s>' % (id(self))
+
     
     
     def build_world(self, mapname):
@@ -260,43 +256,35 @@ class World:
             line = lines[j].strip().split(',')
             
             for i in range(len(line)):
+                coords = j, i
                 cellvalue = line[i]
-                coords = i, j
                 if cellvalue == 'E':#entrance is walkable
-                    self.entrance_coords = coords
-                    tmprow.append(Cell(self, coords, 1, self.evManager)) 
-                elif cellvalue == 'L':#lair is walkable
-                    self.lair_coords = coords
-                    tmprow.append(Cell(self, coords, 1, self.evManager)) 
+                    self.entrance_coords = coords # TODO: should be a list of coords
+                    walkable = 1
+                elif cellvalue == 'L':
+                    self.lair_coords = coords # TODO: should be a list of coords
+                    walkable = 1
                 else:
-                    tmprow.append(Cell(self, coords, line[i], self.evManager))
+                    walkable = int(cellvalue) # 0 or 1
+                cell = Cell(self, coords, walkable, self.evManager)
+                tmprow.append(cell)
             
-            self.cellgrid.append(tmprow)
-        self.cellgrid = self.matrix_transpose(self.cellgrid)
+            self.cellgrid.append(tmprow) 
+            #such that cellgrid[i][j] = i-th cell from top, j-th from left
+        
+        # set the entrances and lair cells
+        e_coords = self.entrance_coords
+        if e_coords:
+            cell = self.get_cell(e_coords)
+            cell.set_entrance(True)
+        l_coords = self.lair_coords
+        if l_coords:
+            cell = self.get_cell(l_coords)
+            cell.set_lair(True)
         
         ev = ModelBuiltMapEvent(self)
         self.evManager.post(ev)
 
-        
-        
-    def make_path(self):  
-        """ assign to each cell a distance from the entrance: 
-        distance(entrance) = 0,
-        and then have each cell with an assigned distance 
-        sets recursively its neighbors' distance   
-        """
-
-        def recursive_dist_fill(cell, newdist):
-            """ only assign distance to walkable cells """
-            if cell.iswalkable and cell.get_dist_from_entrance() > newdist:
-                cell.set_dist_from_entrance(newdist)
-                for neighborcell in self._get_adjacent_walkable_cells(cell):
-                    recursive_dist_fill(neighborcell, newdist + 1)
-            return
-        
-        # start filling from the entrance with distance=0
-        recursive_dist_fill(self.get_cell(self.entrance_coords), 0)
-        return
 
 
 
@@ -310,7 +298,7 @@ class World:
                     return None
                 else:
                     return self.cellgrid[tl][left]
-            else:
+            else: #left was specified
                 if -1 in tl:
                     return None
                 else:
@@ -332,8 +320,8 @@ class Cell:
         self.top, self.left = self.coords = coords
         self.world = world
         self.iswalkable = walkable
-                    
-    
+
+
     def __str__(self):
         return '<Cell %s %s>' % (self.coords, id(self))
     
@@ -354,4 +342,8 @@ class Cell:
         else: #non walkable or out of grid
             return None
             
-                
+    def set_entrance(self, value):
+        self.isentrance = value
+    def set_lair(self, value):
+        self.islair = value
+        

@@ -81,7 +81,7 @@ class MasterView:
         self.gui_sprites.add(chatwindow)
 
     
-    def show_map(self, gmap):
+    def show_map(self, worldmap):
         """ blit the map on the screen.
         The pixel width and height of map cells is supposed to be constant.
         The map is always centered on the avatar (unless when avatar is near
@@ -89,16 +89,18 @@ class MasterView:
         """
         
         # clear the screen first
-        self.background.fill((11, 11, 0))
+        self.background.fill((0, 0, 0))
         self.window.blit(self.background, (0, 0))
         pygame.display.flip() 
         
         # iterate over cell rows and columns
-        for i in range(gmap.width):
-            for j in range(gmap.height):
+        for i in range(worldmap.height):
+            for j in range(worldmap.width):
                 # TODO: distinguish between entrance and lair and normal cells
-                cellrect = Rect(i * 100, j * 100, 99, 99)
-                cellspr = CellSprite(gmap.get_cell(j, i), self.backSprites)
+                cellrect = Rect(j * 100, i * 100, 99, 99)
+                cell = worldmap.get_cell(i, j)
+                
+                cellspr = CellSprite(cell, self.backSprites)
                 cellspr.rect = cellrect
                 # cellspr = None # that was in shandy's code ... why?
 
@@ -161,8 +163,8 @@ class MasterView:
             self.render_dirty_sprites()
 
         elif isinstance(event, ModelBuiltMapEvent):
-            gameMap = event.map
-            self.show_map(gameMap)
+            worldmap = event.worldmap
+            self.show_map(worldmap)
             
         elif isinstance(event, CharactorPlaceEvent):
             self.add_charactor(event.charactor)
@@ -176,9 +178,6 @@ class MasterView:
             self.move_charactor(event.charactor)
             #coords = event.coords
 
-        elif isinstance(event, NetworkReceivedCharactorMoveEvent):
-            #self.move_charactor(event.charactor)
-            print('should move ', event.author, 'to', event.dest)
 
 
 
@@ -187,11 +186,30 @@ class MasterView:
 
 class CellSprite(Sprite):
     """ The representation of a map cell """
+    
+    dims = width, height = 99, 99 # in pixels
+    # rgb cell colors
+    walkable_cell_color = 139, 119, 101 
+    nonwalkable_cell_color = 0, 0, 0 
+    entrance_cell_color = 139, 0, 101 
+    lair_cell_color = 139, 119, 0 
+    
+    
     def __init__(self, cell, group=None):
         Sprite.__init__(self, group)
-        self.image = pygame.Surface((99, 99))
-        self.image.fill((139, 119, 101))
-        
+
+        # self.image filled with a color
+        self.image = pygame.Surface(self.dims)
+        if hasattr(cell, 'isentrance') and cell.isentrance:
+            color = self.entrance_cell_color
+        elif hasattr(cell, 'islair') and cell.islair:
+            color = self.lair_cell_color
+        elif cell.iswalkable:
+            color = self.walkable_cell_color
+        else: # non-walkable
+            color = self.nonwalkable_cell_color
+        self.image.fill(color) 
+
         self.cell = cell
 
         

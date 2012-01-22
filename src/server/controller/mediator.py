@@ -17,17 +17,18 @@ class Mediator():
 ##############################################################################
 
     def build_world(self):
-        """ open map file and build map from it """
+        """ open map file and build map from it: 
+        TODO: this hsould be shared between client and server """
         self.mapname = config_get_mapname()
         f = open(os.path.join(os.pardir, 'maps', self.mapname))
         #other lines = map in itself
         lines = f.readlines() #might be optimized: for line in open("file.txt"):
         self.cellgrid = [] #contains game board
-        for j in range(len(lines)): #for all lines in file
+        for i in range(len(lines)): #for all lines in file
             tmprow = []
-            line = lines[j].strip().split(',')
-            for i in range(len(line)):
-                cellvalue = line[i]
+            line = lines[i].strip().split(',')
+            for j in range(len(line)):
+                cellvalue = line[j]
                 if cellvalue == 'E':
                     self.entrance_coords = i, j
                     tmprow.append(1) #entrance is walkable

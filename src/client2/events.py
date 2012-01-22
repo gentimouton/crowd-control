@@ -60,9 +60,9 @@ class NonprintableKeyEvent(Event):
 """ GAME LOGIC """
 
 class ModelBuiltMapEvent(Event):
-    def __init__(self, gameMap):
+    def __init__(self, worldmap):
         self.name = "Map Finished Building Event"
-        self.map = gameMap
+        self.worldmap = worldmap
 
 
 ###############################################################################
