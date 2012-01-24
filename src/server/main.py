@@ -1,6 +1,6 @@
 from server.config import load_srv_config
 from server.controller.clock import SClockController
-from server.controller.mediator import World
+from server.controller.mediator import Mediator
 from server.controller.network import NetworkController
 from server.events_server import SEventManager
 
@@ -14,7 +14,7 @@ def main():
 
     sclock = SClockController(evManager) #the loop is in there
     
-    w = World(evManager)
+    m = Mediator(evManager)
     n = NetworkController(evManager)
     #g = Game(evManager)
     

@@ -20,6 +20,16 @@ class SQuitEvent(Event):
 
 
 
+#################### model events #########################################
+
+class SModelBuiltWorldEvent(Event):
+    def __init__(self, world):
+        self.name = "Server finished building its world map"
+        self.world = world
+
+
+
+
 ##################### player arrived/left + greeting ######################
 
 

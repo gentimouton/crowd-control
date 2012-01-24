@@ -1,9 +1,9 @@
 from client2.config import config_get_fps
-from client2.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
+from client2.events_client import MyCharactorMoveRequest, QuitEvent, \
+    UpClickEvent, DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, \
+    NonprintableKeyEvent, ClientTickEvent
+from common.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
-from client2.events_client import MyCharactorMoveRequest, QuitEvent, UpClickEvent, \
-    DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, NonprintableKeyEvent, \
-    ClientTickEvent
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, \
     K_BACKSPACE, K_RETURN, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION
 from pygame.time import Clock

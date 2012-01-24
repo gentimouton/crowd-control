@@ -4,7 +4,8 @@ from server.config import config_get_host, config_get_port
 from server.events_server import ServerTickEvent, SPlayerArrivedEvent, \
     SSendGreetEvent, SBroadcastStatusEvent, SPlayerLeftEvent, \
     SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, SReceivedChatEvent, \
-    SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent
+    SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent, \
+    SModelBuiltWorldEvent
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 
@@ -54,8 +55,11 @@ class NetworkController(Server):
         self.evManager = evManager
         self.evManager.register_listener(self)
         
+        self.accept_connections = False # start accepting when model is ready
+        
         self.chan_to_name = WeakKeyDictionary() #maps channel to name
         self.name_to_chan = WeakValueDictionary() #maps name to channel
+        
         #WeakKeyDictionary's key is garbage collected and removed from dictionary 
         # when used nowhere else but in the dict's mapping
         print('Server Network up')
@@ -71,6 +75,10 @@ class NetworkController(Server):
         assign a temporary name to a client, a la IRC. 
         The client should change user's name automatically if it's not taken
         already, and clients can use a command to change their name"""
+        
+        if not self.accept_connections: # accept connections only after model is built
+            return
+        
         name = str(uuid4())[:8] #random 32-hexadigit uuid 
         # truncated to 8 hexits = 16^8 = 4 billion possibilities
         # if by chance someone already has this uuid name, repick until unique
@@ -184,6 +192,10 @@ class NetworkController(Server):
         if isinstance(event, ServerTickEvent):
             self.Pump()
         
+        # accept connections only after the model has been built
+        elif isinstance(event, SModelBuiltWorldEvent):
+            self.accept_connections = True
+            
         elif isinstance(event, SSendGreetEvent):
             self.greet(event.mapname, event.pname, event.coords, event.onlineppl)
         

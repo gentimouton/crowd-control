@@ -1,58 +1,32 @@
+from common.world import World
 from server.config import config_get_mapname
 from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
     SBroadcastStatusEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
     SBroadcastNameChangeEvent, SReceivedChatEvent, SBroadcastChatEvent, \
-    SBroadcastMoveEvent, SReceivedMoveEvent
-import os
+    SBroadcastMoveEvent, SReceivedMoveEvent, SModelBuiltWorldEvent
 
-class World():
-    
-    network = None 
-    
+
+class Mediator():
+        
     def __init__(self, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
-        
+        # players
         self.player_positions = dict() # maps player names to their positions 
-        self.build_world()
-
-        
-
-##############################################################################
-
-    def build_world(self):
-        """ open map file and build map from it: 
-        TODO: this hsould be shared between client and server """
+        # map
         self.mapname = config_get_mapname()
-        f = open(os.path.join(os.pardir, 'maps', self.mapname))
-        #other lines = map in itself
-        lines = f.readlines() #might be optimized: for line in open("file.txt"):
-        self.cellgrid = [] #contains game board
-        for i in range(len(lines)): #for all lines in file
-            tmprow = []
-            line = lines[i].strip().split(',')
-            for j in range(len(line)):
-                cellvalue = line[j]
-                if cellvalue == 'E':
-                    self.entrance_coords = i, j
-                    tmprow.append(1) #entrance is walkable
-                elif cellvalue == 'L':
-                    self.lair_coords = i, j
-                    tmprow.append(1) #lair is walkable
-                else:
-                    tmprow.append(int(line[i]))
-            self.cellgrid.append(tmprow)
-        
-##############################################################################
+        self.world = World(evManager)
+        self.world.build_world(self.mapname, SModelBuiltWorldEvent)
 
-    
-    # (dis)connection and name changes
+        
+  
+    ############### (dis)connection and name changes ##########################
+
+
     # notifying for pausing/resuming the game could also fit in there
         
     def player_left(self, name):
-        """ TODO: remove player's avatar from game state 
-        and notify everyone """
-        #print(name, "disconnected")
+        """ remove player's avatar from game state and notify everyone """
         try:
             del self.player_positions[name]
         except KeyError:
@@ -70,12 +44,12 @@ class World():
         #print(name, "connected") #TODO: log
         if name not in self.player_positions:
             onlineppl = self.player_positions.copy()
-            self.player_positions[name] = self.entrance_coords
+            self.player_positions[name] = self.world.entrance_coords
             # greet the new player 
-            event = SSendGreetEvent(self.mapname, name, self.entrance_coords, onlineppl)
+            event = SSendGreetEvent(self.mapname, name, self.world.entrance_coords, onlineppl)
             self.evManager.post(event) 
             # notify the connected players of this arrival 
-            event = SBroadcastStatusEvent('arrived', name, self.entrance_coords)
+            event = SBroadcastStatusEvent('arrived', name, self.world.entrance_coords)
             self.evManager.post(event)
             
         else: 
