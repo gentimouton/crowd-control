@@ -1,8 +1,10 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client2.config import config_get_host, config_get_port, config_get_my_name
-from client2.events_client import ClientTickEvent, SendChatEvent, NetworkReceivedChatEvent, \
-    ServerGreetEvent, ServerNameChangeEvent, ServerPlayerArrived, \
-    ServerPlayerLeft, NetworkReceivedCharactorMoveEvent, SendCharactorMoveEvent
+from client2.events_client import ClientTickEvent, SendChatEvent, \
+    NetworkReceivedChatEvent, ServerGreetEvent, ServerNameChangeEvent, \
+    ServerPlayerArrived, ServerPlayerLeft, NetworkReceivedCharactorMoveEvent, \
+    SendCharactorMoveEvent
+from common.messages import GreetMsg
 
 class NetworkController(ConnectionListener):
     
@@ -93,13 +95,17 @@ class NetworkController(ConnectionListener):
         
     def Network_admin(self, data):
         """ greeting, left, arrived, and name change messages """
-        actiontype = data['msg']['type']
+        actiontype = data['msg']['mtype']
 
         if actiontype == 'greet':
-            mapname = data['msg']['mapname']
-            newname = data['msg']['newname']
-            newpos = data['msg']['newpos']
-            onlineppl = data['msg']['onlineppl']
+            greetmsg = GreetMsg()
+            greetmsg.deserialize(data['msg'])
+            
+            mapname = greetmsg.mapname
+            newname = greetmsg.pname
+            newpos = greetmsg.coords
+            onlineppl = greetmsg.onlineppl
+
             preferred_name = config_get_my_name()
             if newname is not preferred_name:
                 self.ask_for_name_change(preferred_name)
@@ -123,7 +129,7 @@ class NetworkController(ConnectionListener):
             
             
     def ask_for_name_change(self, newname):
-        msg = {'type':'namechange', 'newname':newname}
+        msg = {'mtype':'namechange', 'newname':newname}
         connection.Send({"action": 'admin', "msg":msg})
 
     

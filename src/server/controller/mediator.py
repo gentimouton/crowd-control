@@ -32,25 +32,25 @@ class Mediator():
         
         
         
-    def player_arrived(self, name):
+    def player_arrived(self, pname):
         """ create player's avatar and send him the list of connected ppl
         do not include him in the list of connected people """
-        #print(name, "connected") #TODO: log
-        if name not in self.player_positions:
+        #print(pname, "connected") #TODO: log
+        if pname not in self.player_positions:
             onlineppl = self.player_positions.copy()
-            self.player_positions[name] = self.world.entrance_coords
+            self.player_positions[pname] = self.world.entrance_coords
             # greet the new player 
-            event = SSendGreetEvent(self.mapname, name, self.world.entrance_coords, onlineppl)
+            event = SSendGreetEvent(self.mapname, pname, self.world.entrance_coords, onlineppl)
             self.evManager.post(event) 
             # notify the connected players of this arrival 
-            event = SBroadcastStatusEvent('arrived', name, self.world.entrance_coords)
+            event = SBroadcastStatusEvent('arrived', pname, self.world.entrance_coords)
             self.evManager.post(event)
             
         else: 
             # player was already connected, 
-            # or his name had not been removed when he disconnected
-            print("Warning:", name, 'was already in connected player_positions')
-            print('Possibly, self.player_positions[name] had not been cleaned properly')
+            # or his pname had not been removed when he disconnected
+            print("Warning:", pname, 'was already in connected player_positions')
+            print('Possibly, self.player_positions[pname] had not been cleaned properly')
     
     
 

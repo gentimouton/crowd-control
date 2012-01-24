@@ -28,7 +28,7 @@ class ClientChannel(Channel):
 
     def Network_admin(self, data):
         """ change name messages """
-        if data['msg']['type'] == 'namechange':
+        if data['msg']['mtype'] == 'namechange':
             self._server.received_name_change(self, data['msg']['newname'])
 
     def Network_move(self, data):
@@ -104,7 +104,7 @@ class NetworkController(Server):
     def broadcast_conn_status(self, status, name, coords=None):
         """ notify clients that a new player just arrived (type='arrived') 
         or left (type='left') """
-        data = {"action": 'admin', "msg": {"type":status, "name":name}}
+        data = {"action": 'admin', "msg": {"mtype":status, "name":name}}
         
         # user joined = broadcast his name and pos to all but him
         if coords is not None:
@@ -118,15 +118,17 @@ class NetworkController(Server):
                 chan.Send(data) 
                 
 
-    def greet(self, mapname, name, coords, onlineppl):
+    def greet(self, greetmsg):
         """ send greeting data to a player """
-        msg = { "type":'greet',
-               'mapname':mapname,
-               "newname":name,
-               'newpos':coords,
-               'onlineppl':onlineppl }
+        
+#        msg = { "type":'greet',
+#               'mapname':mapname,
+#               "newname":name,
+#               'newpos':coords,
+#               'onlineppl':onlineppl }
+        name = greetmsg.pname
         chan = self.name_to_chan[name]
-        chan.Send({"action": 'admin', "msg": msg})
+        chan.Send({"action": 'admin', "msg": greetmsg.serialize()})
 
 
     def received_name_change(self, channel, newname):
@@ -144,7 +146,7 @@ class NetworkController(Server):
         self.chan_to_name[channel] = newname
         self.name_to_chan[newname] = channel
         del self.name_to_chan[oldname]
-        msg = {'type':'namechange', 'old':oldname, 'new':newname}
+        msg = {'mtype':'namechange', 'old':oldname, 'new':newname}
         for c in self.chan_to_name:
             c.Send({'action':'admin', 'msg':msg}) 
 
@@ -197,7 +199,7 @@ class NetworkController(Server):
             self.accept_connections = True
             
         elif isinstance(event, SSendGreetEvent):
-            self.greet(event.mapname, event.pname, event.coords, event.onlineppl)
+            self.greet(event.greetmsg)
         
         elif isinstance(event, SBroadcastStatusEvent):
             self.broadcast_conn_status(event.status, event.pname, event.coords)

@@ -1,3 +1,4 @@
+from common.messages import GreetMsg
 from common.world import World
 from server.config import config_get_mapname
 from server.events_server import SModelBuiltWorldEvent, SBroadcastStatusEvent, \
@@ -6,19 +7,27 @@ from server.events_server import SModelBuiltWorldEvent, SBroadcastStatusEvent, \
     SPlayerNameChangeRequestEvent, SReceivedChatEvent, SReceivedMoveEvent
 
 
-class Game():
+class SPlayer():
+    
+    def __init__(self, pname, coords):
+        self.pname = pname
+        self.coords = coords
+        
+
+class SGame():
     
     def __init__(self, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
-        # players
-        # TODO: make a Player() class instead of position tuples
-        self.player_positions = dict() # maps player names to their positions 
+        # player list
+        self.players = dict() 
         
         # build world
         self.mapname = config_get_mapname()
         self.world = World(evManager)
         self.world.build_world(self.mapname, SModelBuiltWorldEvent)
+
+
 
     ############### (dis)connection and name changes ##########################
 
@@ -28,35 +37,38 @@ class Game():
     def player_left(self, name):
         """ remove player's avatar from game state and notify everyone """
         try:
-            del self.player_positions[name]
+            del self.players[name]
         except KeyError:
             print('Tried to remove player ', name,
-                  ', but it was not in player list')
+                  ', but it was not found in player list')
         
         event = SBroadcastStatusEvent('left', name)
         self.evManager.post(event)
         
         
         
-    def player_arrived(self, name):
+    def player_arrived(self, pname):
         """ create player's avatar and send him the list of connected ppl
         do not include him in the list of connected people """
-        #print(name, "connected") #TODO: log
-        if name not in self.player_positions:
-            onlineppl = self.player_positions.copy()
-            self.player_positions[name] = self.world.entrance_coords
-            # greet the new player 
-            event = SSendGreetEvent(self.mapname, name, self.world.entrance_coords, onlineppl)
+        #print(pname, "connected") #TODO: log
+        if pname not in self.players:
+            onlineppl = self.players.copy()
+            coords = self.world.entrance_coords
+            player = SPlayer(pname, coords)
+            self.players[pname] = player
+            # greet the new player
+            gmsg = GreetMsg(self.mapname, pname, coords, onlineppl) 
+            event = SSendGreetEvent(gmsg)
             self.evManager.post(event) 
             # notify the connected players of this arrival 
-            event = SBroadcastStatusEvent('arrived', name, self.world.entrance_coords)
+            event = SBroadcastStatusEvent('arrived', pname, coords)
             self.evManager.post(event)
             
         else: 
             # player was already connected, 
-            # or his name had not been removed when he disconnected
-            print("Warning:", name, 'was already in connected player_positions')
-            print('Possibly, self.player_positions[name] had not been cleaned properly')
+            # or his pname had not been removed when he disconnected
+            print("Warning:", pname, 'was already in connected player_positions')
+            print('Possibly, self.player_positions[pname] had not been cleaned properly')
     
     
 
@@ -65,9 +77,9 @@ class Game():
             
     def handle_name_change(self, oldname, newname):
         """ change player's name only if newname not taken already """
-        if newname not in self.player_positions:
-            self.player_positions[newname] = self.player_positions[oldname]
-            del self.player_positions[oldname]
+        if newname not in self.players:
+            self.players[newname] = self.players[oldname]
+            del self.players[oldname]
             #print(oldname, 'changed name into ', newname)
             
             event = SBroadcastNameChangeEvent(oldname, newname)
@@ -94,7 +106,7 @@ class Game():
         """ when a player moves, notify all of them """
         #if self.is_walkable(coords): 
         # iswalkable should come from package common to client and server
-        self.player_positions[pname] = coords
+        self.players[pname] = coords
         
         event = SBroadcastMoveEvent(pname, coords)
         self.evManager.post(event)
