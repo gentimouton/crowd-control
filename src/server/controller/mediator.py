@@ -1,17 +1,21 @@
 from server.config import config_get_mapname
+from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
+    SBroadcastStatusEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
+    SBroadcastNameChangeEvent, SReceivedChatEvent, SBroadcastChatEvent, \
+    SBroadcastMoveEvent, SReceivedMoveEvent
 import os
 
-class Mediator():
+class World():
     
     network = None 
     
-    def __init__(self):
+    def __init__(self, evManager):
+        self.evManager = evManager
+        self.evManager.register_listener(self)
+        
         self.player_positions = dict() # maps player names to their positions 
         self.build_world()
 
-    
-    def setnetwork(self, nw):
-        self.network = nw
         
 
 ##############################################################################
@@ -54,7 +58,11 @@ class Mediator():
         except KeyError:
             print('Tried to remove player ', name,
                   ', but it was not in player list')
-        self.network.broadcast_conn_status('left', name)
+        
+        event = SBroadcastStatusEvent('left', name)
+        self.evManager.post(event)
+        
+        
         
     def player_arrived(self, name):
         """ create player's avatar and send him the list of connected ppl
@@ -63,9 +71,16 @@ class Mediator():
         if name not in self.player_positions:
             onlineppl = self.player_positions.copy()
             self.player_positions[name] = self.entrance_coords
-            self.network.greet(self.mapname, name, self.entrance_coords, onlineppl) 
-            self.network.broadcast_conn_status('arrived', name, self.entrance_coords)
-        else:
+            # greet the new player 
+            event = SSendGreetEvent(self.mapname, name, self.entrance_coords, onlineppl)
+            self.evManager.post(event) 
+            # notify the connected players of this arrival 
+            event = SBroadcastStatusEvent('arrived', name, self.entrance_coords)
+            self.evManager.post(event)
+            
+        else: 
+            # player was already connected, 
+            # or his name had not been removed when he disconnected
             print("Warning:", name, 'was already in connected player_positions')
             print('Possibly, self.player_positions[name] had not been cleaned properly')
     
@@ -80,30 +95,63 @@ class Mediator():
             self.player_positions[newname] = self.player_positions[oldname]
             del self.player_positions[oldname]
             #print(oldname, 'changed name into ', newname)
-            self.network.broadcast_name_change(oldname, newname)
+            
+            event = SBroadcastNameChangeEvent(oldname, newname)
+            self.evManager.post(event)
+        
         else: 
             # TODO: send personal notif to the client who failed to change name
             pass
     
 ##############################################################################
             
-    def received_chat(self, txt, author):
+    def received_chat(self, pname, txt):
         """ when chat msg received, broadcast it to all connected users """
         # TODO: implement a chat logger as a view
-        self.network.broadcast_chat(txt, author)
+        
+        event = SBroadcastChatEvent(pname, txt)
+        self.evManager.post(event)
 
 
 
 ##############################################################################
     
-    def player_moved(self, pname, dest):
+    def player_moved(self, pname, coords):
         """ when a player moves, notify all of them """
-        #if self.is_walkable(dest): 
+        #if self.is_walkable(coords): 
         # iswalkable should come from package common to client and server
-        self.player_positions[pname] = dest
-        self.network.broadcast_move(pname, dest)
+        self.player_positions[pname] = coords
+        
+        event = SBroadcastMoveEvent(pname, coords)
+        self.evManager.post(event)
+
 #        else:
 #            print('Warning/Cheat: player', pname,
-#                  'walks in non-walkable area', dest)
+#                  'walks in non-walkable area', coords)
 #            
         
+##############################################################################
+
+    def notify(self, event):
+        
+        # network notifies that a player arrived or left
+        if isinstance(event, SPlayerArrivedEvent):
+            self.player_arrived(event.pname)
+        elif isinstance(event, SPlayerLeftEvent):
+            self.player_left(event.pname)
+        
+        # name changes
+        elif isinstance(event, SPlayerNameChangeRequestEvent):
+            self.handle_name_change(event.oldname, event.newname)
+        
+        # chat
+        elif isinstance(event, SReceivedChatEvent):
+            self.received_chat(event.pname, event.txt)
+        
+        # movement
+        elif isinstance(event, SReceivedMoveEvent):
+            self.player_moved(event.pname, event.coords)
+            
+            
+            
+            

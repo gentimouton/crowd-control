@@ -2,7 +2,7 @@
 
 from client2.config import load_config
 from client2.controllers import InputController, ClockController
-from client2.events import EventManager
+from client2.events_client import EventManager
 from client2.model import Game
 from client2.network import NetworkController
 from client2.view import MasterView

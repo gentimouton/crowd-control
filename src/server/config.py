@@ -16,8 +16,14 @@ def load_srv_config():
                     print("[ERROR]: skipped option: %s" % option)
             except:
                 print("[ERROR]: exception on option %s" % option)
-                __dict[option] = None 
+                __dict[option] = None
+                
     return
+
+
+
+############################################################################
+
 
 # main config
 def config_get_fps():

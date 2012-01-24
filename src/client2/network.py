@@ -1,6 +1,6 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client2.config import config_get_host, config_get_port, config_get_my_name
-from client2.events import TickEvent, SendChatEvent, NetworkReceivedChatEvent, \
+from client2.events_client import ClientTickEvent, SendChatEvent, NetworkReceivedChatEvent, \
     ServerGreetEvent, ServerNameChangeEvent, ServerPlayerArrived, \
     ServerPlayerLeft, NetworkReceivedCharactorMoveEvent, SendCharactorMoveEvent
 
@@ -132,7 +132,7 @@ class NetworkController(ConnectionListener):
      
     def notify(self, event):
         # TODO: only push and pull every once in a while, not every game loop
-        if isinstance(event, TickEvent):
+        if isinstance(event, ClientTickEvent):
             self.pull()
             self.push()
         elif isinstance(event, SendChatEvent):

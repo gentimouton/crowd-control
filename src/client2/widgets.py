@@ -1,4 +1,4 @@
-from client2.events import DownClickEvent, UpClickEvent, MoveMouseEvent, \
+from client2.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
     UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ChatlogUpdatedEvent
 from pygame.font import Font
 from pygame.locals import K_BACKSPACE, K_RETURN

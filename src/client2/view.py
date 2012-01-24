@@ -1,5 +1,5 @@
-from client2.events import CharactorMoveEvent, ModelBuiltMapEvent, TickEvent, \
-    CharactorPlaceEvent, QuitEvent, SendChatEvent, NetworkReceivedCharactorMoveEvent, \
+from client2.events_client import CharactorMoveEvent, ModelBuiltMapEvent, \
+    ClientTickEvent, CharactorPlaceEvent, QuitEvent, SendChatEvent, \
     CharactorRemoveEvent
 from client2.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget
 from pygame.rect import Rect
@@ -159,7 +159,7 @@ class MasterView:
         When the game is loaded, display it. 
         """
         
-        if isinstance(event, TickEvent):
+        if isinstance(event, ClientTickEvent):
             self.render_dirty_sprites()
 
         elif isinstance(event, ModelBuiltMapEvent):

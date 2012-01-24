@@ -1,7 +1,7 @@
 from client2.config import config_get_mapname
 from client2.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
-from client2.events import MyCharactorMoveRequest, ModelBuiltMapEvent, \
+from client2.events_client import MyCharactorMoveRequest, ModelBuiltMapEvent, \
     CharactorPlaceEvent, NetworkReceivedChatEvent, ChatlogUpdatedEvent, \
     CharactorMoveEvent, ServerGreetEvent, ServerNameChangeEvent, ServerPlayerArrived, \
     ServerPlayerLeft, CharactorRemoveEvent, NetworkReceivedCharactorMoveEvent, \

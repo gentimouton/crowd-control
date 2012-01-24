@@ -1,6 +1,10 @@
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
 from server.config import config_get_host, config_get_port
+from server.events_server import ServerTickEvent, SPlayerArrivedEvent, \
+    SSendGreetEvent, SBroadcastStatusEvent, SPlayerLeftEvent, \
+    SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, SReceivedChatEvent, \
+    SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 
@@ -14,7 +18,7 @@ class ClientChannel(Channel):
     
     def Network(self, data):
         """ called for all received msgs """
-        # TODO: implement a logger, as a view of the mediator
+        # TODO: implement a logger
         pass
     
     def Network_chat(self, data):
@@ -32,22 +36,34 @@ class ClientChannel(Channel):
         self._server.received_move(self, dest)
 
 
+
+
+########################## SERVER ############################################
+
+
+
 class NetworkController(Server):
     
     channelClass = ClientChannel
     
-    def __init__(self, mediator):
+    def __init__(self, evManager):
+    
         host, port = config_get_host(), config_get_port()
         Server.__init__(self, localaddr=(host, port))
-        self.mediator = mediator
+
+        self.evManager = evManager
+        self.evManager.register_listener(self)
+        
         self.chan_to_name = WeakKeyDictionary() #maps channel to name
         self.name_to_chan = WeakValueDictionary() #maps name to channel
         #WeakKeyDictionary's key is garbage collected and removed from dictionary 
         # when used nowhere else but in the dict's mapping
         print('Server Network up')
+        # TODO: send an event?
 
 
-
+    
+        
     ####### (dis)connection and name changes 
 
     def Connected(self, channel, addr):
@@ -62,24 +78,29 @@ class NetworkController(Server):
             name = str(uuid4())[:8]
         self.chan_to_name[channel] = name
         self.name_to_chan[name] = channel
-        self.mediator.player_arrived(name)
+        
+        event = SPlayerArrivedEvent(name)
+        self.evManager.post(event)
+        
         
     def channel_closed(self, channel):
         """ when a player logs out, remove his channel from the list """
         name = self.chan_to_name[channel]
-        self.mediator.player_left(name)
+        event = SPlayerLeftEvent(name)
+        self.evManager.post(event)
+
         del self.name_to_chan[name]
         del self.chan_to_name[channel]
 
 
-    def broadcast_conn_status(self, status, name, pos=None):
+    def broadcast_conn_status(self, status, name, coords=None):
         """ notify clients that a new player just arrived (type='arrived') 
         or left (type='left') """
         data = {"action": 'admin', "msg": {"type":status, "name":name}}
         
         # user joined = broadcast his name and pos to all but him
-        if pos is not None:
-            data['msg']['newpos'] = pos
+        if coords is not None:
+            data['msg']['newpos'] = coords
             for chan in self.chan_to_name:
                 if self.chan_to_name[chan] != name:
                     chan.Send(data) 
@@ -89,18 +110,25 @@ class NetworkController(Server):
                 chan.Send(data) 
                 
 
-    def greet(self, mapname, name, pos, onlineppl):
+    def greet(self, mapname, name, coords, onlineppl):
         """ send greeting data to a player """
-        msg = {"type":'greet', 'mapname':mapname, "newname":name, 'newpos':pos,
-               'onlineppl':onlineppl}
+        msg = { "type":'greet',
+               'mapname':mapname,
+               "newname":name,
+               'newpos':coords,
+               'onlineppl':onlineppl }
         chan = self.name_to_chan[name]
         chan.Send({"action": 'admin', "msg": msg})
 
+
     def received_name_change(self, channel, newname):
-        """ notify mediator that a player wants to change name """
+        """ notify that a player wants to change name """
         oldname = self.chan_to_name[channel]
-        self.mediator.handle_name_change(oldname, newname)
-    
+        
+        event = SPlayerNameChangeRequestEvent(oldname, newname)
+        self.evManager.post(event)
+        
+        
             
     def broadcast_name_change(self, oldname, newname):
         """ update name<->channel mappings and notify all players """
@@ -115,12 +143,15 @@ class NetworkController(Server):
         
         
         
-    #######  chat        
+    ##################  chat   ########################################
         
     def received_chat(self, channel, txt):
         """ send a chat msg to all connected clients """
         author = self.chan_to_name[channel]
-        self.mediator.received_chat(txt, author)
+        
+        event = SReceivedChatEvent(author, txt)
+        self.evManager.post(event)
+        
         
     def broadcast_chat(self, txt, author):
         data = {"action": "chat", "msg": {"txt":txt, "author":author}}
@@ -128,11 +159,14 @@ class NetworkController(Server):
             chan.Send(data) 
 
     
-    ###### movement
+    ###################### movement  #####################################
     
     def received_move(self, channel, dest):
         pname = self.chan_to_name[channel]
-        self.mediator.player_moved(pname, dest)
+        
+        event = SReceivedMoveEvent(pname, dest)
+        self.evManager.post(event)
+        
         
     def broadcast_move(self, name, dest):
         msg = {"author":name, "dest":dest}
@@ -140,3 +174,28 @@ class NetworkController(Server):
         for chan in self.chan_to_name:
             chan.Send(data) 
  
+ 
+ 
+ 
+    ######### event notifications #####################################
+    
+    def notify(self, event):
+        
+        if isinstance(event, ServerTickEvent):
+            self.Pump()
+        
+        elif isinstance(event, SSendGreetEvent):
+            self.greet(event.mapname, event.pname, event.coords, event.onlineppl)
+        
+        elif isinstance(event, SBroadcastStatusEvent):
+            self.broadcast_conn_status(event.status, event.pname, event.coords)
+            
+        elif isinstance(event, SBroadcastNameChangeEvent):
+            self.broadcast_name_change(event.oldname, event.newname)
+        
+        elif isinstance(event, SBroadcastChatEvent):
+            self.broadcast_chat(event.txt, event.pname)
+            
+        elif isinstance(event, SBroadcastMoveEvent):
+            self.broadcast_move(event.pname, event.coords)
+            

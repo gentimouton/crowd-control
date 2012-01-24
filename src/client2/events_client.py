@@ -1,19 +1,11 @@
-from _weakrefset import WeakSet
-from collections import deque
-
-
-class Event:
-    """superclass for events sent to the EventManager"""
-    def __init__(self):
-        self.name = "Generic Event"
+from common.events import Event, TickEvent, EventManager
 
 
         
 ##############################################################################
 """ INPUT CONTROLLER EVENTS """
 
-
-class TickEvent(Event):
+class ClientTickEvent(TickEvent):
     def __init__(self):
         self.name = "CPU Tick Event"
 
@@ -23,21 +15,21 @@ class QuitEvent(Event):
 
 class DownClickEvent(Event):
     """ When a button of the mouse is pushed down """
-    def __init__(self, pos):
+    def __init__(self, coords):
         self.name = "Mouse DownClick Event"
-        self.pos = pos
+        self.pos = coords
         
 class UpClickEvent(Event):
     """ When a button of the mouse is raised up """
-    def __init__(self, pos):
+    def __init__(self, coords):
         self.name = "Mouse UpClick Event"
-        self.pos = pos
+        self.pos = coords
 
 class MoveMouseEvent(Event):
     """ When the mouse moves """
-    def __init__(self, pos):
+    def __init__(self, coords):
         self.name = "Mouse Move Event"
-        self.pos = pos
+        self.pos = coords
 
 class UnicodeKeyPushedEvent(Event):
     """ only concerns keys with visible representation
@@ -106,9 +98,9 @@ class SendCharactorMoveEvent(CharactorMoveEvent):
         self.coords = coords
 
 class NetworkReceivedCharactorMoveEvent(Event):
-    def __init__(self, author, dest):
-        self.name = "Network received move - " + author + ' to ' + str(dest)
-        self.author = author
+    def __init__(self, pname, dest):
+        self.name = "Network received move - " + pname + ' to ' + str(dest)
+        self.author = pname
         self.dest = dest
         
         
@@ -121,16 +113,16 @@ class SendChatEvent(Event):
         self.txt = txt
 
 class NetworkReceivedChatEvent(Event):
-    def __init__(self, author, txt):
+    def __init__(self, pname, txt):
         self.name = "Received a chat message from the server"
-        self.author = author
+        self.author = pname
         self.text = txt
 
 class ChatlogUpdatedEvent(Event):
     """ The model asks the view to refresh the chatlog """
-    def __init__(self, author, txt):
+    def __init__(self, pname, txt):
         self.name = "Chatlog model has been updated"
-        self.author = author
+        self.author = pname
         self.text = txt
 
 
@@ -153,10 +145,10 @@ class ServerNameChangeEvent(Event):
         self.newname = newname
     
 class ServerPlayerArrived(Event):
-    def __init__(self, playername, pos):
+    def __init__(self, playername, coords):
         self.name = "The server notified that " + playername + " connected"
         self.playername = playername
-        self.pos = pos
+        self.pos = coords
 class ServerPlayerLeft(Event):
     def __init__(self, playername):
         self.name = "The server notified that " + playername + " left"
@@ -165,64 +157,16 @@ class ServerPlayerLeft(Event):
 
 ##############################################################################
 
-        
-class EventManager:
-    """this object is responsible for coordinating most communication
-    between the Model, View, and Controller."""
-    def __init__(self):
-        self.listeners = WeakSet()
-        self.eventdq = deque()
-        
-        # Since a dict can't change size when iterated, when a listener is 
-        # added during a loop iteration over the existing listeners,
-        #  add temporarily that new listener to the newlisteners dict.
-        self.newlisteners = WeakSet() 
 
-
-    def register_listener(self, listener):
-        self.newlisteners.add(listener)
-
-
-    def join_new_listeners(self):
-        """ add new listeners to the actual listeners """
-        if len(self.newlisteners):
-            for newlistener in self.newlisteners:
-                self.listeners.add(newlistener)
-            self.newlisteners.clear() 
-
-            
+class ClientEventManager(EventManager):
+    
     def post(self, event):
-        """ do housekeeping of the listeners (remove/add those who requested it)
-        then wait for clock ticks to notify listeners of all events 
-        in chronological order 
-        """
-        
+        """ print non-tick events """
         if isinstance(event, MoveMouseEvent):
             pass
-        elif isinstance(event, TickEvent):
+        elif isinstance(event, ClientTickEvent):
             pass
         else:
             print('  Evt -- ', event.name)
+
         
-        # at each clock tick, notify all listeners of all the events 
-        # in the order these events were received
-        if isinstance(event, TickEvent):
-            while len(self.eventdq):
-                ev = self.eventdq.popleft()
-                self.join_new_listeners()
-                for listener in self.listeners: 
-                    #some of those listeners may enqueue events on the fly
-                    # those events will be treated within this while loop,
-                    # they don't have to wait for the next tick event
-                    listener.notify(ev) 
-                    
-                self.join_new_listeners()
-                
-            # post tick event
-            for listener in self.listeners:
-                listener.notify(event)
-            self.join_new_listeners()
-            
-        else:
-            self.eventdq.append(event)
-            

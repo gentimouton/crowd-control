@@ -1,13 +1,13 @@
+from client2.config import config_get_fps
 from client2.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
-from client2.events import MyCharactorMoveRequest, TickEvent, QuitEvent, \
-    UpClickEvent, DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, \
-    NonprintableKeyEvent
+from client2.events_client import MyCharactorMoveRequest, QuitEvent, UpClickEvent, \
+    DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, NonprintableKeyEvent, \
+    ClientTickEvent
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, \
     K_BACKSPACE, K_RETURN, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION
 from pygame.time import Clock
 import pygame
-from client2.config import config_get_fps
 
 
 class InputController:
@@ -24,7 +24,7 @@ class InputController:
 
     def notify(self, event):
         ''' every clock tick, handle input events from keyboard and mouse  '''
-        if isinstance(event, TickEvent):
+        if isinstance(event, ClientTickEvent):
             for event in pygame.event.get():
                 ev = None
                 
@@ -78,7 +78,7 @@ class ClockController:
         clock = Clock()
         while self.keep_going:
             clock.tick(config_get_fps()) # 100 fps to save CPU
-            event = TickEvent()
+            event = ClientTickEvent()
             self.evManager.post(event)
             
 
