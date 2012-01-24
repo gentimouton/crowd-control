@@ -34,9 +34,12 @@ class GreetMsg():
         
     def deserialize(self, smsg):
         """ fill attributes from a serialized msg """
-        self.mtype = smsg['mtype']
-        self.mapname = smsg['mapname']
-        self.pname = smsg['pname']
-        self.coords = smsg['coords']
-        self.onlineppl = smsg['onlineppl']
-    
+        try:
+            self.mtype = smsg['mtype']
+            self.mapname = smsg['mapname']
+            self.pname = smsg['pname']
+            self.coords = smsg['coords']
+            self.onlineppl = smsg['onlineppl']
+        except KeyError:
+            print('Warning: Greet Message was not correctly deserialized')
+            

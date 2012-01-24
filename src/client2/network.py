@@ -98,18 +98,14 @@ class NetworkController(ConnectionListener):
         actiontype = data['msg']['mtype']
 
         if actiontype == 'greet':
+            # deserialize the msg
             greetmsg = GreetMsg()
             greetmsg.deserialize(data['msg'])
-            
-            mapname = greetmsg.mapname
-            newname = greetmsg.pname
-            newpos = greetmsg.coords
-            onlineppl = greetmsg.onlineppl
 
             preferred_name = config_get_my_name()
-            if newname is not preferred_name:
+            if greetmsg.pname is not preferred_name:
                 self.ask_for_name_change(preferred_name)
-            ev = ServerGreetEvent(mapname, newname, newpos, onlineppl)
+            ev = ServerGreetEvent(greetmsg.mapname, greetmsg.pname, greetmsg.coords, greetmsg.onlineppl)
             self.evManager.post(ev)
 
         elif actiontype == 'namechange':
