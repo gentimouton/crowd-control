@@ -1,19 +1,25 @@
-from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
-    SBroadcastStatusEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
-    SBroadcastNameChangeEvent, SReceivedChatEvent, SBroadcastChatEvent, \
-    SBroadcastMoveEvent, SReceivedMoveEvent
+from common.world import World
+from server.config import config_get_mapname
+from server.events_server import SModelBuiltWorldEvent, SBroadcastStatusEvent, \
+    SSendGreetEvent, SBroadcastNameChangeEvent, SBroadcastChatEvent, \
+    SBroadcastMoveEvent, SPlayerArrivedEvent, SPlayerLeftEvent, \
+    SPlayerNameChangeRequestEvent, SReceivedChatEvent, SReceivedMoveEvent
 
 
-class Mediator():
-        
+class Game():
+    
     def __init__(self, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
         # players
+        # TODO: make a Player() class instead of position tuples
         self.player_positions = dict() # maps player names to their positions 
         
-        
-  
+        # build world
+        self.mapname = config_get_mapname()
+        self.world = World(evManager)
+        self.world.build_world(self.mapname, SModelBuiltWorldEvent)
+
     ############### (dis)connection and name changes ##########################
 
 
@@ -119,7 +125,5 @@ class Mediator():
         # movement
         elif isinstance(event, SReceivedMoveEvent):
             self.player_moved(event.pname, event.coords)
-            
-            
             
             
