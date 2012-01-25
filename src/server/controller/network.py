@@ -1,5 +1,6 @@
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
+from common.messages import BroadcastArrivedMsg, BroadcastLeftMsg
 from server.config import config_get_host, config_get_port
 from server.events_server import ServerTickEvent, SPlayerArrivedEvent, \
     SSendGreetEvent, SBroadcastStatusEvent, SPlayerLeftEvent, \
@@ -51,19 +52,18 @@ class NetworkController(Server):
     
         host, port = config_get_host(), config_get_port()
         Server.__init__(self, localaddr=(host, port))
-
+                
         self.evManager = evManager
         self.evManager.register_listener(self)
         
         self.accept_connections = False # start accepting when model is ready
         
         self.chan_to_name = WeakKeyDictionary() #maps channel to name
-        self.name_to_chan = WeakValueDictionary() #maps name to channel
-        
+        self.name_to_chan = WeakValueDictionary() #maps name to channel        
         #WeakKeyDictionary's key is garbage collected and removed from dictionary 
         # when used nowhere else but in the dict's mapping
+        
         print('Server Network up')
-        # TODO: send an event?
 
 
     
@@ -74,14 +74,17 @@ class NetworkController(Server):
         """ Called by Server.handle_accept() whenever a new client connects. 
         assign a temporary name to a client, a la IRC. 
         The client should change user's name automatically if it's not taken
-        already, and clients can use a command to change their name"""
+        already, and clients can use a command to change their name
+        """
         
-        if not self.accept_connections: # accept connections only after model is built
+        # accept connections only after model is built
+        if not self.accept_connections: 
             return
         
-        name = str(uuid4())[:8] #random 32-hexadigit uuid 
-        # truncated to 8 hexits = 16^8 = 4 billion possibilities
-        # if by chance someone already has this uuid name, repick until unique
+        name = str(uuid4())[:8] #random 32-hexadigit = 128-bit uuid 
+        # Truncated to 8 hexits = 16^8 = 4 billion possibilities.
+        # If by chance someone has this uuid name already, 
+        # repick until unique.
         while name in self.chan_to_name.keys(): 
             name = str(uuid4())[:8]
         self.chan_to_name[channel] = name
@@ -101,34 +104,30 @@ class NetworkController(Server):
         del self.chan_to_name[channel]
 
 
-    def broadcast_conn_status(self, status, name, coords=None):
-        """ notify clients that a new player just arrived (type='arrived') 
-        or left (type='left') """
-        data = {"action": 'admin', "msg": {"mtype":status, "name":name}}
+    def broadcast_conn_status(self, bcmsg):
+        """ notify clients that a new player just arrived or left """
         
-        # user joined = broadcast his name and pos to all but him
-        if coords is not None:
-            data['msg']['newpos'] = coords
-            for chan in self.chan_to_name:
-                if self.chan_to_name[chan] != name:
-                    chan.Send(data) 
+        data = {"action": 'admin', "msg": bcmsg.d}
         
-        else: # user left: notify everyone
+        # user joined: notify everyone connected but him
+        if isinstance(bcmsg, BroadcastArrivedMsg):
             for chan in self.chan_to_name:
+                if self.chan_to_name[chan] != bcmsg.d['pname']:
+                    chan.Send(data)
+                    
+        # user left: notify everyone
+        elif isinstance(bcmsg, BroadcastLeftMsg): 
+            for chan in self.chan_to_name: 
+                # The concerned player has been deleted, so he won't be notified
                 chan.Send(data) 
                 
 
     def greet(self, greetmsg):
         """ send greeting data to a player """
         
-#        msg = { "type":'greet',
-#               'mapname':mapname,
-#               "newname":name,
-#               'newpos':coords,
-#               'onlineppl':onlineppl }
-        name = greetmsg.pname
+        name = greetmsg.d['pname']
         chan = self.name_to_chan[name]
-        chan.Send({"action": 'admin', "msg": greetmsg.serialize()})
+        chan.Send({"action": 'admin', "msg": greetmsg.d})
 
 
     def received_name_change(self, channel, newname):
@@ -202,7 +201,7 @@ class NetworkController(Server):
             self.greet(event.greetmsg)
         
         elif isinstance(event, SBroadcastStatusEvent):
-            self.broadcast_conn_status(event.status, event.pname, event.coords)
+            self.broadcast_conn_status(event.bcmsg)
             
         elif isinstance(event, SBroadcastNameChangeEvent):
             self.broadcast_name_change(event.oldname, event.newname)

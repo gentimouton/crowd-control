@@ -45,14 +45,6 @@ class SPlayerLeftEvent(Event):
         self.pname = pname
         
         
-#class SSendGreetEvent(Event):
-#    def __init__(self, mapname, pname, coords, onlineppl):
-#        self.name = "Network is asked to greet a player"
-#        self.mapname = mapname
-#        self.pname = pname
-#        self.coords = coords
-#        self.onlineppl = onlineppl
-        
 class SSendGreetEvent(Event):
     def __init__(self, greetmsg):
         self.name = "Network is asked to greet a player"
@@ -60,11 +52,9 @@ class SSendGreetEvent(Event):
         
         
 class SBroadcastStatusEvent(Event):
-    def __init__(self, status, pname, coords=None):
+    def __init__(self, bcmsg):
         self.name = "Network is asked to broadcast a client (dis)connection"
-        self.status= status
-        self.pname = pname
-        self.coords = coords
+        self.bcmsg = bcmsg
 
 
 

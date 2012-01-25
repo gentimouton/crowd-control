@@ -1,4 +1,4 @@
-from common.messages import GreetMsg
+from common.messages import GreetMsg, BroadcastLeftMsg, BroadcastArrivedMsg
 from common.world import World
 from server.config import config_get_mapname
 from server.events_server import SModelBuiltWorldEvent, SBroadcastStatusEvent, \
@@ -34,23 +34,25 @@ class SGame():
 
     # notifying for pausing/resuming the game could also fit in there
         
-    def player_left(self, name):
+    def player_left(self, pname):
         """ remove player's avatar from game state and notify everyone """
         try:
-            del self.players[name]
+            del self.players[pname]
         except KeyError:
-            print('Tried to remove player ', name,
+            print('Tried to remove player ', pname,
                   ', but it was not found in player list')
         
-        event = SBroadcastStatusEvent('left', name)
+        bcmsg = BroadcastLeftMsg(pname)
+        event = SBroadcastStatusEvent(bcmsg)
         self.evManager.post(event)
         
         
         
     def player_arrived(self, pname):
-        """ create player's avatar and send him the list of connected ppl
-        do not include him in the list of connected people """
-        #print(pname, "connected") #TODO: log
+        """ Create player's avatar, and send him the list of connected ppl.
+        Do not include him in the list of connected people. 
+        """
+        #TODO: log
         if pname not in self.players:
             onlineppl = self.players.copy()
             coords = self.world.entrance_coords
@@ -60,8 +62,9 @@ class SGame():
             gmsg = GreetMsg(self.mapname, pname, coords, onlineppl) 
             event = SSendGreetEvent(gmsg)
             self.evManager.post(event) 
-            # notify the connected players of this arrival 
-            event = SBroadcastStatusEvent('arrived', pname, coords)
+            # notify the connected players of this arrival
+            bcmsg = BroadcastArrivedMsg(pname, coords)
+            event = SBroadcastStatusEvent(bcmsg)
             self.evManager.post(event)
             
         else: 

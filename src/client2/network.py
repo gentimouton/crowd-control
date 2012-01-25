@@ -4,7 +4,7 @@ from client2.events_client import ClientTickEvent, SendChatEvent, \
     NetworkReceivedChatEvent, ServerGreetEvent, ServerNameChangeEvent, \
     ServerPlayerArrived, ServerPlayerLeft, NetworkReceivedCharactorMoveEvent, \
     SendCharactorMoveEvent
-from common.messages import GreetMsg
+from common.messages import GreetMsg, BroadcastArrivedMsg, BroadcastLeftMsg
 
 class NetworkController(ConnectionListener):
     
@@ -95,17 +95,15 @@ class NetworkController(ConnectionListener):
         
     def Network_admin(self, data):
         """ greeting, left, arrived, and name change messages """
-        actiontype = data['msg']['mtype']
+        actiontype = data['msg']['mtype'] # all SerializableMsg have an mtype
 
         if actiontype == 'greet':
-            # deserialize the msg
-            greetmsg = GreetMsg()
-            greetmsg.deserialize(data['msg'])
-
+            greetmsg = GreetMsg(d_src=data['msg']) #build msg from dictionary
             preferred_name = config_get_my_name()
-            if greetmsg.pname is not preferred_name:
+            if greetmsg.d['pname'] is not preferred_name:
                 self.ask_for_name_change(preferred_name)
-            ev = ServerGreetEvent(greetmsg.mapname, greetmsg.pname, greetmsg.coords, greetmsg.onlineppl)
+            ev = ServerGreetEvent(greetmsg.d['mapname'], greetmsg.d['pname'], 
+                                  greetmsg.d['coords'], greetmsg.d['onlineppl'])
             self.evManager.post(ev)
 
         elif actiontype == 'namechange':
@@ -114,14 +112,16 @@ class NetworkController(ConnectionListener):
             ev = ServerNameChangeEvent(oldname, newname)
             self.evManager.post(ev)
 
-        else: #(dis)connection
-            name = data['msg']['name']
-            if actiontype == 'arrived':
-                pos = data['msg']['newpos']
-                ev = ServerPlayerArrived(name, pos)
-            elif actiontype == 'left':
-                ev = ServerPlayerLeft(name)
+        elif actiontype == 'arrived': # new player connected
+                msg = BroadcastArrivedMsg(d_src=data['msg']) 
+                ev = ServerPlayerArrived(msg.d['pname'], msg.d['coords'])
+                self.evManager.post(ev)
+    
+        elif actiontype == 'left': # player left
+            msg = BroadcastLeftMsg(d_src=data['msg'])
+            ev = ServerPlayerLeft(msg.d['pname'])
             self.evManager.post(ev)
+        
             
             
     def ask_for_name_change(self, newname):
