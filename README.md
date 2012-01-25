@@ -12,6 +12,7 @@ Inspirations
 
 * Natural Selection
 * DOTA
+* Alien Swarm for the raiders' gameplay http://www.youtube.com/watch?v=804u05RHxNk&feature=relmfu
 * WoW
 * the movie 300
 * tower defense games
