@@ -31,7 +31,10 @@ class Game:
         
     def remove_player(self, name):
         """ remove a player """
-        self.players[name].remove() 
+        try:
+            self.players[name].remove()
+        except KeyError:
+            print('player', name, ' had already been removed') 
         #remove the player data structure since self.players is a normal dict
         del self.players[name]
     
@@ -199,17 +202,17 @@ class ChatLog(object):
     def notify(self, event):
         """ """
         if isinstance(event, NetworkReceivedChatEvent):
-            msg = {'author':event.author, 'text':event.text}
-            self.add_chatmsg(msg)
+            self.add_chatmsg(event.author, event.txt)
             
             
-    def add_chatmsg(self, msg):
+    def add_chatmsg(self, author, txt):
         """ add a message to the chatlog.
         if full, remove oldest message 
         """
+        msg = {'author':author, 'text':txt}
         self.chatlog.appendleft(msg)
         
-        ev = ChatlogUpdatedEvent(msg['author'], msg['text'])
+        ev = ChatlogUpdatedEvent(author, txt)
         self.evManager.post(ev)
 
 

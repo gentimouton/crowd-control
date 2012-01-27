@@ -1,10 +1,10 @@
-from common.messages import GreetMsg, BroadcastLeftMsg, BroadcastArrivedMsg
 from common.world import World
 from server.config import config_get_mapname
-from server.events_server import SModelBuiltWorldEvent, SBroadcastStatusEvent, \
-    SSendGreetEvent, SBroadcastNameChangeEvent, SBroadcastChatEvent, \
-    SBroadcastMoveEvent, SPlayerArrivedEvent, SPlayerLeftEvent, \
-    SPlayerNameChangeRequestEvent, SReceivedChatEvent, SReceivedMoveEvent
+from server.events_server import SModelBuiltWorldEvent, SSendGreetEvent, \
+    SBroadcastNameChangeEvent, SBroadcastChatEvent, SBroadcastMoveEvent, \
+    SPlayerArrivedEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
+    SReceivedChatEvent, SReceivedMoveEvent, SBroadcastArrivedEvent, \
+    SBroadcastLeftEvent
 
 
 class SPlayer():
@@ -42,8 +42,7 @@ class SGame():
             print('Tried to remove player ', pname,
                   ', but it was not found in player list')
         
-        bcmsg = BroadcastLeftMsg(pname)
-        event = SBroadcastStatusEvent(bcmsg)
+        event = SBroadcastLeftEvent(pname)
         self.evManager.post(event)
         
         
@@ -54,17 +53,19 @@ class SGame():
         """
         #TODO: log
         if pname not in self.players:
-            onlineppl = self.players.copy()
+            # build list of connected players with their coords
+            onlineppl = dict()
+            for (otherpname, otherplayer) in self.players.items():
+                onlineppl[otherpname] = otherplayer.coords
+            # build the new player    
             coords = self.world.entrance_coords
             player = SPlayer(pname, coords)
             self.players[pname] = player
-            # greet the new player
-            gmsg = GreetMsg(self.mapname, pname, coords, onlineppl) 
-            event = SSendGreetEvent(gmsg)
+            # greet the new player 
+            event = SSendGreetEvent(self.mapname, pname, coords, onlineppl)
             self.evManager.post(event) 
             # notify the connected players of this arrival
-            bcmsg = BroadcastArrivedMsg(pname, coords)
-            event = SBroadcastStatusEvent(bcmsg)
+            event = SBroadcastArrivedEvent(pname, coords)
             self.evManager.post(event)
             
         else: 
@@ -80,11 +81,11 @@ class SGame():
             
     def handle_name_change(self, oldname, newname):
         """ change player's name only if newname not taken already """
+        
         if newname not in self.players:
             self.players[newname] = self.players[oldname]
             del self.players[oldname]
             #print(oldname, 'changed name into ', newname)
-            
             event = SBroadcastNameChangeEvent(oldname, newname)
             self.evManager.post(event)
         
@@ -109,7 +110,7 @@ class SGame():
         """ when a player moves, notify all of them """
         #if self.is_walkable(coords): 
         # iswalkable should come from package common to client and server
-        self.players[pname] = coords
+        self.players[pname].coords = coords
         
         event = SBroadcastMoveEvent(pname, coords)
         self.evManager.post(event)

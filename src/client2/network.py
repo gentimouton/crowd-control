@@ -4,7 +4,8 @@ from client2.events_client import ClientTickEvent, SendChatEvent, \
     NetworkReceivedChatEvent, ServerGreetEvent, ServerNameChangeEvent, \
     ServerPlayerArrived, ServerPlayerLeft, NetworkReceivedCharactorMoveEvent, \
     SendCharactorMoveEvent
-from common.messages import GreetMsg, BroadcastArrivedMsg, BroadcastLeftMsg
+from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
+    NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg
 
 class NetworkController(ConnectionListener):
     
@@ -54,14 +55,17 @@ class NetworkController(ConnectionListener):
     ################## CHAT ################    
     
     def Network_chat(self, data):
-        author = data['msg']['author']
-        txt = data['msg']['txt']
+        cmsg = SrvChatMsg(data['msg'])
+        author = cmsg.d['pname']
+        txt = cmsg.d['txt']
         ev = NetworkReceivedChatEvent(author, txt)
         self.evManager.post(ev)
         
         
     def send_chat(self, txt):
-        connection.Send({"action": "chat", "msg": txt})
+        d = {'txt':txt}
+        cmsg = ClChatMsg(d)
+        connection.Send({"action": "chat", "msg": cmsg.d})
     
     
     
@@ -95,38 +99,40 @@ class NetworkController(ConnectionListener):
         
     def Network_admin(self, data):
         """ greeting, left, arrived, and name change messages """
-        actiontype = data['msg']['mtype'] # all SerializableMsg have an mtype
+        actiontype = data['msg']['mtype'] # all admin msg have an mtype
 
         if actiontype == 'greet':
-            greetmsg = GreetMsg(d_src=data['msg']) #build msg from dictionary
+            gmsg = GreetMsg(data['msg']) #build msg from dictionary
             preferred_name = config_get_my_name()
-            if greetmsg.d['pname'] is not preferred_name:
+            if gmsg.d['pname'] is not preferred_name:
                 self.ask_for_name_change(preferred_name)
-            ev = ServerGreetEvent(greetmsg.d['mapname'], greetmsg.d['pname'], 
-                                  greetmsg.d['coords'], greetmsg.d['onlineppl'])
+            ev = ServerGreetEvent(gmsg.d['mapname'], gmsg.d['pname'],
+                                  gmsg.d['coords'], gmsg.d['onlineppl'])
             self.evManager.post(ev)
 
         elif actiontype == 'namechange':
-            oldname = data['msg']['old']
-            newname = data['msg']['new']
+            nmsg = NameChangeNotifMsg(data['msg'])
+            oldname = nmsg.d['oldname']
+            newname = nmsg.d['newname']
             ev = ServerNameChangeEvent(oldname, newname)
             self.evManager.post(ev)
 
         elif actiontype == 'arrived': # new player connected
-                msg = BroadcastArrivedMsg(d_src=data['msg']) 
-                ev = ServerPlayerArrived(msg.d['pname'], msg.d['coords'])
+                amsg = PlayerArrivedNotifMsg(data['msg']) 
+                ev = ServerPlayerArrived(amsg.d['pname'], amsg.d['coords'])
                 self.evManager.post(ev)
     
         elif actiontype == 'left': # player left
-            msg = BroadcastLeftMsg(d_src=data['msg'])
-            ev = ServerPlayerLeft(msg.d['pname'])
+            lmsg = PlayerLeftNotifMsg(data['msg'])
+            ev = ServerPlayerLeft(lmsg.d['pname'])
             self.evManager.post(ev)
         
             
             
     def ask_for_name_change(self, newname):
-        msg = {'mtype':'namechange', 'newname':newname}
-        connection.Send({"action": 'admin', "msg":msg})
+        d = {'pname':newname}
+        nmsg = NameChangeRequestMsg(d)
+        connection.Send({"action": 'admin', "msg":nmsg.d})
 
     
     

@@ -5,19 +5,14 @@ class SerializableMsg():
     and server. 
     """
     
-    mtype = 'not set' #should be overriden in subclasses
     attrs = [] #should be overriden in subclasses
 
-
-
-    def __init__(self, *args, d_src=None):
+    def __init__(self, d_src):
         """ Build self.d, the message's serializable dictionary holding 
         the message's attributes
         """
-        
         self.d = dict() #serializable representation of the message
-        self.d['mtype'] = self.mtype
-        
+       
         if d_src: 
             # Build the message's dictionary from a source dictionary, 
             # eventually limiting the copy to some attributes. 
@@ -30,36 +25,70 @@ class SerializableMsg():
         else:
             # default constructor: arguments have to be passed in the order
             # they are specified in the self.attrs of the subclass
-            assert len(args) <= len(self.attrs), 'Too many arguments given'
-
-            for i in range(len(args)):
-                self.d[self.attrs[i]] = args[i]
-            # careful: if self.attrs is longer than args, 
-            # then the last elements of self.attrs stay undefined 
+            try:
+                for k in self.attrs:
+                    self.d[k] = d_src[k]
+            except KeyError:
+                print('key', k, 'was missing from d_src')
                 
                          
 
-
+  
+    
         
 ################# ADMIN #####################################################
 
 
 
-class GreetMsg(SerializableMsg):
+class AdminSerializableMsg(SerializableMsg):
+    """ Abstract class representing admin messages:
+    connection, disocnnection, name change, and greeting.
+    """
+    mtype = 'not set' #should be overriden in subclasses
+    
+    def __init__(self, d_src=None):
+        # opts can be empty or contain d_src
+        # SOLUTION: have all the message constructors specify the keys and pass **opts all the time
+        SerializableMsg.__init__(self, d_src)
+        self.d['mtype'] = self.mtype
+        
+        
+        
+class GreetMsg(AdminSerializableMsg):
     """ sent from the server to a player when he just arrived """
     mtype = 'greet'
     attrs = ['mapname', 'pname', 'coords', 'onlineppl']
     
     
-class BroadcastArrivedMsg(SerializableMsg):
+class PlayerArrivedNotifMsg(AdminSerializableMsg):
     """ sent from the server to all players when a player arrived """        
     mtype = 'arrived'
     attrs = ['pname', 'coords'] 
-class BroadcastLeftMsg(SerializableMsg):
+class PlayerLeftNotifMsg(AdminSerializableMsg):
     """ sent from the server to all players when a player left """        
     mtype = 'left'
     attrs = ['pname'] 
 
+
+class NameChangeRequestMsg(AdminSerializableMsg):
+    """ sent from a client to the server when he wants to change name """        
+    mtype = 'namechange'
+    attrs = ['pname'] 
+class NameChangeNotifMsg(AdminSerializableMsg):
+    """ broadcasted by the server to notify all the clients of a name change """        
+    mtype = 'namechange'
+    attrs = ['oldname', 'newname'] 
+
     
     
     
+################# CHAT #####################################################
+
+
+
+class ClChatMsg(SerializableMsg):
+    """ chat msg sent from a client to the server """        
+    attrs = ['txt'] 
+class SrvChatMsg(SerializableMsg):
+    """ brodcast of a chat msg by the server """        
+    attrs = ['pname', 'txt'] 

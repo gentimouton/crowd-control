@@ -373,7 +373,7 @@ class ChatLogWidget(Widget):
         
     def notify(self, event):
         if isinstance(event, ChatlogUpdatedEvent):
-            self.addline(event.author + ': ' + event.text)
+            self.addline(event.author + ': ' + event.txt)
             
         Widget.notify(self, event)
         

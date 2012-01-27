@@ -35,26 +35,36 @@ class SModelBuiltWorldEvent(Event):
 
 
 class SPlayerArrivedEvent(Event):
-    def __init__(self, pname):
+    def __init__(self, authorr):
         self.name = "Network notifies that a player arrived"
-        self.pname = pname
+        self.pname = authorr
         
 class SPlayerLeftEvent(Event):
-    def __init__(self, pname):
+    def __init__(self, authorr):
         self.name = "Network notifies that a player left"
-        self.pname = pname
+        self.pname = authorr
         
         
 class SSendGreetEvent(Event):
-    def __init__(self, greetmsg):
+    def __init__(self, mapname, pname, coords, onlineppl):
         self.name = "Network is asked to greet a player"
-        self.greetmsg = greetmsg
+        self.mapname = mapname
+        self.pname = pname
+        self.coords = coords
+        self.onlineppl = onlineppl
         
         
-class SBroadcastStatusEvent(Event):
-    def __init__(self, bcmsg):
-        self.name = "Network is asked to broadcast a client (dis)connection"
-        self.bcmsg = bcmsg
+class SBroadcastArrivedEvent(Event):
+    def __init__(self, pname, coords):
+        self.name = "Network is asked to broadcast a client connection"
+        self.pname = pname
+        self.coords = coords
+        
+class SBroadcastLeftEvent(Event):
+    def __init__(self, pname):
+        self.name = "Network is asked to broadcast a client disconnection"
+        self.pname = pname
+
 
 
 
@@ -73,21 +83,20 @@ class SBroadcastNameChangeEvent(Event):
         self.oldname = oldname
         self.newname = newname
 
-
 ####################################### CHAT ##############################
 
 
 class SReceivedChatEvent(Event):
-    def __init__(self, pname, txt):
+    def __init__(self, authorr, txt):
         self.name = "Network received a chat message"
         self.txt = txt
-        self.pname = pname
+        self.pname = authorr
 
 class SBroadcastChatEvent(Event):
-    def __init__(self, pname, txt):
+    def __init__(self, authorr, txt):
         self.name = "Network is asked to broadcast a chat message"
         self.txt = txt
-        self.pname = pname
+        self.pname = authorr
     
 
 
@@ -96,15 +105,15 @@ class SBroadcastChatEvent(Event):
 
 
 class SReceivedMoveEvent(Event):
-    def __init__(self, pname, coords):
+    def __init__(self, authorr, coords):
         self.name = "Network received a move message"
-        self.pname = pname
+        self.pname = authorr
         self.coords = coords
 
 class SBroadcastMoveEvent(Event):
-    def __init__(self, pname, coords):
+    def __init__(self, authorr, coords):
         self.name = "Network is asked to broadcast a move message"
-        self.pname = pname
+        self.pname = authorr
         self.coords = coords
     
 
