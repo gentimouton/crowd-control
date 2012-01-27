@@ -1,7 +1,7 @@
+from common.events import EventManager
 from server.config import load_srv_config
 from server.controller.clock import SClockController
 from server.controller.network import NetworkController
-from server.events_server import SEventManager
 from server.model.game import SGame
 
 
@@ -10,7 +10,7 @@ def main():
 
     load_srv_config()
 
-    evManager = SEventManager()
+    evManager = EventManager()
 
     sclock = SClockController(evManager) #the loop is in there
     

@@ -5,7 +5,8 @@ from client2.events_client import ClientTickEvent, SendChatEvent, \
     ServerPlayerArrived, ServerPlayerLeft, NetworkReceivedCharactorMoveEvent, \
     SendCharactorMoveEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
-    NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg
+    NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
+    SrvMoveMsg
 
 class NetworkController(ConnectionListener):
     
@@ -71,13 +72,15 @@ class NetworkController(ConnectionListener):
     
     ################## MOVEMENT ################    
         
-    def send_move(self, dest):
-        connection.Send({'action':'move', 'msg':{'dest':dest}})
+    def send_move(self, coords):
+        mmsg = ClMoveMsg({'coords':coords})
+        connection.Send({'action':'move', 'msg':mmsg.d})
     
     def Network_move(self, data):
-        author = data['msg']['author']
-        dest = data['msg']['dest']
-        ev = NetworkReceivedCharactorMoveEvent(author, dest)
+        mmsg = SrvMoveMsg(data['msg'])
+        pname = mmsg.d['pname']
+        coords = mmsg.d['coords']
+        ev = NetworkReceivedCharactorMoveEvent(pname, coords)
         self.evManager.post(ev)
 
         

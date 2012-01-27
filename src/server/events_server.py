@@ -1,12 +1,4 @@
-from common.events import Event, EventManager, TickEvent
-
-
-
-class SEventManager(EventManager):
-    """ nothing particular to have the server event manager do """    
-    def __init__(self):
-        EventManager.__init__(self)
-
+from common.events import Event, TickEvent
 
 
 class ServerTickEvent(TickEvent):
@@ -105,15 +97,15 @@ class SBroadcastChatEvent(Event):
 
 
 class SReceivedMoveEvent(Event):
-    def __init__(self, authorr, coords):
+    def __init__(self, pname, coords):
         self.name = "Network received a move message"
-        self.pname = authorr
+        self.pname = pname
         self.coords = coords
 
 class SBroadcastMoveEvent(Event):
-    def __init__(self, authorr, coords):
+    def __init__(self, pname, coords):
         self.name = "Network is asked to broadcast a move message"
-        self.pname = authorr
+        self.pname = pname
         self.coords = coords
     
 

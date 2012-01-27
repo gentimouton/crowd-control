@@ -113,16 +113,16 @@ class SendChatEvent(Event):
         self.txt = txt
 
 class NetworkReceivedChatEvent(Event):
-    def __init__(self, author, txt):
+    def __init__(self, pname, txt):
         self.name = "Received a chat message from the server"
-        self.author = author
+        self.author = pname
         self.txt = txt
 
 class ChatlogUpdatedEvent(Event):
     """ The model asks the view to refresh the chatlog """
-    def __init__(self, author, txt):
+    def __init__(self, pname, txt):
         self.name = "Chatlog model has been updated"
-        self.author = author
+        self.author = pname
         self.txt = txt
 
 

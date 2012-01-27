@@ -1,7 +1,8 @@
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
 from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
-    NameChangeRequestMsg, ClChatMsg, SrvChatMsg, GreetMsg, NameChangeNotifMsg
+    NameChangeRequestMsg, ClChatMsg, SrvChatMsg, GreetMsg, NameChangeNotifMsg, \
+    ClMoveMsg, SrvMoveMsg
 from server.config import config_get_host, config_get_port
 from server.events_server import ServerTickEvent, SPlayerArrivedEvent, \
     SSendGreetEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
@@ -39,8 +40,8 @@ class ClientChannel(Channel):
         
     def Network_move(self, data):
         """ movement messages """
-        dest = data['msg']['dest'] 
-        self._server.received_move(self, dest)
+        mmsg = ClMoveMsg(data['msg']) 
+        self._server.received_move(self, mmsg.d['coords'])
 
 
 
@@ -186,9 +187,9 @@ class NetworkController(Server):
         self.evManager.post(event)
         
         
-    def broadcast_move(self, name, dest):
-        msg = {"author":name, "dest":dest}
-        data = {"action": "move", "msg": msg}
+    def broadcast_move(self, name, coords):
+        mmsg = SrvMoveMsg({"pname":name, "coords":coords})
+        data = {"action": "move", "msg": mmsg.d}
         for chan in self.chan_to_name:
             chan.Send(data) 
  

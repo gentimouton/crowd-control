@@ -92,3 +92,15 @@ class ClChatMsg(SerializableMsg):
 class SrvChatMsg(SerializableMsg):
     """ brodcast of a chat msg by the server """        
     attrs = ['pname', 'txt'] 
+    
+    
+################# MOVEMENT #####################################################
+
+
+
+class ClMoveMsg(SerializableMsg):
+    """ mvt msg sent from a client to the server """        
+    attrs = ['coords'] 
+class SrvMoveMsg(SerializableMsg):
+    """ brodcast of a mvt msg by the server """        
+    attrs = ['pname', 'coords'] 
