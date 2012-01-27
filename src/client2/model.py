@@ -1,11 +1,12 @@
 from client2.config import config_get_mapname
-from client2.events_client import MyCharactorMoveRequest, ModelBuiltMapEvent, \
+from client2.events_client import MoveMyCharactorRequest, ModelBuiltMapEvent, \
     CharactorPlaceEvent, NetworkReceivedChatEvent, ChatlogUpdatedEvent, \
-    CharactorMoveEvent, ServerGreetEvent, ServerNameChangeEvent, ServerPlayerArrived, \
-    ServerPlayerLeft, CharactorRemoveEvent, NetworkReceivedCharactorMoveEvent, \
-    SendCharactorMoveEvent
+    CharactorMoveEvent, ClGreetEvent, ClPlayerLeft, CharactorRemoveEvent, \
+    NetworkReceivedCharactorMoveEvent, SendCharactorMoveEvent, ClPlayerArrived, \
+    ClNameChangeEvent
 from collections import deque
 from common.world import World
+
 
 
 
@@ -67,17 +68,17 @@ class Game:
     
     def notify(self, event):
         # add/remove players when they join in/leave
-        if isinstance(event, ServerPlayerArrived):
+        if isinstance(event, ClPlayerArrived):
             self.add_player(event.playername, event.pos)
-        if isinstance(event, ServerPlayerLeft):
+        if isinstance(event, ClPlayerLeft):
             self.remove_player(event.playername)
             
         # update players' names when they change it
-        if isinstance(event, ServerNameChangeEvent):
+        if isinstance(event, ClNameChangeEvent):
             self.update_player_name(event.oldname, event.newname)
             
         # when the server greets me, build map and set my name 
-        if isinstance(event, ServerGreetEvent):
+        if isinstance(event, ClGreetEvent):
             # map stuffs
             self.start_map(event.mapname)
             
@@ -89,7 +90,7 @@ class Game:
             
         # when the user pressed up,down,right,or left, move his charactor
         # TODO: location-related events should be in Map
-        if isinstance(event, MyCharactorMoveRequest):
+        if isinstance(event, MoveMyCharactorRequest):
             mychar = self.players[self.myname].charactor
             mychar.move_relative(event.direction)
 

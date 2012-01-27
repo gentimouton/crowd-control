@@ -1,5 +1,5 @@
 from client2.config import config_get_fps
-from client2.events_client import MyCharactorMoveRequest, QuitEvent, \
+from client2.events_client import MoveMyCharactorRequest, QuitEvent, \
     UpClickEvent, DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, \
     NonprintableKeyEvent, ClientTickEvent
 from common.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
@@ -39,13 +39,13 @@ class InputController:
                     elif event.key in self.nonprintable_keys: 
                         ev = NonprintableKeyEvent(event.key)
                     elif event.key == K_UP:
-                        ev = MyCharactorMoveRequest(DIRECTION_UP)
+                        ev = MoveMyCharactorRequest(DIRECTION_UP)
                     elif event.key == K_DOWN:
-                        ev = MyCharactorMoveRequest(DIRECTION_DOWN)
+                        ev = MoveMyCharactorRequest(DIRECTION_DOWN)
                     elif event.key == K_LEFT:
-                        ev = MyCharactorMoveRequest(DIRECTION_LEFT)
+                        ev = MoveMyCharactorRequest(DIRECTION_LEFT)
                     elif event.key == K_RIGHT:
-                        ev = MyCharactorMoveRequest(DIRECTION_RIGHT)
+                        ev = MoveMyCharactorRequest(DIRECTION_RIGHT)
                     elif event.unicode is not '': 
                         # visible chars: letters, numbers, punctuation, space
                         ev = UnicodeKeyPushedEvent(event.key, event.unicode)

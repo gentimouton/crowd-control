@@ -23,8 +23,8 @@ class SGame():
         self.players = dict() 
         
         # build world
-        self.mapname = config_get_mapname()
         self.world = World(evManager)
+        self.mapname = config_get_mapname()
         self.world.build_world(self.mapname, SModelBuiltWorldEvent)
 
 

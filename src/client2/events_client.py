@@ -60,7 +60,7 @@ class ModelBuiltMapEvent(Event):
 ###############################################################################
 """ MOVEMENT """
 
-class MyCharactorMoveRequest(Event):
+class MoveMyCharactorRequest(Event):
     """ sent from controller to model """
     def __init__(self, direction):
         self.name = "Move my charactor towards " + str(direction)
@@ -130,7 +130,7 @@ class ChatlogUpdatedEvent(Event):
 """ NETWORK """
 
 
-class ServerGreetEvent(Event):
+class ClGreetEvent(Event):
     def __init__(self, mapname, newname, newpos, onlineppl):
         self.name = "Received a greeting message from the server"
         self.mapname = mapname
@@ -138,18 +138,18 @@ class ServerGreetEvent(Event):
         self.newpos = newpos
         self.onlineppl = onlineppl
 
-class ServerNameChangeEvent(Event):
+class ClNameChangeEvent(Event):
     def __init__(self, oldname, newname):
         self.name = "The server notified that " + oldname + " changed named to " + newname
         self.oldname = oldname
         self.newname = newname
     
-class ServerPlayerArrived(Event):
+class ClPlayerArrived(Event):
     def __init__(self, playername, coords):
         self.name = "The server notified that " + playername + " connected"
         self.playername = playername
         self.pos = coords
-class ServerPlayerLeft(Event):
+class ClPlayerLeft(Event):
     def __init__(self, playername):
         self.name = "The server notified that " + playername + " left"
         self.playername = playername

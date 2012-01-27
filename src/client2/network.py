@@ -1,8 +1,8 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client2.config import config_get_host, config_get_port, config_get_my_name
 from client2.events_client import ClientTickEvent, SendChatEvent, \
-    NetworkReceivedChatEvent, ServerGreetEvent, ServerNameChangeEvent, \
-    ServerPlayerArrived, ServerPlayerLeft, NetworkReceivedCharactorMoveEvent, \
+    NetworkReceivedChatEvent, ClGreetEvent, ClNameChangeEvent, \
+    ClPlayerArrived, ClPlayerLeft, NetworkReceivedCharactorMoveEvent, \
     SendCharactorMoveEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
@@ -95,7 +95,7 @@ class NetworkController(ConnectionListener):
     the client asks the server to change to its preferred name. 
     The client knows if the server accepted the
     name change by a server broadcast which triggers 
-    a ServerNameChangeEvent(oldname, newname). 
+    a ClNameChangeEvent(oldname, newname). 
     TODO: if the name change was rejected, the client should be notified
     and the user should be told that his preferred name is already in use.
     """
@@ -109,7 +109,7 @@ class NetworkController(ConnectionListener):
             preferred_name = config_get_my_name()
             if gmsg.d['pname'] is not preferred_name:
                 self.ask_for_name_change(preferred_name)
-            ev = ServerGreetEvent(gmsg.d['mapname'], gmsg.d['pname'],
+            ev = ClGreetEvent(gmsg.d['mapname'], gmsg.d['pname'],
                                   gmsg.d['coords'], gmsg.d['onlineppl'])
             self.evManager.post(ev)
 
@@ -117,17 +117,17 @@ class NetworkController(ConnectionListener):
             nmsg = NameChangeNotifMsg(data['msg'])
             oldname = nmsg.d['oldname']
             newname = nmsg.d['newname']
-            ev = ServerNameChangeEvent(oldname, newname)
+            ev = ClNameChangeEvent(oldname, newname)
             self.evManager.post(ev)
 
         elif actiontype == 'arrived': # new player connected
                 amsg = PlayerArrivedNotifMsg(data['msg']) 
-                ev = ServerPlayerArrived(amsg.d['pname'], amsg.d['coords'])
+                ev = ClPlayerArrived(amsg.d['pname'], amsg.d['coords'])
                 self.evManager.post(ev)
     
         elif actiontype == 'left': # player left
             lmsg = PlayerLeftNotifMsg(data['msg'])
-            ev = ServerPlayerLeft(lmsg.d['pname'])
+            ev = ClPlayerLeft(lmsg.d['pname'])
             self.evManager.post(ev)
         
             

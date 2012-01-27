@@ -94,10 +94,10 @@ class MasterView:
         pygame.display.flip() 
         
         # iterate over cell rows and columns
-        for i in range(worldmap.height):
-            for j in range(worldmap.width):
+        for i in range(worldmap.width):
+            for j in range(worldmap.height):
                 # TODO: distinguish between entrance and lair and normal cells
-                cellrect = Rect(j * 100, i * 100, 99, 99)
+                cellrect = Rect(i * 100, j * 100, 99, 99)
                 cell = worldmap.get_cell(i, j)
                 
                 cellspr = CellSprite(cell, self.backSprites)
