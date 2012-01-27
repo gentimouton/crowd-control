@@ -27,11 +27,12 @@ Tools
 
 See `HOWTO-Ubuntu.txt` to setup your dev platform.
 
-Graphics
+Assets
 ==========
 
 * http://openclipart.org/
 * newsground?
+* http://freemusicarchive.org/
 
 License
 ==========
