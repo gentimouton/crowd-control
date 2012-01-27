@@ -2,7 +2,6 @@ from client2.events_client import CharactorMoveEvent, ModelBuiltMapEvent, \
     ClientTickEvent, CharactorPlaceEvent, QuitEvent, SendChatEvent, \
     CharactorRemoveEvent
 from client2.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget
-from pygame.rect import Rect
 from pygame.sprite import RenderUpdates, Sprite
 import pygame
 
@@ -51,28 +50,27 @@ class MasterView:
      
         
         # add quit button and meh_btn at bottom-right 
-        rect = Rect((231, 341), (69, 39)) 
+        rect = pygame.Rect((231, 341), (69, 39)) 
         quitEvent = QuitEvent()
         quit_btn = ButtonWidget(evManager, "Quit", rect=rect,
                              onUpClickEvent=quitEvent)
         
-        rect = Rect((231, 301), (69, 39)) 
+        rect = pygame.Rect((231, 301), (69, 39)) 
         msgEvent = SendChatEvent('meh...') #ask to send 'meh' to the server
         meh_btn = ButtonWidget(evManager, "Meh.", rect=rect,
                                    onUpClickEvent=msgEvent)
         
         
         # chat box input
-        rect = Rect((0, 361), (230, 19)) #bottom and bottom-left of the screen
+        rect = pygame.Rect((0, 361), (230, 19)) #bottom and bottom-left of the screen
         chatbox = InputFieldWidget(evManager, rect=rect)
 
         # chat window display
-        rect = Rect((0, 301), (230, 60)) # just above the chat input field
+        rect = pygame.Rect((0, 301), (230, 60)) # just above the chat input field
         chatwindow = ChatLogWidget(evManager, numlines=3, rect=rect)
         
         pygame.display.flip()
 
-        self.backSprites = RenderUpdates() # TODO: this should actually be the BG
         self.charactorSprites = RenderUpdatesDict()
         self.gui_sprites = RenderUpdates()   
         self.gui_sprites.add(quit_btn)
@@ -82,36 +80,40 @@ class MasterView:
 
     
     def show_map(self, worldmap):
-        """ blit the map on the screen.
+        """ Build the bg from the map cells, and blit it.
         The pixel width and height of map cells is supposed to be constant.
+        
+        TODO: 
         The map is always centered on the avatar (unless when avatar is near
         edges) and scrolls to follow the movement of the player's avatar.
         """
         
-        # clear the screen first
-        self.background.fill((0, 0, 0))
+        self.cellsprs = dict() # maps model.Cell to view.CellSprite
+        
+        # make bg: iterate over cell rows and columns
+        for i in range(worldmap.width):
+            for j in range(worldmap.height):
+                cellrect = pygame.Rect(i * 100, j * 100, 99, 99)
+                cell = worldmap.get_cell(i, j)
+                cellspr = CellSprite(cell, cellrect)
+                self.cellsprs[cell] = cellspr
+                
+                self.background.blit(cellspr.image, cellspr.rect)
+        
+        # display the bg
         self.window.blit(self.background, (0, 0))
         pygame.display.flip() 
         
-        # iterate over cell rows and columns
-        for i in range(worldmap.width):
-            for j in range(worldmap.height):
-                # TODO: distinguish between entrance and lair and normal cells
-                cellrect = Rect(i * 100, j * 100, 99, 99)
-                cell = worldmap.get_cell(i, j)
-                
-                cellspr = CellSprite(cell, self.backSprites)
-                cellspr.rect = cellrect
-                # cellspr = None # that was in shandy's code ... why?
-
     
     def add_charactor(self, charactor):
-        """ Make a sprite and center the sprite based on cell location. """
-        charactorSprite = CharactorSprite(charactor, self.charactorSprites)
+        """ Make a sprite and center the sprite 
+        based on the cell location of the charactor.
+        """
+        charspr = CharactorSprite(charactor, self.charactorSprites)
         # center in middle of cell
-        cell = charactor.cell
-        cell_spr = self.get_cell_sprite(cell)
-        charactorSprite.rect.center = cell_spr.rect.center
+        cell_spr = self.get_cell_sprite(charactor.cell)
+        charspr.rect.center = cell_spr.rect.center
+
 
     def remove_charactor(self, charactor):
         char_spr = self.charactorSprites.get_spr(charactor)
@@ -119,36 +121,38 @@ class MasterView:
         del char_spr
     
     def move_charactor(self, charactor):
+        # TODO: surface.scroll the bg instead of moving the charactor
         charactorSprite = self.charactorSprites.get_spr(charactor)
         cell_spr = self.get_cell_sprite(charactor.cell)
         charactorSprite.dest = cell_spr.rect.center
+        
 
         
     
     def get_cell_sprite(self, cell):
-        for s in self.backSprites:
-            if isinstance(s, CellSprite) and s.cell == cell:
-                return s
+        try:
+            return self.cellsprs[cell]
+        except KeyError:
+            print('Cell', cell, 'not found in the cell dict of the view.')  
+
 
 
     def render_dirty_sprites(self):    
         # clear the window from all the sprites, replacing them with the bg
-        self.backSprites.clear(self.window, self.background)
+        #self.backSprites.clear(self.window, self.background)
         self.charactorSprites.clear(self.window, self.background)
         self.gui_sprites.clear(self.window, self.background)
         
         # update all the sprites - calls update() on each sprite of the groups
-        self.backSprites.update()
         self.charactorSprites.update()
         self.gui_sprites.update()
         
         # collect the display areas that have changed
-        dirtyRectsB = self.backSprites.draw(self.window)
         dirtyRectsF = self.charactorSprites.draw(self.window)
         dirtyRectsG = self.gui_sprites.draw(self.window)
         
         # and redisplay those areas only
-        dirtyRects = dirtyRectsB + dirtyRectsF + dirtyRectsG
+        dirtyRects = dirtyRectsF + dirtyRectsG
         pygame.display.update(dirtyRects)
 
 
@@ -163,6 +167,7 @@ class MasterView:
             self.render_dirty_sprites()
 
         elif isinstance(event, ModelBuiltMapEvent):
+            # called only once at the beginning, when model.map has been built 
             worldmap = event.worldmap
             self.show_map(worldmap)
             
@@ -183,9 +188,12 @@ class MasterView:
 
 ###########################################################################
 
-
+    
+    
 class CellSprite(Sprite):
-    """ The representation of a map cell """
+    """ The representation of a map cell. 
+    Used to draw the map background.
+     """
     
     dims = width, height = 99, 99 # in pixels
     # rgb cell colors
@@ -195,23 +203,23 @@ class CellSprite(Sprite):
     lair_cell_color = 139, 119, 0 
     
     
-    def __init__(self, cell, group=None):
+    def __init__(self, cell, rect, group=()):
         Sprite.__init__(self, group)
 
-        # self.image filled with a color
+        # fill self.image filled with the appropriate color
         self.image = pygame.Surface(self.dims)
-        if hasattr(cell, 'isentrance') and cell.isentrance:
+        if cell.isentrance:
             color = self.entrance_cell_color
-        elif hasattr(cell, 'islair') and cell.islair:
+        elif cell.islair:
             color = self.lair_cell_color
         elif cell.iswalkable:
             color = self.walkable_cell_color
         else: # non-walkable
             color = self.nonwalkable_cell_color
         self.image.fill(color) 
-
+        self.rect = rect
+        
         self.cell = cell
-
         
 
 
@@ -238,7 +246,7 @@ class CharactorSprite(IndexableSprite):
 
     
     def update(self):
-        """ TODO: movement could be smoother and last for longer than 1 frame """
+        """ movement could be smoother and last for longer than 1 frame """
         if self.dest:
             self.rect.center = self.dest
             self.dest = None

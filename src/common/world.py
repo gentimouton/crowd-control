@@ -106,7 +106,7 @@ class Cell():
         self.left, self.top = self.coords = coords
         self.world = world
         self.iswalkable = walkable
-
+        self.isentrance = self.islair = False
 
     def __str__(self):
         return '<Cell %s %s>' % (self.coords, id(self))
