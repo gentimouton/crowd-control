@@ -34,6 +34,8 @@ Assets
 * newsground?
 * http://freemusicarchive.org/
 * http://danosongs.com/
+* http://www.incompetech.com/m/c/royalty-free/#
+* SFX: http://www.partnersinrhyme.com/pir/PIRsfx.shtml
 
 License
 ==========
