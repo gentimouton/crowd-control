@@ -36,6 +36,7 @@ Assets
 * http://danosongs.com/
 * http://www.incompetech.com/m/c/royalty-free/#
 * SFX: http://www.partnersinrhyme.com/pir/PIRsfx.shtml
+* SFX: http://www.audiomicro.com/free-sound-effects
 
 License
 ==========
