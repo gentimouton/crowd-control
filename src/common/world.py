@@ -21,20 +21,31 @@ class World():
                 + '\n' + self.worldrepr
     
     
-    def build_world(self, mapname, buildevent):    
-        f = open(os.path.join(os.pardir, 'maps', mapname))
+    def build_world(self, mapname, buildevent):
+        try:    
+            fname = os.path.join(os.pardir, 'maps', mapname)
+            f = open(fname)
+        except IOError:
+            print('Error: Map not found:', os.path.abspath(fname))
+            exit()
+            
         lines = f.readlines() #might be optimized: for line in open("file.txt"):
         self.__cellgrid = [] #contains game board
         self.worldrepr = '' # string visually representing the world map
+        
+        # 1st line = diameter of the players' visible area
+        self.visibility_radius = int(lines.pop(0))
+        assert self.visibility_radius > 0, \
+            'Visibility radius should be greater than 0.'
         
         # sanity checks on map width and height
         self.height = len(lines)
         if self.height == 0:
             print('Warning: map', mapname, 'has no lines.')
         else:
-            self.width = len(lines[0].strip().split(','))
+            self.width = len(lines[1].strip().split(','))
             if self.width == 0:
-                print('Warning: the first line of map', mapname, 'has no cells.')
+                print('Warning: the first row of map', mapname, 'has no cells.')
         
         # build the cell matrix
         for i in range(self.height): 
@@ -43,7 +54,8 @@ class World():
             self.worldrepr = self.worldrepr + lines[i]
             
             for j in range(len(line)):
-                coords = j, i #__cellgrid[i][j] = i-th cell from top, j-th from left
+                coords = j, i 
+                # so that __cellgrid[i][j] = i-th cell from top, j-th from left
                 cellvalue = line[j]
                 if cellvalue == 'E':#entrance is walkable
                     self.entrance_coords = coords 

@@ -1,6 +1,7 @@
-from client2.events_client import CharactorMoveEvent, ModelBuiltMapEvent, \
-    ClientTickEvent, CharactorPlaceEvent, QuitEvent, SendChatEvent, \
-    CharactorRemoveEvent
+from client2.config import config_get_screenres
+from client2.events_client import ModelBuiltMapEvent, ClientTickEvent, QuitEvent, \
+    SendChatEvent, CharactorRemoveEvent, OtherCharactorPlaceEvent, \
+    LocalCharactorPlaceEvent, LocalCharactorMoveEvent, RemoteCharactorMoveEvent
 from client2.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget
 from pygame.sprite import RenderUpdates, Sprite
 import pygame
@@ -41,37 +42,41 @@ class MasterView:
         self.evManager.register_listener(self)
 
         pygame.init() #calling init() multiple times does not mess anything
-        self.window = pygame.display.set_mode((300, 380))
+        self.window_size = config_get_screenres()
+        assert self.window_size[0] == self.window_size[1], \
+            'Config Error: Window width and height should be equal.' 
+        self.window = pygame.display.set_mode(self.window_size)
         pygame.display.set_caption('CC')
         
+        # blit the loading screen: a black screen
         self.background = pygame.Surface(self.window.get_size())
         self.background.fill((0, 0, 0)) #black
         self.window.blit(self.background, (0, 0))
      
         
         # add quit button and meh_btn at bottom-right 
-        rect = pygame.Rect((231, 341), (69, 39)) 
+        rect = pygame.Rect((500, 550), (99, 49)) 
         quitEvent = QuitEvent()
         quit_btn = ButtonWidget(evManager, "Quit", rect=rect,
                              onUpClickEvent=quitEvent)
         
-        rect = pygame.Rect((231, 301), (69, 39)) 
+        rect = pygame.Rect((500, 500), (99, 49)) 
         msgEvent = SendChatEvent('meh...') #ask to send 'meh' to the server
         meh_btn = ButtonWidget(evManager, "Meh.", rect=rect,
                                    onUpClickEvent=msgEvent)
         
         
         # chat box input
-        rect = pygame.Rect((0, 361), (230, 19)) #bottom and bottom-left of the screen
+        rect = pygame.Rect((70, 580), (429, 19)) #bottom and bottom-left of the screen
         chatbox = InputFieldWidget(evManager, rect=rect)
 
         # chat window display
-        rect = pygame.Rect((0, 301), (230, 60)) # just above the chat input field
-        chatwindow = ChatLogWidget(evManager, numlines=3, rect=rect)
+        rect = pygame.Rect((0, 500), (499, 79)) # just above the chat input field
+        chatwindow = ChatLogWidget(evManager, numlines=4, rect=rect)
         
         pygame.display.flip()
 
-        self.charactorSprites = RenderUpdatesDict()
+        self.charactor_sprites = RenderUpdatesDict()
         self.gui_sprites = RenderUpdates()   
         self.gui_sprites.add(quit_btn)
         self.gui_sprites.add(meh_btn)
@@ -79,81 +84,157 @@ class MasterView:
         self.gui_sprites.add(chatwindow)
 
     
+    
+    ###################### map and charactor ###############################
+    
+    
     def show_map(self, worldmap):
         """ Build the bg from the map cells, and blit it.
-        The pixel width and height of map cells is supposed to be constant.
-        
-        TODO: 
-        The map is always centered on the avatar (unless when avatar is near
-        edges) and scrolls to follow the movement of the player's avatar.
+        The pixel width and height of map cells comes from 
+        the window's dimensions and the map's visibility radius.
         """
         
         self.cellsprs = dict() # maps model.Cell to view.CellSprite
         
-        # make bg: iterate over cell rows and columns
+        # determine width and height of cell spr from map visibility 
+        self.visib_rad = worldmap.visibility_radius
+        self.visib_diam = 2 * self.visib_rad + 1
+        self.cspr_size = int(min(self.window_size) / self.visib_diam)
+        
+        # Build world background to be scrolled when the charactor moves
+        # so that world_bg can be scrolled 
+        # padding of visib_diam so that the bg can subsurface(world_bg)
+        world_surf_w = self.cspr_size * (worldmap.width + 2 * self.visib_rad)
+        world_surf_h = self.cspr_size * (worldmap.height + 2 * self.visib_rad)
+        self.world_bg = pygame.Surface((world_surf_w, world_surf_h))
+        
         for i in range(worldmap.width):
             for j in range(worldmap.height):
-                cellrect = pygame.Rect(i * 100, j * 100, 99, 99)
+                # don't forget the visib_rad of padding
+                cspr_left = (self.visib_rad + i) * self.cspr_size
+                cspr_top = (self.visib_rad + j) * self.cspr_size
+                cspr_dims = (self.cspr_size, self.cspr_size)
+                cellrect = pygame.Rect((cspr_left, cspr_top), cspr_dims)
+                
                 cell = worldmap.get_cell(i, j)
                 cellspr = CellSprite(cell, cellrect)
                 self.cellsprs[cell] = cellspr
                 
-                self.background.blit(cellspr.image, cellspr.rect)
+                self.world_bg.blit(cellspr.image, cellspr.rect)
         
-        # display the bg
+        # Center screen background on entrance cell, and blit
+        eleft, etop = worldmap.entrance_coords
+        self.center_screen_on_coords(eleft, etop)
+        
+    
+         
+                
+                
+    def center_screen_on_coords(self, cleft, ctop):
+        """ Get the subsurface of interest to pick from the whole world surface
+        and blit it on the window screen.
+        """
+        self.bg_shift_left = cleft
+        self.bg_shift_top = ctop
+        
+        subsurf_left = cleft * self.cspr_size
+        subsurf_top = ctop * self.cspr_size
+        subsurf_dims = (self.visib_diam * self.cspr_size,
+                        self.visib_diam * self.cspr_size) 
+        visible_area = pygame.Rect((subsurf_left, subsurf_top), subsurf_dims)
+        # make bg from that area of interest
+        # subsurface() should not raise any error when moving on the world borders
+        # since the screen is squared and the world padded with an extra visib_diam
+        self.background = self.world_bg.subsurface(visible_area)
         self.window.blit(self.background, (0, 0))
         pygame.display.flip() 
         
+        
+        
+    def display_charactor(self, charspr, cleft, ctop):
+        """ display a charactor on the screen given his cell coords """
+        
+        cell_shift_left = cleft - self.bg_shift_left
+        cell_shift_top = ctop - self.bg_shift_top
+        
+        if abs(cell_shift_left) <= self.visib_rad\
+        and abs(cell_shift_top) <= self.visib_rad:
+            # charactor got out of screen
+            pass
+         
+        # determine the screen position of the char's spr
+        charleft = (self.visib_diam / 2 + cell_shift_left) * self.cspr_size
+        chartop = (self.visib_diam / 2 + cell_shift_top) * self.cspr_size
+        charspr.rect.center = (charleft, chartop)
+
     
-    def add_charactor(self, charactor):
+    
+    
+    def add_remote_charactor(self, charactor):
         """ Make a sprite and center the sprite 
         based on the cell location of the charactor.
         """
-        charspr = CharactorSprite(charactor, self.charactorSprites)
-        # center in middle of cell
-        cell_spr = self.get_cell_sprite(charactor.cell)
-        charspr.rect.center = cell_spr.rect.center
+        sprdims = (self.cspr_size, self.cspr_size)
+        charspr = CharactorSprite(charactor, sprdims, self.charactor_sprites)
+        cleft, ctop = charactor.cell.coords
+        self.display_charactor(charspr, cleft, ctop)
 
 
-    def remove_charactor(self, charactor):
-        char_spr = self.charactorSprites.get_spr(charactor)
+    def add_local_charactor(self, charactor):
+        """ Center the map on the charactor's cell,
+        build a charactor sprite in that cell, 
+        and reblit background, charactor sprites, and GUI.
+        """
+        sprdims = (self.cspr_size, self.cspr_size)
+        charspr = CharactorSprite(charactor, sprdims, self.charactor_sprites)
+        cleft, ctop = charactor.cell.coords
+        self.center_screen_on_coords(cleft, ctop)
+        self.display_charactor(charspr, cleft, ctop)
+        
+
+    def remove_remote_charactor(self, charactor):
+        """ """
+        char_spr = self.charactor_sprites.get_spr(charactor)
         char_spr.kill() # remove from all sprite groups
         del char_spr
     
-    def move_charactor(self, charactor):
-        # TODO: surface.scroll the bg instead of moving the charactor
-        charactorSprite = self.charactorSprites.get_spr(charactor)
-        cell_spr = self.get_cell_sprite(charactor.cell)
-        charactorSprite.dest = cell_spr.rect.center
-        
-
-        
     
-    def get_cell_sprite(self, cell):
-        try:
-            return self.cellsprs[cell]
-        except KeyError:
-            print('Cell', cell, 'not found in the cell dict of the view.')  
+    def move_local_charactor(self, charactor):
+        """ move my charactor: scroll the background """
+        cleft, ctop = charactor.cell.coords
+        self.center_screen_on_coords(cleft, ctop)
+        # redisplay the other charactors
+        for charspr in self.charactor_sprites:
+            cleft, ctop = charspr.charactor.cell.coords
+            self.display_charactor(charspr, cleft, ctop)
+        
 
-
+    def move_remote_charactor(self, charactor):
+        """ move the spr of other clients' charactors """
+        charspr = self.charactor_sprites.get_spr(charactor)
+        cleft, ctop = charactor.cell.coords
+        self.display_charactor(charspr, cleft, ctop) 
+        
+        
+    #####################################################################
+    
 
     def render_dirty_sprites(self):    
         # clear the window from all the sprites, replacing them with the bg
-        #self.backSprites.clear(self.window, self.background)
-        self.charactorSprites.clear(self.window, self.background)
+        self.charactor_sprites.clear(self.window, self.background)
         self.gui_sprites.clear(self.window, self.background)
         
         # update all the sprites - calls update() on each sprite of the groups
-        self.charactorSprites.update()
+        self.charactor_sprites.update()
         self.gui_sprites.update()
         
         # collect the display areas that have changed
-        dirtyRectsF = self.charactorSprites.draw(self.window)
-        dirtyRectsG = self.gui_sprites.draw(self.window)
+        dirty_rects_chars = self.charactor_sprites.draw(self.window)
+        dirty_rects_gui = self.gui_sprites.draw(self.window)
         
         # and redisplay those areas only
-        dirtyRects = dirtyRectsF + dirtyRectsG
-        pygame.display.update(dirtyRects)
+        dirty_rects = dirty_rects_chars + dirty_rects_gui
+        pygame.display.update(dirty_rects)
 
 
 
@@ -168,19 +249,24 @@ class MasterView:
 
         elif isinstance(event, ModelBuiltMapEvent):
             # called only once at the beginning, when model.map has been built 
-            worldmap = event.worldmap
-            self.show_map(worldmap)
+            self.show_map(event.worldmap)
             
-        elif isinstance(event, CharactorPlaceEvent):
-            self.add_charactor(event.charactor)
+        elif isinstance(event, OtherCharactorPlaceEvent):
+            self.add_remote_charactor(event.charactor)
+
+        elif isinstance(event, LocalCharactorPlaceEvent):
+            self.add_local_charactor(event.charactor)
             
         elif isinstance(event, CharactorRemoveEvent):
             charactor = event.charactor
-            self.remove_charactor(charactor)
+            self.remove_remote_charactor(charactor)
 
             
-        elif isinstance(event, CharactorMoveEvent):
-            self.move_charactor(event.charactor)
+        elif isinstance(event, LocalCharactorMoveEvent):
+            self.move_local_charactor(event.charactor)
+            #coords = event.coords
+        elif isinstance(event, RemoteCharactorMoveEvent):
+            self.move_remote_charactor(event.charactor)
             #coords = event.coords
 
 
@@ -195,7 +281,6 @@ class CellSprite(Sprite):
     Used to draw the map background.
      """
     
-    dims = width, height = 99, 99 # in pixels
     # rgb cell colors
     walkable_cell_color = 139, 119, 101 
     nonwalkable_cell_color = 0, 0, 0 
@@ -205,6 +290,8 @@ class CellSprite(Sprite):
     
     def __init__(self, cell, rect, group=()):
         Sprite.__init__(self, group)
+        
+        self.dims = self.width, self.height = rect.width, rect.height
 
         # fill self.image filled with the appropriate color
         self.image = pygame.Surface(self.dims)
@@ -230,14 +317,18 @@ class CellSprite(Sprite):
 class CharactorSprite(IndexableSprite):
     """ The representation of a character """
     
-    def __init__(self, charactor, groups=None):
+    def __init__(self, charactor, sprdims, groups=None):
         self.key = charactor # must be set before adding the spr to group(s)
         Sprite.__init__(self, groups)
         
-        charactorSurf = pygame.Surface((64, 64))
+        charactorSurf = pygame.Surface(sprdims)
         charactorSurf = charactorSurf.convert_alpha()
         charactorSurf.fill((0, 0, 0, 0)) #make transparent
-        pygame.draw.circle(charactorSurf, (255, 140, 0), (32, 32), 32)
+        # draw a circle as big as dims
+        w, h = sprdims
+        ctr_coords = int(w / 2), int(h / 2)
+        radius = int(min(w / 2, h / 2)) #don't overflow the given sprdims
+        pygame.draw.circle(charactorSurf, (255, 140, 0), ctr_coords, radius)
         self.image = charactorSurf
         self.rect = charactorSurf.get_rect()
 

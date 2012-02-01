@@ -123,7 +123,7 @@ class SGame():
 ##############################################################################
 
     def notify(self, event):
-        
+            
         # network notifies that a player arrived or left
         if isinstance(event, SPlayerArrivedEvent):
             self.player_arrived(event.pname)

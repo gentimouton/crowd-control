@@ -1,9 +1,8 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client2.config import config_get_host, config_get_port, config_get_my_name
+from client2.config import config_get_nick, config_get_hostport
 from client2.events_client import ClientTickEvent, SendChatEvent, \
-    NetworkReceivedChatEvent, ClGreetEvent, ClNameChangeEvent, \
-    ClPlayerArrived, ClPlayerLeft, NetworkReceivedCharactorMoveEvent, \
-    SendCharactorMoveEvent
+    NetworkReceivedChatEvent, ClGreetEvent, ClNameChangeEvent, ClPlayerArrived, \
+    ClPlayerLeft, NetworkReceivedCharactorMoveEvent, LocalCharactorMoveEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
     SrvMoveMsg
@@ -15,7 +14,7 @@ class NetworkController(ConnectionListener):
         self.evManager = evManager
         self.evManager.register_listener(self)
         
-        host, port = config_get_host(), config_get_port()
+        host, port = config_get_hostport()
         self.Connect((host, port))
         
         
@@ -106,7 +105,7 @@ class NetworkController(ConnectionListener):
 
         if actiontype == 'greet':
             gmsg = GreetMsg(data['msg']) #build msg from dictionary
-            preferred_name = config_get_my_name()
+            preferred_name = config_get_nick()
             if gmsg.d['pname'] is not preferred_name:
                 self.ask_for_name_change(preferred_name)
             ev = ClGreetEvent(gmsg.d['mapname'], gmsg.d['pname'],
@@ -148,6 +147,6 @@ class NetworkController(ConnectionListener):
             self.push()
         elif isinstance(event, SendChatEvent):
             self.send_chat(event.txt)
-        elif isinstance(event, SendCharactorMoveEvent):
+        elif isinstance(event, LocalCharactorMoveEvent):
             self.send_move(event.coords)
             

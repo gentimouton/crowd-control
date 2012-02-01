@@ -1,12 +1,19 @@
 import configparser
+import os
 
 __dict = {} #store pairs of (config option, value)
 
 def load_config():
     """ read configs from config file, and simulate a static config class """
+    
     config_filepath = "client_config.ini"
     config = configparser.ConfigParser()
-    config.read(config_filepath)
+    files_read = config.read(config_filepath)
+    if not files_read: #config.read() could not find the config file
+        print('Error: Could not find config file at', 
+              os.path.abspath(config_filepath))
+        exit()
+        
     for section in config.sections():
         options = config.options(section)
         for option in options:
@@ -21,31 +28,24 @@ def load_config():
 
 
 # --- graphics config
+
 def config_get_fps():
     return int(__dict['fps'])
 
-def config_get_screencaption():
-    return __dict['screencaption']
+def config_get_screenres():
+    res = __dict['screenres'].strip().split(',')
+    w = int(res[0])
+    h = int(res[1])
+    return w, h
 
-def config_get_screenwidth():
-    return int(__dict['screenwidth'])
-
-def config_get_screenheight():
-    return int(__dict['screenheight'])
-
-def config_get_mapname():
-    return __dict['mapname']
 
 # --- network
 
-def config_get_host():
-    return __dict['host']
+def config_get_hostport():
+    hostport = __dict['hostport'].strip().split(':')
+    host = hostport[0]
+    port = int(hostport[1])
+    return host, port
 
-def config_get_port():
-    return int(__dict['port'])
-
-def config_get_push_freq():
-    return int(__dict['push_freq'])
-
-def config_get_my_name():
-    return __dict['myname']
+def config_get_nick():
+    return __dict['nick']

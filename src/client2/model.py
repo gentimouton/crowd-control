@@ -1,9 +1,9 @@
-from client2.config import config_get_mapname
 from client2.events_client import MoveMyCharactorRequest, ModelBuiltMapEvent, \
-    CharactorPlaceEvent, NetworkReceivedChatEvent, ChatlogUpdatedEvent, \
-    CharactorMoveEvent, ClGreetEvent, ClPlayerLeft, CharactorRemoveEvent, \
-    NetworkReceivedCharactorMoveEvent, SendCharactorMoveEvent, ClPlayerArrived, \
-    ClNameChangeEvent
+    NetworkReceivedChatEvent, ChatlogUpdatedEvent, ClGreetEvent, \
+    ClPlayerLeft, CharactorRemoveEvent, NetworkReceivedCharactorMoveEvent, \
+    ClPlayerArrived, ClNameChangeEvent, \
+    LocalCharactorPlaceEvent, OtherCharactorPlaceEvent, LocalCharactorMoveEvent, \
+    RemoteCharactorMoveEvent
 from collections import deque
 from common.world import World
 
@@ -12,21 +12,25 @@ from common.world import World
 
 
 class Game:
-    """ The top of the model. Contains players and map. """
+    """ The top of the model. Contains players and world. """
 
     def __init__(self, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
         
         self.players = dict() #unlike WeakValueDict, I need to remove players manually
-        self.map = World(evManager)
+        self.world = World(evManager)
         self.chatlog = ChatLog(evManager)
 
 
     def add_player(self, name, pos):
         """ add a new player to the list of connected players """
-        cell = self.map.get_cell(pos)
-        newplayer = Player(name, cell, self.evManager)       
+        cell = self.world.get_cell(pos)
+        if hasattr(self, 'myname') and name == self.myname:
+            islocal = True # whether that Player is controlled by the client 
+        else:
+            islocal = False
+        newplayer = Player(name, cell, islocal, self.evManager)       
         self.players[name] = newplayer
         
         
@@ -57,15 +61,33 @@ class Game:
 
     
     def start_map(self, mapname):
-        """ load map from file """
+        """ load world from file """
         self.mapname = mapname
-        if config_get_mapname() != self.mapname:
-            print('---- Warning: the server map (', self.mapname ,
-                   ') is not the client map (', config_get_mapname(), ')') 
-        self.map.build_world(self.mapname, ModelBuiltMapEvent)
+        self.world.build_world(self.mapname, ModelBuiltMapEvent)
 
     
+    def greeted(self, mapname, newname, newpos, onlineppl):
+        """ start world builing process and add already connected players """
+        self.start_map(mapname)
+            
+        self.myname = newname 
+        self.add_player(newname, newpos)
+        
+        for name, pos in onlineppl.items():
+            self.add_player(name, pos)
+            
     
+    
+    def move_charactor(self, pname, dest):
+        """move the charactor of the player which name is pname
+        #TODO: track my own updates inside a 'ghost' appearance
+        """
+        if pname != self.myname:
+            charactor = self.players[pname].charactor
+            destcell = self.world.get_cell(dest)
+            charactor.move_absolute(destcell)
+
+            
     def notify(self, event):
         # add/remove players when they join in/leave
         if isinstance(event, ClPlayerArrived):
@@ -77,16 +99,9 @@ class Game:
         if isinstance(event, ClNameChangeEvent):
             self.update_player_name(event.oldname, event.newname)
             
-        # when the server greets me, build map and set my name 
+        # when the server greets me, build world and set my name 
         if isinstance(event, ClGreetEvent):
-            # map stuffs
-            self.start_map(event.mapname)
-            
-            # players stuff
-            for name, pos in event.onlineppl.items():
-                self.add_player(name, pos)
-            self.myname = event.newname 
-            self.add_player(event.newname, event.newpos)
+            self.greeted(event.mapname, event.newname, event.newpos, event.onlineppl)
             
         # when the user pressed up,down,right,or left, move his charactor
         # TODO: location-related events should be in Map
@@ -96,11 +111,7 @@ class Game:
 
         # TODO: should be in Map?
         if isinstance(event, NetworkReceivedCharactorMoveEvent):
-            pname = event.author
-            if pname != self.myname: #TODO: track my own updates inside a 'ghost' appearance 
-                charactor = self.players[event.author].charactor
-                destcell = self.map.get_cell(event.dest)
-                charactor.move_absolute(destcell)
+            self.move_charactor(event.author, event.dest)
 
 
 
@@ -112,12 +123,12 @@ class Player(object):
     """ the model structure for a person playing the game 
     It has name, score, etc. 
     """
-    def __init__(self, name, cell, evManager):
+    def __init__(self, name, cell, islocal, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
 
         self.name = name
-        self.charactor = Charactor(self, cell, evManager) 
+        self.charactor = Charactor(self, cell, islocal, evManager) 
 
 
     def __str__(self):
@@ -140,15 +151,21 @@ class Player(object):
 
 class Charactor:
     """ An entity controlled by a player.
-    Right now, the mapping is 1-to-1: one charactor per player. """
+    Right now, the mapping is 1-to-1: one charactor per player. 
+    """
 
-    def __init__(self, player, cell, evManager):
+    def __init__(self, player, cell, islocal, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
         
         self.player = player
-        self.cell = cell        
-        ev = CharactorPlaceEvent(self, cell)
+        self.cell = cell
+        self.islocal = islocal #whether the charactor is controlled by the client
+        
+        if islocal:
+            ev = LocalCharactorPlaceEvent(self, cell)
+        else:
+            ev = OtherCharactorPlaceEvent(self, cell)
         self.evManager.post(ev)
         
 
@@ -162,11 +179,8 @@ class Charactor:
         dest_cell = self.cell.get_adjacent_cell(direction)
         if dest_cell:
             self.cell = dest_cell
-            # send to server that I moved
-            ev = SendCharactorMoveEvent(self, dest_cell.coords)
-            self.evManager.post(ev)
-            # send to view that I moved
-            ev = CharactorMoveEvent(self, dest_cell.coords)
+            # send to view and server that I moved
+            ev = LocalCharactorMoveEvent(self, dest_cell.coords)
             self.evManager.post(ev)
         else:
             pass #TODO: give (audio?) feedback that move is not possible
@@ -176,7 +190,7 @@ class Charactor:
         # TODO: check that moving to destcell is a legal move. 
         #If illegal move, report to server of potential cheat/hack
         self.cell = destcell
-        ev = CharactorMoveEvent(self, destcell.coords)
+        ev = RemoteCharactorMoveEvent(self, destcell.coords)
         self.evManager.post(ev)
 
 

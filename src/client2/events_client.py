@@ -67,8 +67,15 @@ class MoveMyCharactorRequest(Event):
         self.direction = direction
 
 
-class CharactorPlaceEvent(Event):
-    """this event occurs when a Charactor is *placed* in a cell,
+class OtherCharactorPlaceEvent(Event):
+    """this event occurs when another client's Charactor is *placed* in a cell,
+    ie it doesn't move there from an adjacent cell."""
+    def __init__(self, charactor, cell):
+        self.name = "Charactor Placement - " + str(charactor)
+        self.charactor = charactor
+        self.cell = cell
+class LocalCharactorPlaceEvent(Event):
+    """this event occurs when the client's Charactor is *placed* in a cell,
     ie it doesn't move there from an adjacent cell."""
     def __init__(self, charactor, cell):
         self.name = "Charactor Placement - " + str(charactor)
@@ -82,20 +89,20 @@ class CharactorRemoveEvent(Event):
         self.name = "Charactor Removal - " + str(charactor)
         self.charactor = charactor
         
-
-class CharactorMoveEvent(Event):
-    """ sent from model to view """
+        
+class RemoteCharactorMoveEvent(Event):
+    """ sent from model to view when another client moved """
+    def __init__(self, charactor, coords):
+        self.name = "Charactor Move - " + str(charactor)
+        self.charactor = charactor
+        self.coords = coords
+class LocalCharactorMoveEvent(Event):
+    """ sent from model to view and network controller when my charactor moved """
     def __init__(self, charactor, coords):
         self.name = "Charactor Move - " + str(charactor)
         self.charactor = charactor
         self.coords = coords
 
-class SendCharactorMoveEvent(CharactorMoveEvent):
-    """ sent from model to network controller """
-    def __init__(self, charactor, coords):
-        self.name = "Send Charactor Move - " + str(charactor)
-        self.charactor = charactor
-        self.coords = coords
 
 class NetworkReceivedCharactorMoveEvent(Event):
     def __init__(self, pname, dest):
