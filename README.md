@@ -35,6 +35,7 @@ Assets
 * http://freemusicarchive.org/
 * http://danosongs.com/
 * http://www.incompetech.com/m/c/royalty-free/#
+* http://www.pacdv.com/sounds/free-music.html
 * SFX: http://www.partnersinrhyme.com/pir/PIRsfx.shtml
 * SFX: http://www.audiomicro.com/free-sound-effects
 
