@@ -16,6 +16,7 @@ Inspirations
 * WoW
 * the movie 300
 * tower defense games
+* Bastion: www.youtube.com/watch?v=rfufeFECLeY&feature=related
 
 
 Tools
