@@ -79,16 +79,16 @@ class SBroadcastNameChangeEvent(Event):
 
 
 class SReceivedChatEvent(Event):
-    def __init__(self, authorr, txt):
+    def __init__(self, author, txt):
         self.name = "Network received a chat message"
         self.txt = txt
-        self.pname = authorr
+        self.pname = author
 
 class SBroadcastChatEvent(Event):
-    def __init__(self, authorr, txt):
+    def __init__(self, author, txt):
         self.name = "Network is asked to broadcast a chat message"
         self.txt = txt
-        self.pname = authorr
+        self.pname = author
     
 
 

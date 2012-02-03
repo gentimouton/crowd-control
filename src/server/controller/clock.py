@@ -1,16 +1,22 @@
 from server.config import config_get_fps
 from server.events_server import ServerTickEvent, SQuitEvent
 from time import sleep
+import logging
 
 class SClockController():
     """ sends tick events """
-    
+
+    log = logging.getLogger('server')
+
     def __init__(self, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
         
         self.fps = config_get_fps()
         self.keep_going = True
+        
+        self.log.debug('Clock starts to tick at '+ str(self.fps) + ' fps')
+        
         
     
     def tick(self):

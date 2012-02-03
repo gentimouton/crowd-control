@@ -1,9 +1,15 @@
 import configparser
+import logging
 
 __dict = {} #store pairs of (config option, value)
 
+
+
 def load_srv_config():
     """ read configs from config file, and simulate a static config class """
+    
+    log = logging.getLogger('server')
+
     config_filepath = "srv_config.ini"
     config = configparser.ConfigParser()
     config.read(config_filepath)
@@ -13,9 +19,9 @@ def load_srv_config():
             try:
                 __dict[option] = config.get(section, option)
                 if __dict[option] == -1:
-                    print("[ERROR]: skipped option: %s" % option)
+                    log.error("Skipped option: %s" % option)
             except:
-                print("[ERROR]: exception on option %s" % option)
+                log.error("Exception on option %s" % option)
                 __dict[option] = None
                 
     return

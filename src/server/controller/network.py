@@ -11,9 +11,12 @@ from server.events_server import ServerTickEvent, SPlayerArrivedEvent, \
     SBroadcastArrivedEvent, SBroadcastLeftEvent
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
+import logging
 
 class ClientChannel(Channel):
-      
+
+    log = logging.getLogger('server')
+  
     def Close(self):
         """ built-in called by Channel.handle_close """
         self._server.channel_closed(self)
@@ -22,8 +25,8 @@ class ClientChannel(Channel):
     
     def Network(self, data):
         """ called for all received msgs """
-        # TODO: implement a logger
-        pass
+        self.log.debug('Received from ' + str(self.addr) + ' : ' + str(data))
+        
     
 
     def Network_admin(self, data):
@@ -52,8 +55,9 @@ class ClientChannel(Channel):
 
 class NetworkController(Server):
     
-    channelClass = ClientChannel
-    
+    channelClass = ClientChannel # The Server needs that attribute to be set
+    log = logging.getLogger('server')
+
     def __init__(self, evManager):
     
         host, port = config_get_host(), config_get_port()
@@ -69,10 +73,14 @@ class NetworkController(Server):
         #WeakKeyDictionary's key is garbage collected and removed from dictionary 
         # when used nowhere else but in the dict's mapping
         
-        print('Server Network up')
+        self.log.info('Server Network up')
 
 
-    
+    def send(self, chan, data):
+        """ send data to a channel """
+        self.log.debug('Send to ' + str(chan.addr) + ' : ' + str(data))
+        chan.Send(data)
+        
         
     ####### (dis)connection and name changes 
 
@@ -82,6 +90,8 @@ class NetworkController(Server):
         The client should change user's name automatically if it's not taken
         already, and clients can use a command to change their name
         """
+        
+        self.log.debug('Connection try from ' + str(addr))
         
         # accept connections only after model is built
         if not self.accept_connections: 
@@ -96,6 +106,8 @@ class NetworkController(Server):
         self.chan_to_name[channel] = name
         self.name_to_chan[name] = channel
         
+        self.log.debug(name + ' joined ' + str(channel.addr))
+        
         event = SPlayerArrivedEvent(name)
         self.evManager.post(event)
         
@@ -103,11 +115,16 @@ class NetworkController(Server):
     def channel_closed(self, channel):
         """ when a player logs out, remove his channel from the list """
         name = self.chan_to_name[channel]
+        
+        self.log.debug(name + ' disconnected ' + str(channel.addr))
+        
         event = SPlayerLeftEvent(name)
         self.evManager.post(event)
 
         del self.name_to_chan[name]
         del self.chan_to_name[channel]
+        
+        
 
 
     def broadcast_conn_status(self, bcmsg):
@@ -119,13 +136,13 @@ class NetworkController(Server):
         if isinstance(bcmsg, PlayerArrivedNotifMsg):
             for chan in self.chan_to_name:
                 if self.chan_to_name[chan] != bcmsg.d['pname']:
-                    chan.Send(data)
+                    self.send(chan, data)
                     
         # user left: notify everyone
         elif isinstance(bcmsg, PlayerLeftNotifMsg): 
             for chan in self.chan_to_name: 
                 # The concerned player has been deleted, so he won't be notified
-                chan.Send(data) 
+                self.send(chan, data) 
                 
 
     def greet(self, greetmsg):
@@ -134,12 +151,15 @@ class NetworkController(Server):
         name = greetmsg.d['pname']
         chan = self.name_to_chan[name]
         try:
-            chan.Send({"action": 'admin', "msg": greetmsg.d})
+            data = {"action": 'admin', "msg": greetmsg.d}
+            self.send(chan, data)
         except KeyError:
-            print(greetmsg.d)
+            self.log.error('Could not find greet message data for ' + str(chan.addr))
+        
 
     def received_name_change(self, channel, newname):
         """ notify that a player wants to change name """
+        
         oldname = self.chan_to_name[channel]
         event = SPlayerNameChangeRequestEvent(oldname, newname)
         self.evManager.post(event)
@@ -148,16 +168,20 @@ class NetworkController(Server):
             
     def broadcast_name_change(self, msg):
         """ update name<->channel mappings and notify all players """
+        
         oldname = msg.d['oldname']
         newname = msg.d['newname']
+        
         # update my chan<->name mappings
         channel = self.name_to_chan[oldname]
         self.chan_to_name[channel] = newname
         self.name_to_chan[newname] = channel
         del self.name_to_chan[oldname]
+        
         # notify everyone
-        for c in self.chan_to_name:
-            c.Send({'action':'admin', 'msg':msg.d}) 
+        data = {'action':'admin', 'msg':msg.d}
+        for chan in self.chan_to_name:
+            self.send(chan, data) 
 
         
         
@@ -166,6 +190,7 @@ class NetworkController(Server):
         
     def received_chat(self, channel, cmsg):
         """ send a chat msg to all connected clients """
+        
         author = self.chan_to_name[channel]
         
         event = SReceivedChatEvent(author, cmsg.d['txt'])
@@ -175,7 +200,7 @@ class NetworkController(Server):
     def broadcast_chat(self, cmsg):
         data = {"action": "chat", "msg": cmsg.d}
         for chan in self.chan_to_name:
-            chan.Send(data)
+            self.send(chan, data)
 
     
     ###################### movement  #####################################
@@ -191,7 +216,7 @@ class NetworkController(Server):
         mmsg = SrvMoveMsg({"pname":name, "coords":coords})
         data = {"action": "move", "msg": mmsg.d}
         for chan in self.chan_to_name:
-            chan.Send(data) 
+            self.send(chan, data) 
  
  
  
@@ -234,7 +259,7 @@ class NetworkController(Server):
             self.broadcast_name_change(bcmsg)
         
         elif isinstance(event, SBroadcastChatEvent):
-            dic = {'pname':event.pname, 
+            dic = {'pname':event.pname,
                    'txt':event.txt}
             cmsg = SrvChatMsg(dic)
             self.broadcast_chat(cmsg)
