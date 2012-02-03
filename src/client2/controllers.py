@@ -18,8 +18,9 @@ class InputController:
     def __init__(self, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
-        
-        self.nonprintable_keys = (K_RETURN, K_BACKSPACE) #non-printable keys to detect
+        #non-printable keys to detect when typing in a text input field
+        self.nonprintable_keys = (K_RETURN, K_BACKSPACE)
+    
 
 
     def notify(self, event):
@@ -75,9 +76,10 @@ class ClockController:
 
 
     def run(self):
+        """ keep the clock running """
         clock = Clock()
         while self.keep_going:
-            clock.tick(config_get_fps()) # 100 fps to save CPU
+            clock.tick(config_get_fps())
             event = ClientTickEvent()
             self.evManager.post(event)
             

@@ -1,11 +1,9 @@
 from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
     DIRECTION_RIGHT
+import logging
 import os
 
-# matrix transposition: return matrix_transpose(a)
-def matrix_transpose(a):
-    assert(a[0] and a)
-    return [[a[i][j] for i in range(len(a))] for j in range(len(a[0]))]
+
 
 class World():
     
@@ -22,12 +20,15 @@ class World():
     
     
     def build_world(self, mapname, buildevent):
+        """ build the world from a map name, and notify when done """
+        
+        self.mapname = mapname
+        
         try:    
             fname = os.path.join(os.pardir, 'maps', mapname)
             f = open(fname)
         except IOError:
-            print('Error: Map not found:', os.path.abspath(fname))
-            exit()
+            logging.critical('Map not found: ' + os.path.abspath(fname))
             
         lines = f.readlines() #might be optimized: for line in open("file.txt"):
         self.__cellgrid = [] #contains game board
@@ -35,17 +36,20 @@ class World():
         
         # 1st line = diameter of the players' visible area
         self.visibility_radius = int(lines.pop(0))
-        assert self.visibility_radius > 0, \
-            'Visibility radius should be greater than 0.'
         
+        if self.visibility_radius <= 0:
+            logging.error('Visibility radius should be greater than 0 in ' 
+                          + os.path.abspath(fname))
+
         # sanity checks on map width and height
         self.height = len(lines)
         if self.height == 0:
-            print('Warning: map', mapname, 'has no lines.')
+            logging.error('Map ' + mapname + ' has no lines.')
         else:
             self.width = len(lines[1].strip().split(','))
             if self.width == 0:
-                print('Warning: the first row of map', mapname, 'has no cells.')
+                logging.error('The first row of map ' + mapname 
+                              + ' has no cells.')
         
         # build the cell matrix
         for i in range(self.height): 

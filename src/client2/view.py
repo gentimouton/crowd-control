@@ -53,13 +53,13 @@ class MasterView:
         self.window.blit(self.background, (0, 0))
      
         
-        # add quit button  at bottom-right 
+        # -- add quit button  at bottom-right 
         rect = pygame.Rect((self.win_size * 5 / 6, self.win_size * 11 / 12),
                            (self.win_size / 6 - 1, self.win_size / 12 - 1)) 
         quitEvent = QuitEvent()
         quit_btn = ButtonWidget(evManager, "Quit", rect=rect,
                              onUpClickEvent=quitEvent)
-        # meh_btn at bottom right
+        # -- meh_btn at bottom right
         rect = pygame.Rect((self.win_size * 5 / 6, self.win_size * 5 / 6),
                             (self.win_size / 6 - 1, self.win_size / 12 - 1)) 
         msgEvent = SendChatEvent('meh...') #ask to send 'meh' to the server
@@ -67,16 +67,15 @@ class MasterView:
                                    onUpClickEvent=msgEvent)
         
         
-        # chat box input at bottom-left of the screen
+        # -- chat box input at bottom-left of the screen
         rect = pygame.Rect((self.win_size / 10, self.win_size - 20),
                             (self.win_size * 5 / 6 - self.win_size / 10 - 1, 19)) 
         chatbox = InputFieldWidget(evManager, rect=rect)
 
-        # chat window display, just above the chat input field
+        # -- chat window display, just above the chat input field
         numlines = int(self.win_size / 200) 
         # rough estimate: for 400px, 2 lines of chat don't take too much room,
         # and for 600px, 3 lines are still OK
-        lineheight = (self.win_size / 6) / numlines
         rect = pygame.Rect((0, self.win_size * 5 / 6),
                            (self.win_size * 5 / 6 - 1, self.win_size / 6 -20 - 1)) 
         chatwindow = ChatLogWidget(evManager, numlines=numlines, rect=rect)

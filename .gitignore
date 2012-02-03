@@ -4,3 +4,6 @@
 
 #eclipse prefs
 .settings
+
+#logs
+*.log

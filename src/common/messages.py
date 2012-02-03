@@ -1,3 +1,4 @@
+import logging
 
 
 class SerializableMsg():
@@ -20,7 +21,7 @@ class SerializableMsg():
                 for k in self.attrs:
                     self.d[k] = d_src[k]
             except KeyError:
-                print('Source dictionary is missing a required key')
+                logging.error('Source dictionary is missing a required key')
 
         else:
             # default constructor: arguments have to be passed in the order
@@ -29,7 +30,7 @@ class SerializableMsg():
                 for k in self.attrs:
                     self.d[k] = d_src[k]
             except KeyError:
-                print('key', k, 'was missing from d_src')
+                logging.error('key', k, 'was missing from d_src')
                 
                          
 

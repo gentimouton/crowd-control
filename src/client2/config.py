@@ -1,16 +1,18 @@
 import configparser
 import os
-
+import logging
 __dict = {} #store pairs of (config option, value)
 
 def load_config():
     """ read configs from config file, and simulate a static config class """
     
+    clogger = logging.getLogger('client')
+    
     config_filepath = "client_config.ini"
     config = configparser.ConfigParser()
     files_read = config.read(config_filepath)
     if not files_read: #config.read() could not find the config file
-        print('Error: Could not find config file at', 
+        clogger.critical('Error: Could not find config file at', 
               os.path.abspath(config_filepath))
         exit()
         
@@ -20,10 +22,12 @@ def load_config():
             try:
                 __dict[option] = config.get(section, option)
                 if __dict[option] == -1:
-                    print("[ERROR]: skipped option: %s" % option)
+                    clogger.error("[ERROR]: skipped option: %s" % option)
             except:
-                print("[ERROR]: exception on option %s" % option)
-                __dict[option] = None 
+                __dict[option] = None
+                clogger.error("[ERROR]: exception on option %s" % option)
+    
+    clogger.debug('Loaded config')
     return
 
 

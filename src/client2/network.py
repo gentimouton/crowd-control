@@ -6,9 +6,13 @@ from client2.events_client import ClientTickEvent, SendChatEvent, \
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
     SrvMoveMsg
+import logging
 
 class NetworkController(ConnectionListener):
     
+    log = logging.getLogger('client')
+
+
     def __init__(self, evManager):
         """ open connection to the server """
         self.evManager = evManager
@@ -20,33 +24,41 @@ class NetworkController(ConnectionListener):
         
     def push(self): 
         """ push data to server """
-        #TODO: log what has been sent 
         connection.Pump()
     
     def pull(self):
         """ pull data from the pipe and trigger the Network_* callbacks"""
-        # TODO: log what's been received
         self.Pump() 
 
+    def send(self, data):
+        """ data is a dict """
+        self.log.debug('Network sends: ' + str(data))
+        connection.Send(data)
+        
+                        
+    def Network(self, data):
+        """ triggered for any Network_* callback """
+        self.log.debug("Network received: " + str(data))
 
 
     ################## DEFAULT ADMIN ##########
   
     def Network_connected(self, data):
-        print("Client connected to the server", str(connection.address))
+        self.log.info("Client connected to the server " 
+                      + str(connection.address))
 
     
     def Network_error(self, data):
         try:
-            print("Error:" + data['error'][1])
+            self.log.error("Network error: " + data['error'][1])
         except TypeError:
-            print('Error:', data['error'])
+            self.log.error('Network error: ' + data['error'])
         connection.Close()
     
 
     def Network_disconnected(self, data):
         # TODO: should try to get back the connection instead of exit()
-        print("Client disconnected from the server.")
+        self.log.info("Network disconnected.")
         connection.Close()
         exit()
     
@@ -65,7 +77,8 @@ class NetworkController(ConnectionListener):
     def send_chat(self, txt):
         d = {'txt':txt}
         cmsg = ClChatMsg(d)
-        connection.Send({"action": "chat", "msg": cmsg.d})
+        self.send({"action": "chat", "msg": cmsg.d})
+        
     
     
     
@@ -73,7 +86,7 @@ class NetworkController(ConnectionListener):
         
     def send_move(self, coords):
         mmsg = ClMoveMsg({'coords':coords})
-        connection.Send({'action':'move', 'msg':mmsg.d})
+        self.send({'action':'move', 'msg':mmsg.d})
     
     def Network_move(self, data):
         mmsg = SrvMoveMsg(data['msg'])
@@ -134,7 +147,7 @@ class NetworkController(ConnectionListener):
     def ask_for_name_change(self, newname):
         d = {'pname':newname}
         nmsg = NameChangeRequestMsg(d)
-        connection.Send({"action": 'admin', "msg":nmsg.d})
+        self.send({"action": 'admin', "msg":nmsg.d})
 
     
     

@@ -1,4 +1,5 @@
 from common.events import Event, TickEvent, EventManager
+import logging
 
 
         
@@ -166,14 +167,22 @@ class ClPlayerLeft(Event):
 
 
 class ClientEventManager(EventManager):
-    
+
+    log = logging.getLogger('client')
+
+    def __init__(self):
+        EventManager.__init__(self)
+        
     def post(self, event):
-        """ print non-tick events """
+        """ only log non-tick and non-moving events """
+        
         if isinstance(event, MoveMouseEvent):
             pass
         elif isinstance(event, ClientTickEvent):
             pass
         else:
-            print('  Evt -- ', event.name)
-
-        
+            pass
+            #self.log.debug('Event: ' + event.name)
+            
+        # notify everyone in any cases    
+        EventManager.post(self, event)

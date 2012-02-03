@@ -1,11 +1,11 @@
 from client2.events_client import MoveMyCharactorRequest, ModelBuiltMapEvent, \
-    NetworkReceivedChatEvent, ChatlogUpdatedEvent, ClGreetEvent, \
-    ClPlayerLeft, CharactorRemoveEvent, NetworkReceivedCharactorMoveEvent, \
-    ClPlayerArrived, ClNameChangeEvent, \
-    LocalCharactorPlaceEvent, OtherCharactorPlaceEvent, LocalCharactorMoveEvent, \
-    RemoteCharactorMoveEvent
+    NetworkReceivedChatEvent, ChatlogUpdatedEvent, ClGreetEvent, ClPlayerLeft, \
+    CharactorRemoveEvent, NetworkReceivedCharactorMoveEvent, ClPlayerArrived, \
+    ClNameChangeEvent, LocalCharactorPlaceEvent, OtherCharactorPlaceEvent, \
+    LocalCharactorMoveEvent, RemoteCharactorMoveEvent
 from collections import deque
 from common.world import World
+import logging
 
 
 
@@ -14,6 +14,8 @@ from common.world import World
 class Game:
     """ The top of the model. Contains players and world. """
 
+    log = logging.getLogger('client')
+    
     def __init__(self, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)
@@ -38,17 +40,18 @@ class Game:
         """ remove a player """
         try:
             self.players[name].remove()
+            #don't forget to clean the player data from the dict
             del self.players[name]
         except KeyError:
-            print('player', name, ' had already been removed') 
-        #remove the player data structure since self.players is a normal dict
+            self.log.error('Player' + name + ' had already been removed') 
+        
             
     
     def update_player_name(self, oldname, newname):
         """ update a player's name """ 
         if newname in self.players:
-            print('Warning from model:', oldname, 'changed name to', newname,
-                  'which was already in use')
+            self.log.warning(oldname + ' changed name to ' + newname 
+                             + ' which was already in use')
         
         if self.myname == oldname:
             self.myname = newname
@@ -104,7 +107,7 @@ class Game:
             self.greeted(event.mapname, event.newname, event.newpos, event.onlineppl)
             
         # when the user pressed up,down,right,or left, move his charactor
-        # TODO: location-related events should be in Map
+        # TODO: location-related events should be in Map?
         if isinstance(event, MoveMyCharactorRequest):
             mychar = self.players[self.myname].charactor
             mychar.move_relative(event.direction)
@@ -153,6 +156,7 @@ class Charactor:
     """ An entity controlled by a player.
     Right now, the mapping is 1-to-1: one charactor per player. 
     """
+    log = logging.getLogger('client')
 
     def __init__(self, player, cell, islocal, evManager):
         self.evManager = evManager
@@ -193,7 +197,9 @@ class Charactor:
             ev = RemoteCharactorMoveEvent(self, destcell.coords)
             self.evManager.post(ev)
         else:
-            #TODO: illegal move, should report to server of potential cheat/hack
+            self.log.warning('Illegal move from ' + self.player.name 
+                             + ' towards ' + str(destcell.coords))
+            #TODO: should report to server of potential cheat/hack
             pass
 
 

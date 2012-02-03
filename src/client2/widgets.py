@@ -1,17 +1,21 @@
 from client2.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
     UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ChatlogUpdatedEvent
+from collections import deque
 from pygame.font import Font
 from pygame.locals import K_BACKSPACE, K_RETURN
 from pygame.rect import Rect
 from pygame.sprite import Sprite
 from pygame.surface import Surface
+import logging
 import pygame
-from collections import deque
 
 
 class Widget(Sprite):
     """ abstract class for other types of widgets """
     
+    log = logging.getLogger('client')
+
+
     def __init__(self, evManager):
         Sprite.__init__(self)
 
@@ -92,7 +96,7 @@ class ButtonWidget(Widget):
         """ button down focuses and triggers eventual behavior """
         self.dirty = 1 
         self.set_focus(True)
-        
+                
         if self.onDownClickEvent:
             self.evManager.post(self.onDownClickEvent)
             
@@ -104,6 +108,7 @@ class ButtonWidget(Widget):
             self.set_focus(False)
             
             if self.onUpClickEvent:
+                self.log.debug('Clicked on button widget ' + self.text)
                 self.evManager.post(self.onUpClickEvent)
 
 
@@ -144,7 +149,6 @@ class ButtonWidget(Widget):
 class InputFieldWidget(Widget):
     """ widget where the user can enter text. 
     The widget loses focus when the user clicks somewhere else. 
-    TODO: when focused, K_ENTER should do a 'submit' of some sort, and unfocus
     """
         
     def __init__(self, evManager, rect=None):
@@ -220,6 +224,7 @@ class InputFieldWidget(Widget):
 
     def submit_text(self):
         """ send the string typed, and reset the text input field """
+        self.log.debug('Widget submit text: ' + self.text)
         ev = SendChatEvent(self.text)
         self.set_text('')
         self.evManager.post(ev)
@@ -332,6 +337,8 @@ class ChatLogWidget(Widget):
         """ If there's room, add a line on top, and then shift all widget texts upwards.
         If there's no room, only shift the texts upwards (don't add new widgets). 
         """
+        
+        self.log.debug('Chatlog widget added line: ' + linetxt)
         
         if len(self.linewidgets) < self.maxnumlines: 
             # there's room to add another text widget on top of existing ones
