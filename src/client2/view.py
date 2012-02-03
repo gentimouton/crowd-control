@@ -42,10 +42,9 @@ class MasterView:
         self.evManager.register_listener(self)
 
         pygame.init() #calling init() multiple times does not mess anything
-        self.window_size = config_get_screenres()
-        assert self.window_size[0] == self.window_size[1], \
-            'Config Error: Window width and height should be equal.' 
-        self.window = pygame.display.set_mode(self.window_size)
+        self.win_size = config_get_screenres()[0]
+        # make a square window screen
+        self.window = pygame.display.set_mode((self.win_size, self.win_size))
         pygame.display.set_caption('CC')
         
         # blit the loading screen: a black screen
@@ -54,25 +53,33 @@ class MasterView:
         self.window.blit(self.background, (0, 0))
      
         
-        # add quit button and meh_btn at bottom-right 
-        rect = pygame.Rect((500, 550), (99, 49)) 
+        # add quit button  at bottom-right 
+        rect = pygame.Rect((self.win_size * 5 / 6, self.win_size * 11 / 12),
+                           (self.win_size / 6 - 1, self.win_size / 12 - 1)) 
         quitEvent = QuitEvent()
         quit_btn = ButtonWidget(evManager, "Quit", rect=rect,
                              onUpClickEvent=quitEvent)
-        
-        rect = pygame.Rect((500, 500), (99, 49)) 
+        # meh_btn at bottom right
+        rect = pygame.Rect((self.win_size * 5 / 6, self.win_size * 5 / 6),
+                            (self.win_size / 6 - 1, self.win_size / 12 - 1)) 
         msgEvent = SendChatEvent('meh...') #ask to send 'meh' to the server
         meh_btn = ButtonWidget(evManager, "Meh.", rect=rect,
                                    onUpClickEvent=msgEvent)
         
         
-        # chat box input
-        rect = pygame.Rect((70, 580), (429, 19)) #bottom and bottom-left of the screen
+        # chat box input at bottom-left of the screen
+        rect = pygame.Rect((self.win_size / 10, self.win_size - 20),
+                            (self.win_size * 5 / 6 - self.win_size / 10 - 1, 19)) 
         chatbox = InputFieldWidget(evManager, rect=rect)
 
-        # chat window display
-        rect = pygame.Rect((0, 500), (499, 79)) # just above the chat input field
-        chatwindow = ChatLogWidget(evManager, numlines=4, rect=rect)
+        # chat window display, just above the chat input field
+        numlines = int(self.win_size / 200) 
+        # rough estimate: for 400px, 2 lines of chat don't take too much room,
+        # and for 600px, 3 lines are still OK
+        lineheight = (self.win_size / 6) / numlines
+        rect = pygame.Rect((0, self.win_size * 5 / 6),
+                           (self.win_size * 5 / 6 - 1, self.win_size / 6 -20 - 1)) 
+        chatwindow = ChatLogWidget(evManager, numlines=numlines, rect=rect)
         
         pygame.display.flip()
 
@@ -99,7 +106,7 @@ class MasterView:
         # determine width and height of cell spr from map visibility 
         self.visib_rad = worldmap.visibility_radius
         self.visib_diam = 2 * self.visib_rad + 1
-        self.cspr_size = int(min(self.window_size) / self.visib_diam)
+        self.cspr_size = int(self.win_size / self.visib_diam)
         
         # Build world background to be scrolled when the charactor moves
         # so that world_bg can be scrolled 

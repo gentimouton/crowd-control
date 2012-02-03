@@ -38,11 +38,11 @@ class Game:
         """ remove a player """
         try:
             self.players[name].remove()
+            del self.players[name]
         except KeyError:
             print('player', name, ' had already been removed') 
         #remove the player data structure since self.players is a normal dict
-        del self.players[name]
-    
+            
     
     def update_player_name(self, oldname, newname):
         """ update a player's name """ 
@@ -187,11 +187,14 @@ class Charactor:
 
 
     def move_absolute(self, destcell):
-        # TODO: check that moving to destcell is a legal move. 
-        #If illegal move, report to server of potential cheat/hack
-        self.cell = destcell
-        ev = RemoteCharactorMoveEvent(self, destcell.coords)
-        self.evManager.post(ev)
+        """ move to the specified destination """ 
+        if destcell:
+            self.cell = destcell
+            ev = RemoteCharactorMoveEvent(self, destcell.coords)
+            self.evManager.post(ev)
+        else:
+            #TODO: illegal move, should report to server of potential cheat/hack
+            pass
 
 
     def notify(self, event):
