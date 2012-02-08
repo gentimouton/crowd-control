@@ -260,10 +260,15 @@ class InputFieldWidget(Widget):
 class TextLabelWidget(Widget):
     """ display static text """ 
     
-    def __init__(self, evManager, text, rect=None, txtcolor=(255, 255, 0),
-                 bgcolor=(111, 111, 0)):
+    def __init__(self, evManager, text, events_attrs=None, rect=None,
+                 txtcolor=(255, 255, 0), bgcolor=(111, 111, 0)):
         Widget.__init__(self, evManager)
 
+        # When receiving an event containing text, 
+        # replace self.text by that event's text.
+        # txt_events_attrs maps event types to event text attributes. 
+        self.txt_events_attrs = events_attrs
+        
         self.font = Font(None, 22)
         if rect:
             self.rect = rect
@@ -302,6 +307,14 @@ class TextLabelWidget(Widget):
         
 
     def notify(self, event):
+
+        # if widget waits for some events w/ text to change its own text
+        if self.txt_events_attrs and type(event) in self.txt_events_attrs:
+            # replace self.text by the event's text
+            evt_txt_attr = self.txt_events_attrs[type(event)]
+            txt = getattr(event, evt_txt_attr)
+            self.set_text(txt)
+
         Widget.notify(self, event)
 
 
@@ -346,7 +359,7 @@ class ChatLogWidget(Widget):
             line_height = self.rect.height / self.maxnumlines
             newline_top = (lines_from_top - 1) * line_height
             newline_rect = Rect(0, newline_top, self.rect.width, line_height)
-            txtwidget = TextLabelWidget(self.evManager, '', newline_rect)
+            txtwidget = TextLabelWidget(self.evManager, '', rect=newline_rect)
             # this empty text will be replaced when we shift all the texts upwards
             self.linewidgets.append(txtwidget)
         

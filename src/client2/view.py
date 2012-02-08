@@ -1,8 +1,10 @@
 from client2.config import config_get_screenres
 from client2.events_client import ModelBuiltMapEvent, ClientTickEvent, QuitEvent, \
     SendChatEvent, CharactorRemoveEvent, OtherCharactorPlaceEvent, \
-    LocalCharactorPlaceEvent, LocalCharactorMoveEvent, RemoteCharactorMoveEvent
-from client2.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget
+    LocalCharactorPlaceEvent, LocalCharactorMoveEvent, RemoteCharactorMoveEvent, \
+    ClNameChangeEvent, ClGreetEvent
+from client2.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
+    TextLabelWidget
 from pygame.sprite import RenderUpdates, Sprite
 import pygame
 
@@ -67,17 +69,24 @@ class MasterView:
                                    onUpClickEvent=msgEvent)
         
         
+        # -- name label at bottom-left of the screen
+        rect = pygame.Rect((0, self.win_size - 20),
+                            (self.win_size / 8 - 1, 19)) 
+        evt_txt_dict = {ClNameChangeEvent: 'newname', ClGreetEvent: 'newname'}
+        namebox = TextLabelWidget(evManager, '', events_attrs=evt_txt_dict, rect=rect)
+                
         # -- chat box input at bottom-left of the screen
-        rect = pygame.Rect((self.win_size / 10, self.win_size - 20),
-                            (self.win_size * 5 / 6 - self.win_size / 10 - 1, 19)) 
+        rect = pygame.Rect((self.win_size / 8, self.win_size - 20),
+                            (self.win_size * 5 / 6 - self.win_size / 8 - 1, 19)) 
         chatbox = InputFieldWidget(evManager, rect=rect)
+
 
         # -- chat window display, just above the chat input field
         numlines = int(self.win_size / 200) 
         # rough estimate: for 400px, 2 lines of chat don't take too much room,
         # and for 600px, 3 lines are still OK
         rect = pygame.Rect((0, self.win_size * 5 / 6),
-                           (self.win_size * 5 / 6 - 1, self.win_size / 6 -20 - 1)) 
+                           (self.win_size * 5 / 6 - 1, self.win_size / 6 - 20 - 1)) 
         chatwindow = ChatLogWidget(evManager, numlines=numlines, rect=rect)
         
         pygame.display.flip()
@@ -87,6 +96,7 @@ class MasterView:
         self.gui_sprites.add(quit_btn)
         self.gui_sprites.add(meh_btn)
         self.gui_sprites.add(chatbox)
+        self.gui_sprites.add(namebox)
         self.gui_sprites.add(chatwindow)
 
     
