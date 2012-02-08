@@ -22,10 +22,10 @@ def main():
 
     sclock = SClockController(evManager) #the loop is in there
     
-    n = NetworkController(evManager)    
+    n = NetworkController(evManager)
     g = SGame(evManager)
     
-    sclock.tick()
+    sclock.run()
         
     log.debug('Server stopped')
 

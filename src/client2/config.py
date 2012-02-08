@@ -8,7 +8,7 @@ def load_config():
     
     clogger = logging.getLogger('client')
     
-    config_filepath = "client_config.ini"
+    config_filepath = "client_config.conf"
     config = configparser.ConfigParser()
     files_read = config.read(config_filepath)
     if not files_read: #config.read() could not find the config file

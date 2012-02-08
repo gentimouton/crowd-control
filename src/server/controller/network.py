@@ -3,7 +3,7 @@ from PodSixNet.Server import Server
 from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, ClChatMsg, SrvChatMsg, GreetMsg, NameChangeNotifMsg, \
     ClMoveMsg, SrvMoveMsg
-from server.config import config_get_host, config_get_port
+from server.config import config_get_hostport
 from server.events_server import ServerTickEvent, SPlayerArrivedEvent, \
     SSendGreetEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
     SBroadcastNameChangeEvent, SReceivedChatEvent, SBroadcastChatEvent, \
@@ -12,6 +12,8 @@ from server.events_server import ServerTickEvent, SPlayerArrivedEvent, \
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 import logging
+
+
 
 class ClientChannel(Channel):
 
@@ -60,7 +62,7 @@ class NetworkController(Server):
 
     def __init__(self, evManager):
     
-        host, port = config_get_host(), config_get_port()
+        host, port = config_get_hostport()
         Server.__init__(self, localaddr=(host, port))
                 
         self.evManager = evManager
@@ -222,7 +224,8 @@ class NetworkController(Server):
  
  
     ######### event notifications #####################################
-    
+        
+        
     def notify(self, event):
         
         if isinstance(event, ServerTickEvent):

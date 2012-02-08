@@ -7,6 +7,7 @@ from common.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, \
     K_BACKSPACE, K_RETURN, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION
 from pygame.time import Clock
+import logging
 import pygame
 
 
@@ -68,7 +69,7 @@ class InputController:
 
 class ClockController:
     """ Each clock tick sends a TickEvent """
-    
+    log = logging.getLogger('client')
     def __init__(self, evManager):
         self.evManager = evManager
         self.evManager.register_listener(self)

@@ -10,7 +10,7 @@ def load_srv_config():
     
     log = logging.getLogger('server')
 
-    config_filepath = "srv_config.ini"
+    config_filepath = "srv_config.conf"
     config = configparser.ConfigParser()
     config.read(config_filepath)
     for section in config.sections():
@@ -38,8 +38,9 @@ def config_get_mapname():
     return __dict['mapname']
 
 # network
-def config_get_host():
-    return __dict['host']
+def config_get_hostport():
+    hostport = __dict['hostport'].strip().split(':')
+    host = hostport[0]
+    port = int(hostport[1])
+    return host, port
 
-def config_get_port():
-    return int(__dict['port'])
