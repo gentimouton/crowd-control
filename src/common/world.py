@@ -11,8 +11,8 @@ class World():
     def __init__(self, evManager):
         """ ... """
 
-        self.evManager = evManager
-        #self.evManager.register_listener(self)
+        self._em = evManager
+        #self._em.register_listener(self)
         
     def __str__(self):
         return '<World %s, %s x %s>' % (id(self), self.width, self.height) \
@@ -69,7 +69,7 @@ class World():
                     walkable = 1
                 else:
                     walkable = int(cellvalue) # 0 or 1
-                cell = Cell(self, coords, walkable, self.evManager)
+                cell = Cell(self, coords, walkable, self._em)
                 tmprow.append(cell)
 
             self.__cellgrid.append(tmprow)
@@ -86,7 +86,7 @@ class World():
             cell.set_lair(True)
           
         ev = buildevent(self)
-        self.evManager.post(ev)
+        self._em.post(ev)
         
         
         
@@ -116,10 +116,10 @@ class World():
         
 class Cell():
     
-    def __init__(self, world, coords, walkable, evManager):
-        self.evManager = evManager
-        #self.evManager.register_listener( self )
-        self.left, self.top = self.coords = coords
+    def __init__(self, world, pos, walkable, evManager):
+        self._em = evManager
+        #self._em.register_listener( self )
+        self.left, self.top = self.coords = pos
         self.world = world
         self.iswalkable = walkable
         self.isentrance = self.islair = False

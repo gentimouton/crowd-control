@@ -1,4 +1,4 @@
-from common.events import Event, TickEvent, EventManager
+from common.events import EventManager, TickEvent
 import logging
 
 
@@ -6,108 +6,92 @@ import logging
 ##############################################################################
 """ INPUT CONTROLLER EVENTS """
 
-class ClientTickEvent(TickEvent):
-    def __init__(self):
-        self.name = "CPU Tick Event"
+class QuitEvent():
+    pass
 
-class QuitEvent(Event):
-    def __init__(self):
-        self.name = "Program Quit Event"
-
-class DownClickEvent(Event):
+class DownClickEvent():
     """ When a button of the mouse is pushed down """
-    def __init__(self, coords):
-        self.name = "Mouse DownClick Event"
-        self.pos = coords
+    def __init__(self, pos):
+        self.pos = pos
         
-class UpClickEvent(Event):
+class UpClickEvent():
     """ When a button of the mouse is raised up """
-    def __init__(self, coords):
-        self.name = "Mouse UpClick Event"
-        self.pos = coords
+    def __init__(self, pos):
+        self.pos = pos
 
-class MoveMouseEvent(Event):
+class MoveMouseEvent():
     """ When the mouse moves """
-    def __init__(self, coords):
-        self.name = "Mouse Move Event"
-        self.pos = coords
+    def __init__(self, pos):
+        self.pos = pos
 
-class UnicodeKeyPushedEvent(Event):
+class UnicodeKeyPushedEvent():
     """ only concerns keys with visible representation
     (letters, numbers, ...) """
     def __init__(self, key, unicode):
-        self.name = "Pushed key with visible representation Event "
         self.key = key
         self.unicode = unicode
 
-class NonprintableKeyEvent(Event):
+class NonprintableKeyEvent():
     """ Triggered by enter, backspace, control, delete, and other keys 
     that are not letters, numbers, or punctuation 
     """
     def __init__(self, key):
-        self.name = "Non-Printablekey pressed Event"
         self.key = key
         
         
 ##############################################################################
 """ GAME LOGIC """
 
-class ModelBuiltMapEvent(Event):
+class ModelBuiltMapEvent():
     def __init__(self, worldmap):
-        self.name = "Map Finished Building Event"
         self.worldmap = worldmap
 
 
 ###############################################################################
 """ MOVEMENT """
 
-class MoveMyCharactorRequest(Event):
+class MoveMyCharactorRequest():
     """ sent from controller to model """
     def __init__(self, direction):
-        self.name = "Move my charactor towards " + str(direction)
         self.direction = direction
 
 
-class OtherCharactorPlaceEvent(Event):
+class OtherCharactorPlaceEvent():
     """this event occurs when another client's Charactor is *placed* in a cell,
     ie it doesn't move there from an adjacent cell."""
     def __init__(self, charactor, cell):
-        self.name = "Charactor Placement - " + str(charactor)
         self.charactor = charactor
         self.cell = cell
-class LocalCharactorPlaceEvent(Event):
+        
+class LocalCharactorPlaceEvent():
     """this event occurs when the client's Charactor is *placed* in a cell,
     ie it doesn't move there from an adjacent cell."""
     def __init__(self, charactor, cell):
-        self.name = "Charactor Placement - " + str(charactor)
         self.charactor = charactor
         self.cell = cell
 
-class CharactorRemoveEvent(Event):
+class CharactorRemoveEvent():
     """this event occurs when a Charactor is removed from the model, 
     and the view needs to be notified of that removal """
     def __init__(self, charactor):
-        self.name = "Charactor Removal - " + str(charactor)
         self.charactor = charactor
         
         
-class RemoteCharactorMoveEvent(Event):
+class RemoteCharactorMoveEvent():
     """ sent from model to view when another client moved """
     def __init__(self, charactor, coords):
-        self.name = "Charactor Move - " + str(charactor)
         self.charactor = charactor
         self.coords = coords
-class LocalCharactorMoveEvent(Event):
+        
+class LocalCharactorMoveEvent():
     """ sent from model to view and network controller when my charactor moved """
     def __init__(self, charactor, coords):
-        self.name = "Charactor Move - " + str(charactor)
         self.charactor = charactor
         self.coords = coords
 
 
-class NetworkReceivedCharactorMoveEvent(Event):
+class NetworkReceivedCharactorMoveEvent():
     def __init__(self, pname, dest):
-        self.name = "Network received move - " + pname + ' to ' + str(dest)
         self.author = pname
         self.dest = dest
         
@@ -115,21 +99,18 @@ class NetworkReceivedCharactorMoveEvent(Event):
 ##############################################################################
 """ CHAT """
 
-class SendChatEvent(Event):
+class SendChatEvent():
     def __init__(self, txt):
-        self.name = "Ask to send a chat message to the server"
         self.txt = txt
 
-class NetworkReceivedChatEvent(Event):
+class NetworkReceivedChatEvent():
     def __init__(self, pname, txt):
-        self.name = "Received a chat message from the server"
         self.author = pname
         self.txt = txt
 
-class ChatlogUpdatedEvent(Event):
+class ChatlogUpdatedEvent():
     """ The model asks the view to refresh the chatlog """
     def __init__(self, pname, txt):
-        self.name = "Chatlog model has been updated"
         self.author = pname
         self.txt = txt
 
@@ -138,29 +119,26 @@ class ChatlogUpdatedEvent(Event):
 """ NETWORK """
 
 
-class ClGreetEvent(Event):
+class ClGreetEvent():
     def __init__(self, mapname, newname, newpos, onlineppl):
-        self.name = "Received a greeting message from the server"
         self.mapname = mapname
         self.newname = newname
         self.newpos = newpos
         self.onlineppl = onlineppl
 
-class ClNameChangeEvent(Event):
+class ClNameChangeEvent():
     def __init__(self, oldname, newname):
-        self.name = "The server notified that " + oldname + " changed named to " + newname
         self.oldname = oldname
         self.newname = newname
     
-class ClPlayerArrived(Event):
-    def __init__(self, playername, coords):
-        self.name = "The server notified that " + playername + " connected"
-        self.playername = playername
-        self.pos = coords
-class ClPlayerLeft(Event):
-    def __init__(self, playername):
-        self.name = "The server notified that " + playername + " left"
-        self.playername = playername
+class ClPlayerArrived():
+    def __init__(self, pname, pos):
+        self.pname = pname
+        self.pos = pos
+        
+class ClPlayerLeft():
+    def __init__(self, pname):
+        self.playername = pname
 
 
 ##############################################################################
@@ -172,17 +150,24 @@ class ClientEventManager(EventManager):
 
     def __init__(self):
         EventManager.__init__(self)
+    
+    
+    def reg_cb(self, eventClass, callback):
+        """ just to log what's going on """
+        EventManager.reg_cb(self, eventClass, callback)
+        self.log.debug(eventClass.__name__ + ' will trigger ' 
+                       + callback.__self__.__class__.__name__ + '.' 
+                       + callback.__name__)
+        
         
     def post(self, event):
         """ only log non-tick and non-moving events """
         
-        if isinstance(event, MoveMouseEvent):
-            pass
-        elif isinstance(event, ClientTickEvent):
+        if isinstance(event, MoveMouseEvent) or isinstance(event, TickEvent):
             pass
         else:
+            #self.log.debug('Event: ' + event.__class__.__name__)
             pass
-            #self.log.debug('Event: ' + event.name)
-            
-        # notify everyone in any cases    
+        
+        # notify listeners in any case
         EventManager.post(self, event)

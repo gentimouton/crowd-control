@@ -1,14 +1,14 @@
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
+from common.events import TickEvent
 from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, ClChatMsg, SrvChatMsg, GreetMsg, NameChangeNotifMsg, \
     ClMoveMsg, SrvMoveMsg
 from server.config import config_get_hostport
-from server.events_server import ServerTickEvent, SPlayerArrivedEvent, \
-    SSendGreetEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
-    SBroadcastNameChangeEvent, SReceivedChatEvent, SBroadcastChatEvent, \
-    SReceivedMoveEvent, SBroadcastMoveEvent, SModelBuiltWorldEvent, \
-    SBroadcastArrivedEvent, SBroadcastLeftEvent
+from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
+    SPlayerLeftEvent, SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, \
+    SReceivedChatEvent, SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent, \
+    SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 import logging
@@ -65,9 +65,16 @@ class NetworkController(Server):
         host, port = config_get_hostport()
         Server.__init__(self, localaddr=(host, port))
                 
-        self.evManager = evManager
-        self.evManager.register_listener(self)
-        
+        self._em = evManager
+        self._em.reg_cb(TickEvent, self.on_tick)
+        self._em.reg_cb(SModelBuiltWorldEvent, self.on_worldbuilt)
+        self._em.reg_cb(SSendGreetEvent, self.greet)
+        self._em.reg_cb(SBroadcastArrivedEvent, self.on_broadcastarrived)
+        self._em.reg_cb(SBroadcastLeftEvent, self.on_broadcastleft)
+        self._em.reg_cb(SBroadcastNameChangeEvent, self.broadcast_name_change)
+        self._em.reg_cb(SBroadcastChatEvent, self.broadcast_chat)
+        self._em.reg_cb(SBroadcastMoveEvent, self.broadcast_move)
+                
         self.accept_connections = False # start accepting when model is ready
         
         self.chan_to_name = WeakKeyDictionary() #maps channel to name
@@ -78,6 +85,18 @@ class NetworkController(Server):
         self.log.info('Server Network up')
 
 
+
+
+    def on_tick(self, event):
+        """ Pump the sockets every tick """
+        self.Pump()
+        
+        
+    def on_worldbuilt(self, event):
+        """ Accept connections only after the model has been built. """
+        self.accept_connections = True
+        
+        
     def send(self, chan, data):
         """ send data to a channel """
         self.log.debug('Send to ' + str(chan.addr) + ' : ' + str(data))
@@ -111,7 +130,7 @@ class NetworkController(Server):
         self.log.debug(name + ' joined ' + str(channel.addr))
         
         event = SPlayerArrivedEvent(name)
-        self.evManager.post(event)
+        self._em.post(event)
         
         
     def channel_closed(self, channel):
@@ -121,7 +140,7 @@ class NetworkController(Server):
         self.log.debug(name + ' disconnected ' + str(channel.addr))
         
         event = SPlayerLeftEvent(name)
-        self.evManager.post(event)
+        self._em.post(event)
 
         del self.name_to_chan[name]
         del self.chan_to_name[channel]
@@ -129,27 +148,38 @@ class NetworkController(Server):
         
 
 
-    def broadcast_conn_status(self, bcmsg):
-        """ notify clients that a new player just arrived or left """
-        
+    def on_broadcastarrived(self, event):
+        """ User arrived: notify everyone connected but him """
+        dic = {'pname':event.pname,
+               'coords':event.coords}
+        bcmsg = PlayerArrivedNotifMsg(dic)
         data = {"action": 'admin', "msg": bcmsg.d}
         
-        # user joined: notify everyone connected but him
-        if isinstance(bcmsg, PlayerArrivedNotifMsg):
-            for chan in self.chan_to_name:
-                if self.chan_to_name[chan] != bcmsg.d['pname']:
-                    self.send(chan, data)
-                    
-        # user left: notify everyone
-        elif isinstance(bcmsg, PlayerLeftNotifMsg): 
-            for chan in self.chan_to_name: 
-                # The concerned player has been deleted, so he won't be notified
-                self.send(chan, data) 
+        for chan in self.chan_to_name:
+            if self.chan_to_name[chan] != bcmsg.d['pname']:
+                self.send(chan, data)
+     
+     
+    def on_broadcastleft(self, event):
+        """ Notify everyone connected. """
+        dic = {'pname':event.pname}
+        bcmsg = PlayerLeftNotifMsg(dic)
+        data = {"action": 'admin', "msg": bcmsg.d}
+             
+        for chan in self.chan_to_name: 
+            # The concerned player has been deleted, so he won't be notified
+            self.send(chan, data) 
                 
 
-    def greet(self, greetmsg):
+    def greet(self, event):
         """ send greeting data to a player """
         
+        dic = {'mapname':event.mapname,
+               'pname':event.pname,
+               'coords':event.coords,
+               'onlineppl':event.onlineppl}
+        greetmsg = GreetMsg(dic)
+            
         name = greetmsg.d['pname']
         chan = self.name_to_chan[name]
         try:
@@ -164,15 +194,19 @@ class NetworkController(Server):
         
         oldname = self.chan_to_name[channel]
         event = SPlayerNameChangeRequestEvent(oldname, newname)
-        self.evManager.post(event)
+        self._em.post(event)
         
         
             
-    def broadcast_name_change(self, msg):
+    def broadcast_name_change(self, event):
         """ update name<->channel mappings and notify all players """
         
-        oldname = msg.d['oldname']
-        newname = msg.d['newname']
+        dic = {'oldname':event.oldname,
+               'newname':event.newname} 
+        bcmsg = NameChangeNotifMsg(dic)
+            
+        oldname = bcmsg .d['oldname']
+        newname = bcmsg .d['newname']
         
         # update my chan<->name mappings
         channel = self.name_to_chan[oldname]
@@ -181,7 +215,7 @@ class NetworkController(Server):
         del self.name_to_chan[oldname]
         
         # notify everyone
-        data = {'action':'admin', 'msg':msg.d}
+        data = {'action':'admin', 'msg':bcmsg.d}
         for chan in self.chan_to_name:
             self.send(chan, data) 
 
@@ -196,10 +230,14 @@ class NetworkController(Server):
         author = self.chan_to_name[channel]
         
         event = SReceivedChatEvent(author, cmsg.d['txt'])
-        self.evManager.post(event)
+        self._em.post(event)
         
         
-    def broadcast_chat(self, cmsg):
+    def broadcast_chat(self, event):
+        
+        dic = {'pname':event.pname, 'txt':event.txt}
+        cmsg = SrvChatMsg(dic)
+        
         data = {"action": "chat", "msg": cmsg.d}
         for chan in self.chan_to_name:
             self.send(chan, data)
@@ -211,62 +249,18 @@ class NetworkController(Server):
         pname = self.chan_to_name[channel]
         
         event = SReceivedMoveEvent(pname, dest)
-        self.evManager.post(event)
+        self._em.post(event)
         
         
-    def broadcast_move(self, name, coords):
+    def broadcast_move(self, event):
+        name, coords = event.pname, event.coords
         mmsg = SrvMoveMsg({"pname":name, "coords":coords})
         data = {"action": "move", "msg": mmsg.d}
         for chan in self.chan_to_name:
             self.send(chan, data) 
  
  
- 
- 
-    ######### event notifications #####################################
         
         
-    def notify(self, event):
         
-        if isinstance(event, ServerTickEvent):
-            self.Pump()
         
-        # accept connections only after the model has been built
-        elif isinstance(event, SModelBuiltWorldEvent):
-            self.accept_connections = True
-            
-        elif isinstance(event, SSendGreetEvent):
-            dic = {'mapname':event.mapname,
-                   'pname':event.pname,
-                   'coords':event.coords,
-                   'onlineppl':event.onlineppl}
-            greetmsg = GreetMsg(dic)
-            self.greet(greetmsg)
-        
-        elif isinstance(event, SBroadcastArrivedEvent):
-            dic = {'pname':event.pname,
-                   'coords':event.coords}
-            bcmsg = PlayerArrivedNotifMsg(dic)
-            self.broadcast_conn_status(bcmsg)
-            
-        elif isinstance(event, SBroadcastLeftEvent):
-            dic = {'pname':event.pname}
-            bcmsg = PlayerLeftNotifMsg(dic)
-            self.broadcast_conn_status(bcmsg)
-            
-            
-        elif isinstance(event, SBroadcastNameChangeEvent):
-            dic = {'oldname':event.oldname,
-                   'newname':event.newname} 
-            bcmsg = NameChangeNotifMsg(dic)
-            self.broadcast_name_change(bcmsg)
-        
-        elif isinstance(event, SBroadcastChatEvent):
-            dic = {'pname':event.pname,
-                   'txt':event.txt}
-            cmsg = SrvChatMsg(dic)
-            self.broadcast_chat(cmsg)
-            
-        elif isinstance(event, SBroadcastMoveEvent):
-            self.broadcast_move(event.pname, event.coords)
-            

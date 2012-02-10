@@ -1,8 +1,9 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client2.config import config_get_nick, config_get_hostport
-from client2.events_client import ClientTickEvent, SendChatEvent, \
+from client2.events_client import SendChatEvent, \
     NetworkReceivedChatEvent, ClGreetEvent, ClNameChangeEvent, ClPlayerArrived, \
     ClPlayerLeft, NetworkReceivedCharactorMoveEvent, LocalCharactorMoveEvent
+from common.events import TickEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
     SrvMoveMsg
@@ -15,8 +16,10 @@ class NetworkController(ConnectionListener):
 
     def __init__(self, evManager):
         """ open connection to the server """
-        self.evManager = evManager
-        self.evManager.register_listener(self)
+        self._em = evManager
+        self._em.reg_cb(TickEvent, self.on_tick)
+        self._em.reg_cb(SendChatEvent, self.send_chat)
+        self._em.reg_cb(LocalCharactorMoveEvent, self.send_move)
         
         host, port = config_get_hostport()
         self.Connect((host, port))
@@ -71,10 +74,11 @@ class NetworkController(ConnectionListener):
         author = cmsg.d['pname']
         txt = cmsg.d['txt']
         ev = NetworkReceivedChatEvent(author, txt)
-        self.evManager.post(ev)
+        self._em.post(ev)
         
         
-    def send_chat(self, txt):
+    def send_chat(self, event):
+        txt = event.txt
         d = {'txt':txt}
         cmsg = ClChatMsg(d)
         self.send({"action": "chat", "msg": cmsg.d})
@@ -84,7 +88,8 @@ class NetworkController(ConnectionListener):
     
     ################## MOVEMENT ################    
         
-    def send_move(self, coords):
+    def send_move(self, event):
+        coords = event.coords
         mmsg = ClMoveMsg({'coords':coords})
         self.send({'action':'move', 'msg':mmsg.d})
     
@@ -93,7 +98,7 @@ class NetworkController(ConnectionListener):
         pname = mmsg.d['pname']
         coords = mmsg.d['coords']
         ev = NetworkReceivedCharactorMoveEvent(pname, coords)
-        self.evManager.post(ev)
+        self._em.post(ev)
 
         
             
@@ -122,25 +127,25 @@ class NetworkController(ConnectionListener):
             if gmsg.d['pname'] is not preferred_name:
                 self.ask_for_name_change(preferred_name)
             ev = ClGreetEvent(gmsg.d['mapname'], gmsg.d['pname'],
-                                  gmsg.d['coords'], gmsg.d['onlineppl'])
-            self.evManager.post(ev)
+                              gmsg.d['coords'], gmsg.d['onlineppl'])
+            self._em.post(ev)
 
         elif actiontype == 'namechange':
             nmsg = NameChangeNotifMsg(data['msg'])
             oldname = nmsg.d['oldname']
             newname = nmsg.d['newname']
             ev = ClNameChangeEvent(oldname, newname)
-            self.evManager.post(ev)
+            self._em.post(ev)
 
         elif actiontype == 'arrived': # new player connected
                 amsg = PlayerArrivedNotifMsg(data['msg']) 
                 ev = ClPlayerArrived(amsg.d['pname'], amsg.d['coords'])
-                self.evManager.post(ev)
+                self._em.post(ev)
     
         elif actiontype == 'left': # player left
             lmsg = PlayerLeftNotifMsg(data['msg'])
             ev = ClPlayerLeft(lmsg.d['pname'])
-            self.evManager.post(ev)
+            self._em.post(ev)
         
             
             
@@ -151,15 +156,11 @@ class NetworkController(ConnectionListener):
 
     
     
-    #################### MESSAGES FROM OTHER COMPONENTS ####################
-     
-    def notify(self, event):
+    def on_tick(self, event):
         # TODO: only push and pull every once in a while, not every game loop
-        if isinstance(event, ClientTickEvent):
-            self.pull()
-            self.push()
-        elif isinstance(event, SendChatEvent):
-            self.send_chat(event.txt)
-        elif isinstance(event, LocalCharactorMoveEvent):
-            self.send_move(event.coords)
+        self.pull()
+        self.push()
             
+            
+        
+

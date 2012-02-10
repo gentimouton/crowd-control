@@ -1,10 +1,11 @@
 from client2.config import config_get_screenres
-from client2.events_client import ModelBuiltMapEvent, ClientTickEvent, QuitEvent, \
+from client2.events_client import ModelBuiltMapEvent, QuitEvent, \
     SendChatEvent, CharactorRemoveEvent, OtherCharactorPlaceEvent, \
     LocalCharactorPlaceEvent, LocalCharactorMoveEvent, RemoteCharactorMoveEvent, \
     ClNameChangeEvent, ClGreetEvent
 from client2.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget
+from common.events import TickEvent
 from pygame.sprite import RenderUpdates, Sprite
 import pygame
 
@@ -40,9 +41,17 @@ class MasterView:
     """ links to presentations of game world and HUD """
     
     def __init__(self, evManager):
-        self.evManager = evManager
-        self.evManager.register_listener(self)
+        # -- set the callbacks
+        self._em = evManager
+        self._em.reg_cb(RemoteCharactorMoveEvent, self.move_remote_charactor)
+        self._em.reg_cb(LocalCharactorMoveEvent, self.move_local_charactor)
+        self._em.reg_cb(CharactorRemoveEvent, self.remove_remote_charactor)
+        self._em.reg_cb(LocalCharactorPlaceEvent, self.add_local_charactor)
+        self._em.reg_cb(OtherCharactorPlaceEvent, self.add_remote_charactor)
+        self._em.reg_cb(ModelBuiltMapEvent, self.show_map)
+        self._em.reg_cb(TickEvent, self.render_dirty_sprites)
 
+        # -- init pygame's screen
         pygame.init() #calling init() multiple times does not mess anything
         self.win_size = config_get_screenres()[0]
         # make a square window screen
@@ -104,11 +113,13 @@ class MasterView:
     ###################### map and charactor ###############################
     
     
-    def show_map(self, worldmap):
+    def show_map(self, event):
         """ Build the bg from the map cells, and blit it.
         The pixel width and height of map cells comes from 
         the window's dimensions and the map's visibility radius.
+        Called only once at the beginning, when model.map has been built.
         """
+        worldmap = event.worldmap
         
         self.cellsprs = dict() # maps model.Cell to view.CellSprite
         
@@ -186,21 +197,23 @@ class MasterView:
     
     
     
-    def add_remote_charactor(self, charactor):
+    def add_remote_charactor(self, event):
         """ Make a sprite and center the sprite 
         based on the cell location of the charactor.
         """
+        charactor = event.charactor
         sprdims = (self.cspr_size, self.cspr_size)
         charspr = CharactorSprite(charactor, sprdims, self.charactor_sprites)
         cleft, ctop = charactor.cell.coords
         self.display_charactor(charspr, cleft, ctop)
 
 
-    def add_local_charactor(self, charactor):
+    def add_local_charactor(self, event):
         """ Center the map on the charactor's cell,
         build a charactor sprite in that cell, 
         and reblit background, charactor sprites, and GUI.
         """
+        charactor = event.charactor
         sprdims = (self.cspr_size, self.cspr_size)
         charspr = CharactorSprite(charactor, sprdims, self.charactor_sprites)
         cleft, ctop = charactor.cell.coords
@@ -208,15 +221,17 @@ class MasterView:
         self.display_charactor(charspr, cleft, ctop)
         
 
-    def remove_remote_charactor(self, charactor):
+    def remove_remote_charactor(self, event):
         """ """
+        charactor = event.charactor
         char_spr = self.charactor_sprites.get_spr(charactor)
         char_spr.kill() # remove from all sprite groups
         del char_spr
     
     
-    def move_local_charactor(self, charactor):
+    def move_local_charactor(self, event):
         """ move my charactor: scroll the background """
+        charactor = event.charactor
         cleft, ctop = charactor.cell.coords
         self.center_screen_on_coords(cleft, ctop)
         # redisplay the other charactors
@@ -225,8 +240,9 @@ class MasterView:
             self.display_charactor(charspr, cleft, ctop)
         
 
-    def move_remote_charactor(self, charactor):
+    def move_remote_charactor(self, event):
         """ move the spr of other clients' charactors """
+        charactor = event.charactor
         charspr = self.charactor_sprites.get_spr(charactor)
         cleft, ctop = charactor.cell.coords
         self.display_charactor(charspr, cleft, ctop) 
@@ -235,7 +251,7 @@ class MasterView:
     #####################################################################
     
 
-    def render_dirty_sprites(self):    
+    def render_dirty_sprites(self, event):    
         # clear the window from all the sprites, replacing them with the bg
         self.charactor_sprites.clear(self.window, self.background)
         self.gui_sprites.clear(self.window, self.background)
@@ -252,38 +268,6 @@ class MasterView:
         dirty_rects = dirty_rects_chars + dirty_rects_gui
         pygame.display.update(dirty_rects)
 
-
-
-    def notify(self, event):
-        """ Display the map when it has been built by the model.
-        At clock ticks, draw what needs to be drawn.
-        When the game is loaded, display it. 
-        """
-        
-        if isinstance(event, ClientTickEvent):
-            self.render_dirty_sprites()
-
-        elif isinstance(event, ModelBuiltMapEvent):
-            # called only once at the beginning, when model.map has been built 
-            self.show_map(event.worldmap)
-            
-        elif isinstance(event, OtherCharactorPlaceEvent):
-            self.add_remote_charactor(event.charactor)
-
-        elif isinstance(event, LocalCharactorPlaceEvent):
-            self.add_local_charactor(event.charactor)
-            
-        elif isinstance(event, CharactorRemoveEvent):
-            charactor = event.charactor
-            self.remove_remote_charactor(charactor)
-
-            
-        elif isinstance(event, LocalCharactorMoveEvent):
-            self.move_local_charactor(event.charactor)
-            #coords = event.coords
-        elif isinstance(event, RemoteCharactorMoveEvent):
-            self.move_remote_charactor(event.charactor)
-            #coords = event.coords
 
 
 

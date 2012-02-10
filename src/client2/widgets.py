@@ -19,8 +19,7 @@ class Widget(Sprite):
     def __init__(self, evManager):
         Sprite.__init__(self)
 
-        self.evManager = evManager
-        self.evManager.register_listener(self)
+        self._em = evManager
 
         self.focused = False
         self.dirty = 1
@@ -31,8 +30,6 @@ class Widget(Sprite):
         self.dirty = 1
 
 
-    def notify(self, event):
-        pass
             
             
             
@@ -51,6 +48,15 @@ class ButtonWidget(Widget):
         # Widget init sets dirty to true, hence the actual text rendering 
         # will be done in ButtonWidget.update(), called by the view renderer.
         
+        self._em.reg_cb(DownClickEvent, self.on_downclick)
+        self._em.reg_cb(UpClickEvent, self.on_upclick)
+        self._em.reg_cb(MoveMouseEvent, self.on_mousemove)
+        
+        # the events to be triggered when the button is clicked or mouse moved
+        self.onDownClickEvent = onDownClickEvent
+        self.onUpClickEvent = onUpClickEvent
+        self.onMouseMoveOutEvent = onMouseMoveOutEvent
+        
         self.text = text
         self.font = Font(None, 40) #default font, 40 pixels high
         
@@ -64,10 +70,6 @@ class ButtonWidget(Widget):
             self.image = Surface(self.rect.size) #container size from rendered text
             # if txt changes, the size of the button will stay the same
 
-        # the event to be triggered when the button is clicked or mouse moved
-        self.onUpClickEvent = onUpClickEvent
-        self.onDownClickEvent = onDownClickEvent
-        self.onMouseMoveOutEvent = onMouseMoveOutEvent
 
 
     def update(self):
@@ -92,54 +94,40 @@ class ButtonWidget(Widget):
         self.dirty = 0
 
 
-    def ondownclick(self):
+    def on_downclick(self, event):
         """ button down focuses and triggers eventual behavior """
-        self.dirty = 1 
-        self.set_focus(True)
+        
+        if self.rect.collidepoint(event.pos):
+            self.dirty = 1 
+            self.set_focus(True)
                 
-        if self.onDownClickEvent:
-            self.evManager.post(self.onDownClickEvent)
+            if self.onDownClickEvent:
+                self._em.post(self.onDownClickEvent)
             
                       
-    def onupclick(self):
+    def on_upclick(self, event):
         """ button up loses focus and triggers eventual behavior """
-        if self.focused:
-            self.dirty = 1
-            self.set_focus(False)
-            
-            if self.onUpClickEvent:
-                self.log.debug('Clicked on button widget ' + self.text)
-                self.evManager.post(self.onUpClickEvent)
-
-
-    def onmousemovein(self):
-        pass
-    
-    
-    def onmousemoveout(self):
-        """ if focused, lose focus when the mouse moves out """ 
-        if self.focused:
-            if not self.onMouseMoveOutEvent: #default behavior
+        if self.rect.collidepoint(event.pos):
+            if self.focused:
+                self.dirty = 1
                 self.set_focus(False)
-        
-        
-    def notify(self, event):
-        if isinstance(event, DownClickEvent):
-            if self.rect.collidepoint(event.pos):
-                self.ondownclick()
-        elif isinstance(event, UpClickEvent):
-            if self.rect.collidepoint(event.pos):
-                self.onupclick()
-        elif isinstance(event, MoveMouseEvent):
-            if self.rect.collidepoint(event.pos):
-                self.onmousemovein()
-            else:
-                self.onmousemoveout()
                 
-        Widget.notify(self, event)
+                if self.onUpClickEvent:
+                    self.log.debug('Clicked on button widget ' + self.text)
+                    self._em.post(self.onUpClickEvent)
 
-
-
+        
+    def on_mousemove(self, event):
+        """ if focused, lose focus when the mouse moves out """ 
+        if self.rect.collidepoint(event.pos): #mouse moved in
+            pass
+        else: # mouse moved out
+            if self.focused:
+                if not self.onMouseMoveOutEvent: #default behavior
+                    self.set_focus(False)
+            
+            
+        
 
 
 
@@ -155,6 +143,10 @@ class InputFieldWidget(Widget):
         Widget.__init__(self, evManager)
         # Widget init sets dirty to true, hence the actual rendering 
         # will be done in InputFieldWidget.update(), called by the view renderer.
+
+        self._em.reg_cb(NonprintableKeyEvent, self.on_invisiblekeypushed)    
+        self._em.reg_cb(UnicodeKeyPushedEvent, self.on_visiblekeypushed)    
+        self._em.reg_cb(DownClickEvent, self.on_downclick)    
 
         self.text = ''
         self.font = Font(None, 22)
@@ -210,11 +202,6 @@ class InputFieldWidget(Widget):
         self.dirty = 0
 
 
-    def ondownclick(self):
-        """ when down click, focus widget """
-        self.set_focus(True)
-        self.dirty = 1
-
 
     def set_text(self, newtext):
         """ change the content of the text input field """
@@ -227,31 +214,38 @@ class InputFieldWidget(Widget):
         self.log.debug('Widget submit text: ' + self.text)
         ev = SendChatEvent(self.text)
         self.set_text('')
-        self.evManager.post(ev)
+        self._em.post(ev)
         
-        
-    def notify(self, event):
-        # get focus if clicked, lose focus if something else is clicked
-        if isinstance(event, DownClickEvent): 
-            if self.rect.collidepoint(event.pos):
-                self.ondownclick()
-            elif self.focused: #user clicked on something else
+
+    ###### CALLBACKS 
+    
+     
+    def on_downclick(self, event):
+        """ Get focus if clicked, lose focus if something else is clicked """
+        if self.rect.collidepoint(event.pos): # box was clicked
+            self.set_focus(True)
+            self.dirty = 1
+        elif self.focused: #user clicked on something else
                 self.set_focus(False)
 
-        # add/remove characters and 'submit' the string
-        elif isinstance(event, UnicodeKeyPushedEvent) and self.focused:
-            # add visible characters at the end of existing string
-            newtxt = self.text + event.unicode
-            self.set_text(newtxt)
-        elif isinstance(event, NonprintableKeyEvent) and self.focused:
+    
+    def on_invisiblekeypushed(self, event):
+        """ Add/remove characters and 'submit' the string."""
+        if self.focused:
             if event.key == K_BACKSPACE:# erase last character
                 newtxt = self.text[:(len(self.text) - 1)]
                 self.set_text(newtxt)
             elif event.key == K_RETURN: #submit string
                 self.submit_text()
+        
+    
+    def on_visiblekeypushed(self, event):
+        """ Type characters inside the box. """
+        if self.focused:
+            # add visible characters at the end of existing string
+            newtxt = self.text + event.unicode
+            self.set_text(newtxt)
             
-        Widget.notify(self, event)
-
 
 
 ############################################################################
@@ -262,13 +256,18 @@ class TextLabelWidget(Widget):
     
     def __init__(self, evManager, text, events_attrs=None, rect=None,
                  txtcolor=(255, 255, 0), bgcolor=(111, 111, 0)):
+        
         Widget.__init__(self, evManager)
 
         # When receiving an event containing text, 
         # replace self.text by that event's text.
-        # txt_events_attrs maps event types to event text attributes. 
-        self.txt_events_attrs = events_attrs
+        # events_attrs maps event classes to event text attributes. 
+        self.events_attrs = events_attrs
+        if events_attrs:
+            for evtClass in events_attrs:
+                self._em.reg_cb(evtClass, self.on_textevent)
         
+        # gfx
         self.font = Font(None, 22)
         if rect:
             self.rect = rect
@@ -291,6 +290,13 @@ class TextLabelWidget(Widget):
         return self.text
     
 
+    def on_textevent(self, event):
+        """ Widget has to change its text. """        
+        evt_txt_attr = self.events_attrs[event.__class__]
+        txt = getattr(event, evt_txt_attr)
+        self.set_text(txt)
+        
+        
     def update(self):
         if self.dirty == 0:
             return
@@ -305,17 +311,7 @@ class TextLabelWidget(Widget):
         
         self.dirty = 0
         
-
-    def notify(self, event):
-
-        # if widget waits for some events w/ text to change its own text
-        if self.txt_events_attrs and type(event) in self.txt_events_attrs:
-            # replace self.text by the event's text
-            evt_txt_attr = self.txt_events_attrs[type(event)]
-            txt = getattr(event, evt_txt_attr)
-            self.set_text(txt)
-
-        Widget.notify(self, event)
+        
 
 
 ############################################################################
@@ -327,6 +323,8 @@ class ChatLogWidget(Widget):
     
     def __init__(self, evManager, numlines=3, rect=None):
         Widget.__init__(self, evManager)
+
+        self._em.reg_cb(ChatlogUpdatedEvent, self.on_chatmsg)
 
         self.font = Font(None, 22)
         if rect:
@@ -346,11 +344,12 @@ class ChatLogWidget(Widget):
         
         
         
-    def addline(self, linetxt):
+    def on_chatmsg(self, event):
         """ If there's room, add a line on top, and then shift all widget texts upwards.
         If there's no room, only shift the texts upwards (don't add new widgets). 
         """
         
+        linetxt = event.author + ': ' + event.txt        
         self.log.debug('Chatlog widget added line: ' + linetxt)
         
         if len(self.linewidgets) < self.maxnumlines: 
@@ -359,7 +358,7 @@ class ChatLogWidget(Widget):
             line_height = self.rect.height / self.maxnumlines
             newline_top = (lines_from_top - 1) * line_height
             newline_rect = Rect(0, newline_top, self.rect.width, line_height)
-            txtwidget = TextLabelWidget(self.evManager, '', rect=newline_rect)
+            txtwidget = TextLabelWidget(self._em, '', rect=newline_rect)
             # this empty text will be replaced when we shift all the texts upwards
             self.linewidgets.append(txtwidget)
         
@@ -390,13 +389,4 @@ class ChatLogWidget(Widget):
         self.dirty = 0
         
         
-        
-    def notify(self, event):
-        if isinstance(event, ChatlogUpdatedEvent):
-            self.addline(event.author + ': ' + event.txt)
-            
-        Widget.notify(self, event)
-        
-
-
 

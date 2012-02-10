@@ -10,9 +10,9 @@ import logging
 
 class SPlayer():
     
-    def __init__(self, pname, coords):
+    def __init__(self, pname, pos):
         self.pname = pname
-        self.coords = coords
+        self.coords = pos
         
 
 class SGame():
@@ -21,8 +21,14 @@ class SGame():
 
 
     def __init__(self, evManager):
-        self.evManager = evManager
-        self.evManager.register_listener(self)
+        self._em = evManager
+        # callbacks
+        self._em.reg_cb(SPlayerArrivedEvent, self.player_arrived)
+        self._em.reg_cb(SPlayerLeftEvent, self.player_left)
+        self._em.reg_cb(SPlayerNameChangeRequestEvent, self.handle_name_change)
+        self._em.reg_cb(SReceivedChatEvent, self.received_chat)
+        self._em.reg_cb(SReceivedMoveEvent, self.player_moved)
+
         # player list
         self.players = dict() 
         
@@ -38,8 +44,11 @@ class SGame():
 
     # notifying for pausing/resuming the game could also fit in there
         
-    def player_left(self, pname):
+    def player_left(self, event):
         """ remove player's avatar from game state and notify everyone """
+        
+        pname = event.pname
+        
         try:
             del self.players[pname]
             self.log.info(pname + ' left.')
@@ -48,15 +57,17 @@ class SGame():
                   ', but it was not found in player list')
         
         event = SBroadcastLeftEvent(pname)
-        self.evManager.post(event)
+        self._em.post(event)
         
         
         
-    def player_arrived(self, pname):
+    def player_arrived(self, event):
         """ Create player's avatar, and send him the list of connected ppl.
         Do not include him in the list of connected people. 
         """
-
+        
+        pname = event.pname
+        
         if pname not in self.players:
 
             self.log.info(pname + ' joined')
@@ -73,11 +84,11 @@ class SGame():
             
             # greet the new player 
             event = SSendGreetEvent(self.mapname, pname, coords, onlineppl)
-            self.evManager.post(event) 
+            self._em.post(event) 
             
             # notify the connected players of this arrival
             event = SBroadcastArrivedEvent(pname, coords)
-            self.evManager.post(event)
+            self._em.post(event)
             
         else: 
             # player was already connected, 
@@ -90,8 +101,10 @@ class SGame():
 
 ##############################################################################
             
-    def handle_name_change(self, oldname, newname):
+    def handle_name_change(self, event):
         """ change player's name only if newname not taken already """
+        
+        oldname, newname = event.oldname, event.newname
         
         if newname not in self.players:
             self.log.info(oldname + ' changed name into ' + newname)
@@ -100,7 +113,7 @@ class SGame():
             del self.players[oldname]
                         
             event = SBroadcastNameChangeEvent(oldname, newname)
-            self.evManager.post(event)
+            self._em.post(event)
         
         else: 
             # TODO: send personal notif to the client who failed to change name
@@ -110,50 +123,31 @@ class SGame():
     
 ##############################################################################
             
-    def received_chat(self, pname, txt):
+    def received_chat(self, event):
         """ when chat msg received, broadcast it to all connected users """
         # TODO: implement a chat logger as a view
         
+        pname, txt = event.pname, event.txt 
+        
         event = SBroadcastChatEvent(pname, txt)
-        self.evManager.post(event)
+        self._em.post(event)
 
 
 
 ##############################################################################
     
-    def player_moved(self, pname, coords):
+    def player_moved(self, event):
         """ when a player moves, notify all of them """
+        pname, coords = event.pname, event.coords
+        
         # TODO: if self.is_walkable(coords): 
         self.players[pname].coords = coords
         
         event = SBroadcastMoveEvent(pname, coords)
-        self.evManager.post(event)
+        self._em.post(event)
 
 #        else:
 #            print('Warning/Cheat: player', pname,
 #                  'walks in non-walkable area', coords)
 #            
         
-##############################################################################
-
-    def notify(self, event):
-            
-        # network notifies that a player arrived or left
-        if isinstance(event, SPlayerArrivedEvent):
-            self.player_arrived(event.pname)
-        elif isinstance(event, SPlayerLeftEvent):
-            self.player_left(event.pname)
-        
-        # name changes
-        elif isinstance(event, SPlayerNameChangeRequestEvent):
-            self.handle_name_change(event.oldname, event.newname)
-        
-        # chat
-        elif isinstance(event, SReceivedChatEvent):
-            self.received_chat(event.pname, event.txt)
-        
-        # movement
-        elif isinstance(event, SReceivedMoveEvent):
-            self.player_moved(event.pname, event.coords)
-            
-            

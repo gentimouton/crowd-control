@@ -1,22 +1,18 @@
-from common.events import Event, TickEvent
+from common.events import EventManager
+import logging
 
 
-class ServerTickEvent(TickEvent):
-    def __init__(self):
-        self.name = "Server Tick"
   
-class SQuitEvent(Event):
-    def __init__(self):
-        self.name = "Server Quit Event"
+class SQuitEvent():
+    pass
   
 
 
 
 #################### model events #########################################
 
-class SModelBuiltWorldEvent(Event):
+class SModelBuiltWorldEvent():
     def __init__(self, world):
-        self.name = "Server finished building its world map"
         self.world = world
 
 
@@ -26,35 +22,30 @@ class SModelBuiltWorldEvent(Event):
 
 
 
-class SPlayerArrivedEvent(Event):
+class SPlayerArrivedEvent():
     def __init__(self, authorr):
-        self.name = "Network notifies that a player arrived"
         self.pname = authorr
         
-class SPlayerLeftEvent(Event):
+class SPlayerLeftEvent():
     def __init__(self, authorr):
-        self.name = "Network notifies that a player left"
         self.pname = authorr
         
         
-class SSendGreetEvent(Event):
+class SSendGreetEvent():
     def __init__(self, mapname, pname, coords, onlineppl):
-        self.name = "Network is asked to greet a player"
         self.mapname = mapname
         self.pname = pname
         self.coords = coords
         self.onlineppl = onlineppl
         
         
-class SBroadcastArrivedEvent(Event):
+class SBroadcastArrivedEvent():
     def __init__(self, pname, coords):
-        self.name = "Network is asked to broadcast a client connection"
         self.pname = pname
         self.coords = coords
         
-class SBroadcastLeftEvent(Event):
+class SBroadcastLeftEvent():
     def __init__(self, pname):
-        self.name = "Network is asked to broadcast a client disconnection"
         self.pname = pname
 
 
@@ -63,30 +54,26 @@ class SBroadcastLeftEvent(Event):
 ################### name change ###########################################
 
     
-class SPlayerNameChangeRequestEvent(Event):
+class SPlayerNameChangeRequestEvent():
     def __init__(self, oldname, newname):
-        self.name = "Network was notified that a client wants to change name"
         self.oldname = oldname
         self.newname = newname
 
-class SBroadcastNameChangeEvent(Event):
+class SBroadcastNameChangeEvent():
     def __init__(self, oldname, newname):
-        self.name = "Network is asked to broadcast that a client changed name"
         self.oldname = oldname
         self.newname = newname
 
 ####################################### CHAT ##############################
 
 
-class SReceivedChatEvent(Event):
+class SReceivedChatEvent():
     def __init__(self, author, txt):
-        self.name = "Network received a chat message"
         self.txt = txt
         self.pname = author
 
-class SBroadcastChatEvent(Event):
+class SBroadcastChatEvent():
     def __init__(self, author, txt):
-        self.name = "Network is asked to broadcast a chat message"
         self.txt = txt
         self.pname = author
     
@@ -96,15 +83,13 @@ class SBroadcastChatEvent(Event):
 ######################### MOVEMENT ########################################
 
 
-class SReceivedMoveEvent(Event):
+class SReceivedMoveEvent():
     def __init__(self, pname, coords):
-        self.name = "Network received a move message"
         self.pname = pname
         self.coords = coords
 
-class SBroadcastMoveEvent(Event):
+class SBroadcastMoveEvent():
     def __init__(self, pname, coords):
-        self.name = "Network is asked to broadcast a move message"
         self.pname = pname
         self.coords = coords
     
@@ -112,3 +97,30 @@ class SBroadcastMoveEvent(Event):
 
 
 
+
+
+class SrvEventManager(EventManager):
+
+    log = logging.getLogger('server')
+
+    def __init__(self):
+        EventManager.__init__(self)
+        
+    def reg_cb(self, eventClass, callback):
+        """ just to log """
+        EventManager.reg_cb(self, eventClass, callback)
+        self.log.debug(eventClass.__name__ + ' will trigger ' 
+                       + callback.__self__.__class__.__name__ + '.' 
+                       + callback.__name__)
+        
+    def post(self, event):
+        """ only log non-tick and non-moving events """
+        
+        if event.__class__.__name__ == 'TickEvent':
+            pass
+        else:
+            #self.log.debug('Event: ' + event.__class__.__name__)
+            pass
+            
+        # notify listeners in any case
+        EventManager.post(self, event)
