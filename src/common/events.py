@@ -3,7 +3,6 @@ import weakref
 
 
 
-
 class WeakBoundMethod:
     """ Hold only a weak reference to self
     from http://stackoverflow.com/questions/7249388/python-duck-typing-for-mvc-event-handling-in-pygame 
@@ -32,20 +31,22 @@ class EventManager:
     """
 
     def __init__(self):
-        # map events to list of listener callbacks
-        self._listener_callbacks = defaultdict(list)
+        # maps events to list of listener callbacks
+        self._callbacks = defaultdict(set)
+        # when a listener dies, callbacks have to be removed manually 
+        # from their set, otherwise memory leaks!
 
         self.eventdq = deque()
         
         # Since a dict can't change size when iterated, when a listener is 
         # added during a loop iteration over the existing listeners,
-        #  add temporarily that new listener to the _new_callbacks dict.
-        self._new_callbacks = defaultdict(list)
+        # add temporarily that new listener to the new callbacks.
+        self._new_callbacks = defaultdict(set)
 
 
         
     def reg_cb(self, eventClass, callback):
-        """ Register callback.
+        """ Register a callback for a particular event.
         Turn the listener's callback function into a function weakly bound 
         to the listener it belongs to (weak ref to the listener's self),
         and then add that transformed callback to the temporary callbacks. 
@@ -54,23 +55,22 @@ class EventManager:
             hasattr(callback, '__func__')):
             callback = WeakBoundMethod(callback)
         
-        try:
-            self._new_callbacks[eventClass].append(callback)
-        except KeyError:
-            self._new_callbacks[eventClass] = [callback]
+        # defaultdict: if the set does not exist, create it on the fly.
+        # Add the callback to the set in any case.
+        self._new_callbacks[eventClass].add(callback)
+        
 
         
     def join_new_listeners(self):
         """ add new listener callbacks to the current ones """
+        
         if self._new_callbacks:
             
-            for evtClass in self._new_callbacks:
-                try: #merge the new and current callback lists
-                    self._listener_callbacks[evtClass] += self._new_callbacks[evtClass]
-                except KeyError:
-                    self._listener_callbacks[evtClass] = self._new_callbacks[evtClass]
-                    
+            for evClass in self._new_callbacks:
+                self._callbacks[evClass] = self._callbacks[evClass].union(self._new_callbacks[evClass])
+                
             self._new_callbacks.clear() 
+
 
             
     def post(self, event):
@@ -86,7 +86,7 @@ class EventManager:
             while self.eventdq:
                 ev = self.eventdq.popleft()
                 self.join_new_listeners()
-                for callback in self._listener_callbacks[ev.__class__]: 
+                for callback in self._callbacks[ev.__class__]: 
                     #some of those listeners may enqueue events on the fly
                     # those events will be treated within this while loop,
                     # they don't have to wait for the next tick event
@@ -95,7 +95,7 @@ class EventManager:
                 self.join_new_listeners()
                 
             # finally, post tick event
-            for cb in self._listener_callbacks[event.__class__]:
+            for cb in self._callbacks[event.__class__]:
                 cb(event)
                 
             self.join_new_listeners()
