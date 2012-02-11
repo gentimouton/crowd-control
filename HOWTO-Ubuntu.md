@@ -28,6 +28,8 @@ Git
 
 Setting up git to checkout from and push to github: http://help.github.com/linux-set-up-git/
 
+SSH Issues: http://help.github.com/ssh-issues/
+
 To add coloring in terminal, cf http://en.newinstance.it/2010/05/23/git-autocompletion-and-enhanced-bash-prompt/
 :
 
@@ -86,6 +88,12 @@ Now, you should not have any error running:
 ````
 python3.2 examples/chimp.py
 ````
+
+
+Checkout from Git
+====
+
+```git clone git@github.com:gentimouton/crowd-control.git```
 
 
 
