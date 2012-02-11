@@ -10,7 +10,8 @@ Setup for Ubuntu should happen in this order:
 Python3.2
 ======
 
-Either from the Ubuntu software center package named `python3.2`, or manual install from http://www.giantflyingsaucer.com/blog/?p=2858:
+Either from the Ubuntu software center package named `python3.2`, or manual install 
+(cf http://www.giantflyingsaucer.com/blog/?p=2858):
 
 ````bash
 sudo apt-get install build-essential
