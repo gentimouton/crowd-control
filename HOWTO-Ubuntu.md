@@ -90,10 +90,18 @@ python3.2 examples/chimp.py
 ````
 
 
-Checkout from Git
+Final steps
 ====
 
+- Get the project from github:
+
 ```git clone git@github.com:gentimouton/crowd-control.git```
+
+- Open Eclipse, right click -> new -> project -> PyDev project. 
+- Project name: ```crowd-control```. 
+- Grammar version: 3.0. 
+- Configure Interpreter: python3.2 is most likely in ```/usr/bin/python3.2```
+- Create src folder and add to PYTHONPATH. 
 
 
 
