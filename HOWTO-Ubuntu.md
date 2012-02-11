@@ -26,6 +26,8 @@ sudo make altinstall
 Git
 ====
 
+Setting up git to checkout from and push to github: http://help.github.com/linux-set-up-git/
+
 To add coloring in terminal, cf http://en.newinstance.it/2010/05/23/git-autocompletion-and-enhanced-bash-prompt/
 :
 
