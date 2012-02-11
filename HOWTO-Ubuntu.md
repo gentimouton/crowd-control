@@ -7,10 +7,10 @@ Setup for Ubuntu should happen in this order:
 
 
 
-Python
+Python3.2
 ======
 
-Install Python 3.2 on top of existing Python 2.7 (if any). See http://www.giantflyingsaucer.com/blog/?p=2858:
+Either from the Ubuntu software center package named `python3.2`, or manual install from http://www.giantflyingsaucer.com/blog/?p=2858:
 
 ````bash
 sudo apt-get install build-essential
