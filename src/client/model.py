@@ -1,4 +1,4 @@
-from client2.events_client import MoveMyCharactorRequest, ModelBuiltMapEvent, \
+from client.events_client import MoveMyCharactorRequest, ModelBuiltMapEvent, \
     NetworkReceivedChatEvent, ChatlogUpdatedEvent, ClGreetEvent, ClPlayerLeft, \
     CharactorRemoveEvent, NetworkReceivedCharactorMoveEvent, ClPlayerArrived, \
     ClNameChangeEvent, LocalCharactorPlaceEvent, OtherCharactorPlaceEvent, \

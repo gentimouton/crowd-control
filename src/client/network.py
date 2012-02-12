@@ -1,6 +1,6 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client2.config import config_get_nick, config_get_hostport
-from client2.events_client import SendChatEvent, \
+from client.config import config_get_nick, config_get_hostport
+from client.events_client import SendChatEvent, \
     NetworkReceivedChatEvent, ClGreetEvent, ClNameChangeEvent, ClPlayerArrived, \
     ClPlayerLeft, NetworkReceivedCharactorMoveEvent, LocalCharactorMoveEvent
 from common.events import TickEvent

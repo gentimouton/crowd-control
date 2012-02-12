@@ -1,5 +1,5 @@
-from client2.config import config_get_fps
-from client2.events_client import MoveMyCharactorRequest, QuitEvent, \
+from client.config import config_get_fps
+from client.events_client import MoveMyCharactorRequest, QuitEvent, \
     UpClickEvent, DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, \
     NonprintableKeyEvent
 from common.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
