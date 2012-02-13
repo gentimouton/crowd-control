@@ -1,7 +1,8 @@
 #! /usr/bin/env python3.2
 
 from client.config import load_config
-from client.controllers import InputController, CClockController
+from client.input import InputController
+from client.clock import CClockController
 from client.events_client import ClientEventManager
 from client.model import Game
 from client.network import NetworkController

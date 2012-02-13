@@ -52,3 +52,8 @@ def config_get_hostport():
 
 def config_get_nick():
     return __dict['nick']
+
+# --- logging
+
+def config_get_logfolder():
+    return __dict['logfolder']
