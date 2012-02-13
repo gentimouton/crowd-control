@@ -7,7 +7,7 @@ from common.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
 from common.events import TickEvent
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, \
     K_BACKSPACE, K_RETURN, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION
-from pygame.time import Clock
+from common.clock import Clock
 import logging
 import pygame
 
@@ -70,28 +70,36 @@ class InputController:
 ###########################################################################
 
 
-class ClockController:
+class CClockController(Clock):
     """ Each clock tick sends a TickEvent """
     log = logging.getLogger('client')
+    
+    
     def __init__(self, evManager):
+        
+        fps = config_get_fps()
+        if fps == 0:
+            fps = 100 #100 fps is the maximum timer resolution anyway
+        Clock.__init__(self, fps)
+        
         self._em = evManager
         self._em.reg_cb(QuitEvent, self.on_quit)
-        self.keep_going = True
 
 
-    def run(self):
-        """ keep the clock running """
-        clock = Clock()
-        while self.keep_going:
-            clock.tick(config_get_fps())
-            event = TickEvent()
-            self._em.post(event)
+    
+    def start(self):
+        self.log.debug('Clock starts to tick at ' + str(self.fps) + ' fps')
+        Clock.start(self)
+        
             
 
     def on_quit(self, qevent):
         """ stop the while loop from running """
-        self.keep_going = False
+        Clock.stop(self)
 
 
 
+    def on_tick(self, frame_num):
+        event = TickEvent()
+        self._em.post(event)
             

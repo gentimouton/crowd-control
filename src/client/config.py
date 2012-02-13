@@ -3,16 +3,15 @@ import os
 import logging
 __dict = {} #store pairs of (config option, value)
 
-def load_config():
+def load_config(config_filepath):
     """ read configs from config file, and simulate a static config class """
     
     clogger = logging.getLogger('client')
-    
-    config_filepath = "client_config.conf"
+ 
     config = configparser.ConfigParser()
     files_read = config.read(config_filepath)
     if not files_read: #config.read() could not find the config file
-        clogger.critical('Error: Could not find config file at', 
+        clogger.critical('Error: Could not find config file at' +
               os.path.abspath(config_filepath))
         exit()
         

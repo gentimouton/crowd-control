@@ -25,7 +25,7 @@ def main():
     n = NetworkController(evManager)
     g = SGame(evManager)
     
-    sclock.run()
+    sclock.start()
         
     log.debug('Server stopped')
 
