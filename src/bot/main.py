@@ -1,7 +1,10 @@
 #! /usr/bin/env python3.2
+from bot.config import load_bot_config, config_get_fps, config_get_hostport, \
+    config_get_nick
+from bot.input import BotInputController
 from bot.logger import config_logger
 from client.clock import CClockController
-from client.config import load_config
+from client.config import load_client_config
 from client.events_client import ClientEventManager
 from client.model import Game
 from client.network import NetworkController
@@ -11,7 +14,7 @@ from threading import current_thread
     
 def main():
     
-    load_config("bot_config.conf") #config contains all the constants for the game
+    load_bot_config() # bot-specific config (e.g. logger)
     
     tid = current_thread().ident
     logger = config_logger(str(tid))
@@ -20,12 +23,10 @@ def main():
     
     evManager = ClientEventManager()
 
-    # TODO: should simulate inputs 
-    #kb = InputController(evManager)
-    
-    clock = CClockController(evManager) #the main loop is in there
+    ic = BotInputController(evManager) # simulate inputs    
+    clock = CClockController(evManager, config_get_fps()) #the main loop is in there
     g = Game(evManager)
-    n = NetworkController(evManager)
+    n = NetworkController(evManager, config_get_hostport(), config_get_nick())
     
     clock.start()
     

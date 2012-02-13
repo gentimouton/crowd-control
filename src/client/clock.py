@@ -1,5 +1,4 @@
 
-from client.config import config_get_fps
 from client.events_client import QuitEvent
 from common.clock import Clock
 from common.events import TickEvent
@@ -11,9 +10,8 @@ class CClockController(Clock):
     log = logging.getLogger('client')
     
     
-    def __init__(self, evManager):
+    def __init__(self, evManager, fps):
         
-        fps = config_get_fps()
         if fps == 0:
             fps = 100 #100 fps is the maximum timer resolution anyway
         Clock.__init__(self, fps)

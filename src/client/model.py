@@ -18,12 +18,7 @@ class Game:
     
     def __init__(self, evManager):
         self._em = evManager
-        self._em.reg_cb(NetworkReceivedCharactorMoveEvent, self.move_charactor)
-        self._em.reg_cb(MoveMyCharactorRequest, self.move_char_relative)
         self._em.reg_cb(ClGreetEvent, self.greeted)
-        self._em.reg_cb(ClNameChangeEvent, self.update_player_name)
-        self._em.reg_cb(ClPlayerLeft, self.remove_player)
-        self._em.reg_cb(ClPlayerArrived, self.on_playerarrived)
         
         self.players = dict() #unlike WeakValueDict, I need to remove players manually
         self.world = World(evManager)
@@ -85,20 +80,31 @@ class Game:
     
     def greeted(self, event):
         """ When the server greets me, set my name,
-        start world building process, and add other connected players. 
+        start world building process, and add other connected players.
+        Start also listening to player inputs, and other network messages.
         """
+        
         mapname, newname = event.mapname, event.newname
         newpos, onlineppl = event.newpos, event.onlineppl
+            
+        self.myname = newname
         
         self.start_map(mapname)
-            
-        self.myname = newname 
+         
         self.add_player(newname, newpos)
         
         for name, pos in onlineppl.items():
             self.add_player(name, pos)
-            
-    
+           
+        # start listening to game events coming from the network
+        self._em.reg_cb(NetworkReceivedCharactorMoveEvent, self.move_charactor)
+        self._em.reg_cb(ClPlayerLeft, self.remove_player)
+        self._em.reg_cb(ClPlayerArrived, self.on_playerarrived) 
+        self._em.reg_cb(ClNameChangeEvent, self.update_player_name)
+        # start listening to player input events
+        self._em.reg_cb(MoveMyCharactorRequest, self.move_char_relative)
+        
+        
     
     def move_charactor(self, event):
         """move the charactor of the player which name is pname

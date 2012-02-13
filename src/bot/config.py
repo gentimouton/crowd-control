@@ -2,30 +2,31 @@ from common.config import load_config
 import logging
 import os
 
-_dict = {} #store pairs of (config option, value)
+_dict = {}
 
-def load_client_config():
+def load_bot_config():
     """ read configs from config file, and simulate a static config class """
     
     log = logging.getLogger('client')
-    config_filepath = os.path.abspath("../client/client_config.conf")
-    dic = load_config(log, config_filepath)
+    config_filepath = "bot_config.conf"
+    dic = load_config(log, os.path.abspath(config_filepath))
     for k, v in dic.items():
         _dict[k] = v
-    print(_dict)
+    
+    
+# --- logging
 
+def config_get_logfolder():
+    return _dict['logfolder']
+
+def config_get_loglevel():
+    return _dict['loglevel']
 
 
 # --- graphics config
 
 def config_get_fps():
     return int(_dict['fps'])
-
-def config_get_screenres():
-    res = _dict['screenres'].strip().split(',')
-    w = int(res[0])
-    h = int(res[1])
-    return w, h
 
 
 # --- network
@@ -38,5 +39,3 @@ def config_get_hostport():
 
 def config_get_nick():
     return _dict['nick']
-
-

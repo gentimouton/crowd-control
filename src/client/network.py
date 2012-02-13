@@ -1,5 +1,4 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client.config import config_get_nick, config_get_hostport
 from client.events_client import SendChatEvent, \
     NetworkReceivedChatEvent, ClGreetEvent, ClNameChangeEvent, ClPlayerArrived, \
     ClPlayerLeft, NetworkReceivedCharactorMoveEvent, LocalCharactorMoveEvent
@@ -14,14 +13,15 @@ class NetworkController(ConnectionListener):
     log = logging.getLogger('client')
 
 
-    def __init__(self, evManager):
+    def __init__(self, evManager, hostport, nick):
         """ open connection to the server """
         self._em = evManager
         self._em.reg_cb(TickEvent, self.on_tick)
         self._em.reg_cb(SendChatEvent, self.send_chat)
         self._em.reg_cb(LocalCharactorMoveEvent, self.send_move)
         
-        host, port = config_get_hostport()
+        self.preferrednick = nick
+        host, port = hostport
         self.Connect((host, port))
         
         
@@ -123,7 +123,7 @@ class NetworkController(ConnectionListener):
 
         if actiontype == 'greet':
             gmsg = GreetMsg(data['msg']) #build msg from dictionary
-            preferred_name = config_get_nick()
+            preferred_name = self.preferrednick
             if gmsg.d['pname'] is not preferred_name:
                 self.ask_for_name_change(preferred_name)
             ev = ClGreetEvent(gmsg.d['mapname'], gmsg.d['pname'],
