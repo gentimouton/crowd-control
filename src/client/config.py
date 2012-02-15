@@ -12,7 +12,6 @@ def load_client_config():
     dic = load_config(log, config_filepath)
     for k, v in dic.items():
         _dict[k] = v
-    print(_dict)
 
 
 

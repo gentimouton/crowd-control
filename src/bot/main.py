@@ -4,7 +4,6 @@ from bot.config import load_bot_config, config_get_fps, config_get_hostport, \
 from bot.input import BotInputController
 from bot.logger import config_logger
 from client.clock import CClockController
-from client.config import load_client_config
 from client.events_client import ClientEventManager
 from client.model import Game
 from client.network import NetworkController

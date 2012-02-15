@@ -13,7 +13,7 @@ class BotInputController():
         self._em = evManager
         self._em.reg_cb(ModelBuiltMapEvent, self.start)
         self.moves = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT]
-        self.mvtimer = int(config_get_fps() / 20)
+        self.mvtimer = int(config_get_fps())
         
         
     def start(self, event):
@@ -25,7 +25,7 @@ class BotInputController():
         """ Move every now and then """
                 
         if self.mvtimer == 0:
-            self.mvtimer = int(config_get_fps() / 20)
+            self.mvtimer = int(config_get_fps())
             ev = MoveMyCharactorRequest(random.choice(self.moves))
             self._em.post(ev)
         
