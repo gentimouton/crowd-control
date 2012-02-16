@@ -110,6 +110,9 @@ class World():
             return None
         
         
+    def iswalkable(self, coords):
+        """ return whether a cell is walkable or not """
+        return self.get_cell(coords).iswalkable
         
 ##########################################################################
 

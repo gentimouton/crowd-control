@@ -125,9 +125,10 @@ class SGame():
             
     def received_chat(self, event):
         """ when chat msg received, broadcast it to all connected users """
-        # TODO: implement a chat logger as a view
         
         pname, txt = event.pname, event.txt 
+        
+        self.log.debug(pname + ' says ' + txt)
         
         event = SBroadcastChatEvent(pname, txt)
         self._em.post(event)
@@ -140,14 +141,14 @@ class SGame():
         """ when a player moves, notify all of them """
         pname, coords = event.pname, event.coords
         
-        # TODO: if self.is_walkable(coords): 
-        self.players[pname].coords = coords
-        
-        event = SBroadcastMoveEvent(pname, coords)
-        self._em.post(event)
+        if self.world.iswalkable(coords): 
+            self.players[pname].coords = coords
+            self.log.debug(pname + ' moved to ' + str(coords))
+            event = SBroadcastMoveEvent(pname, coords)
+            self._em.post(event)
 
-#        else:
-#            print('Warning/Cheat: player', pname,
-#                  'walks in non-walkable area', coords)
-#            
+        else:
+            self.log.warn('Possible cheat: ' + pname 
+                          + ' walks in non-walkable cell' + str(coords))
+            
         
