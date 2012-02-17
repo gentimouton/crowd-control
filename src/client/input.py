@@ -16,8 +16,14 @@ class InputController:
     def __init__(self, evManager):
         self._em = evManager
         self._em.reg_cb(TickEvent, self.on_tick)
-        #non-printable keys to detect when typing in a text input field
+        
+        #non-printable keys used to detect when typing in a text input field
         self._nonprintable_keys = (K_RETURN, K_BACKSPACE)
+        
+        #if key pushed for more than 150ms, then send KEYDOWN event every 50ms
+        # TODO: keyboard sensitivity should be configurable
+        pygame.init() #calling init() multiple times does not mess anything
+        pygame.key.set_repeat(150, 50) 
     
 
     def on_tick(self, tickevent):
