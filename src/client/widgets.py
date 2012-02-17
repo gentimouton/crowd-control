@@ -1,3 +1,10 @@
+from client.config import config_get_fontsize, config_get_unfocusedbtn_bgcolor, \
+    config_get_unfocusedinput_txtcolor, config_get_focusedbtn_bgcolor, \
+    config_get_unfocusedbtn_txtcolor, config_get_unfocusedinput_bgcolor, \
+    config_get_focusedinput_bgcolor, config_get_focusedbtn_txtcolor, \
+    config_get_focusedinput_txtcolor, config_get_txtlabel_txtcolor, \
+    config_get_txtlabel_bgcolor, config_get_chatlog_txtcolor, \
+    config_get_chatlog_bgcolor
 from client.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
     UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ChatlogUpdatedEvent, \
     NetworkReceivedGameStartEvent
@@ -59,7 +66,7 @@ class ButtonWidget(Widget):
         self.onMouseMoveOutEvent = onMouseMoveOutEvent
         
         self.text = text
-        self.font = Font(None, 40) #default font, 40 pixels high
+        self.font = Font(None, config_get_fontsize()) #default font, 40 pixels high
         
         if rect:
             self.rect = rect
@@ -78,12 +85,12 @@ class ButtonWidget(Widget):
             return
 
         if self.focused:
-            color = (255, 0, 0) #txt is red when widget is focused
-            bgcolor = (100, 100, 200)
+            color = config_get_focusedbtn_txtcolor()
+            bgcolor = config_get_focusedbtn_bgcolor() 
         else:
-            color = (0, 0, 255) #blue when not focused
-            bgcolor = (100, 100, 0)
-        
+            color = config_get_unfocusedbtn_txtcolor()
+            bgcolor = config_get_unfocusedbtn_bgcolor() 
+                
         # TODO: is bliting on existing faster than creating a new surface?
         self.image = Surface(self.rect.size) #rectangle container for the text
         self.image.fill(bgcolor)
@@ -150,12 +157,13 @@ class InputFieldWidget(Widget):
         self._em.reg_cb(DownClickEvent, self.on_downclick)    
 
         self.text = ''
-        self.font = Font(None, 22)
+        self.font = Font(None, config_get_fontsize())
         
         if rect:
             self.rect = rect
         else:
-            self.rect = Rect((0, 0), (100, 22 + 4)) #100px = default width,
+            self.rect = Rect((0, 0), (100, config_get_fontsize() + 4)) 
+            #100px = default width,
             # 25px = font height, 4px = 1 px for each of border-bottom, 
             # padding bottom, padding top, and border top.  
         
@@ -163,16 +171,16 @@ class InputFieldWidget(Widget):
         border_rect = Rect((0, 0), self.rect.size)
         # draw and store unfocused empty box
         emptyboxImg = Surface(self.rect.size)
-        self.unfocused_bgcolor = (111, 111, 111) #grey
-        self.unfocused_txtcolor = (255, 255, 255) #white
+        self.unfocused_bgcolor = config_get_unfocusedinput_bgcolor() 
+        self.unfocused_txtcolor = config_get_unfocusedinput_txtcolor()
         emptyboxImg.fill(self.unfocused_bgcolor)
         pygame.draw.rect(emptyboxImg, self.unfocused_txtcolor, border_rect, 2)
         self.unfocused_emptyboxImg = emptyboxImg.convert_alpha()
         self.image = emptyboxImg
         # draw and store focused empty box
         emptyboxImg = Surface(self.rect.size)
-        self.focused_bgcolor = (255, 255, 255) #white
-        self.focused_txtcolor = (0, 0, 0) #black
+        self.focused_bgcolor = config_get_focusedinput_bgcolor()
+        self.focused_txtcolor = config_get_focusedinput_txtcolor() 
         emptyboxImg.fill(self.focused_bgcolor)
         pygame.draw.rect(emptyboxImg, self.focused_txtcolor, border_rect, 2)
         self.focused_emptyboxImg = emptyboxImg.convert_alpha()
@@ -263,10 +271,10 @@ class TextLabelWidget(Widget):
     """ display static text """ 
     
     def __init__(self, evManager, text, events_attrs=None, rect=None,
-                 txtcolor=(255, 255, 0), bgcolor=(111, 111, 0)):
+                 txtcolor=None, bgcolor=None):
         
         Widget.__init__(self, evManager)
-
+            
         # When receiving an event containing text, 
         # replace self.text by that event's text.
         # events_attrs maps event classes to event text attributes. 
@@ -276,16 +284,24 @@ class TextLabelWidget(Widget):
                 self._em.reg_cb(evtClass, self.on_textevent)
         
         # gfx
-        self.font = Font(None, 22)
+        self.font = Font(None, config_get_fontsize())
         if rect:
             self.rect = rect
         else:
-            self.rect = Rect((0, 0), (100, 22 + 4)) #default width = 100px,
-            # 22px = font height, 4px from 1px each of  border bottom,
+            self.rect = Rect((0, 0), (100, config_get_fontsize() + 4)) 
+            #default width = 100px,
+            # 4px from 1px each of  border bottom,
             # padding bottom, padding top, and border top 
         
+        
+        if not txtcolor:
+            txtcolor = config_get_txtlabel_txtcolor()
         self.txtcolor = txtcolor 
+
+        if not bgcolor:
+            bgcolor = config_get_txtlabel_bgcolor()
         self.bgcolor = bgcolor
+
         self.text = text
         self.image = Surface(self.rect.size)
         
@@ -335,17 +351,17 @@ class ChatLogWidget(Widget):
         self._em.reg_cb(ChatlogUpdatedEvent, self.on_chatmsg)
         self._em.reg_cb(NetworkReceivedGameStartEvent, self.on_game_start)
 
-        self.font = Font(None, 22)
+        self.font = Font(None, config_get_fontsize())
         if rect:
             self.rect = rect
         else:
-            self.rect = Rect((0, 0), (100, (22 + 4) * numlines)) 
+            self.rect = Rect((0, 0), (100, (config_get_fontsize() + 4) * numlines)) 
             #100px = default width,
-            # 22px = font height, 4px = 1px for each of border bottom,
+            #4px = 1px for each of border bottom,
             # padding bottom, padding top, and border top, 
         
-        self.txtcolor = (255, 255, 0) #yellow
-        self.bgcolor = (111, 111, 0) #brown
+        self.txtcolor = config_get_chatlog_txtcolor()
+        self.bgcolor = config_get_chatlog_bgcolor()
         self.image = Surface(self.rect.size).fill(self.bgcolor)
         
         self.maxnumlines = numlines

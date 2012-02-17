@@ -1,4 +1,5 @@
-from client.config import config_get_screenres
+from client.config import config_get_screenres, config_get_loadingscreen_bgcolor, \
+    config_get_fontsize
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvent, \
     CharactorRemoveEvent, OtherCharactorPlaceEvent, LocalCharactorPlaceEvent, \
     LocalCharactorMoveEvent, RemoteCharactorMoveEvent, ClNameChangeEvent, \
@@ -60,13 +61,13 @@ class MasterView:
         if self.win_w != 4 * self.win_h / 3:
             self.log.warn('Resolution ' + str(self.win_size) + ' is not 4x3.')
 
-        # make a square window screen
+        # make the window screen
         self.window = pygame.display.set_mode(self.win_size)
         pygame.display.set_caption('CC')
         
         # blit the loading screen: a black screen
-        self.background = pygame.Surface((self.win_h, self.win_h)) #or self.window.get_size()?
-        self.background.fill((0, 0, 0)) #black
+        self.background = pygame.Surface(self.window.get_size()) 
+        self.background.fill(config_get_loadingscreen_bgcolor()) 
         self.window.blit(self.background, (0, 0))
      
         
@@ -83,14 +84,15 @@ class MasterView:
         meh_btn = ButtonWidget(evManager, "Meh.", rect=rect,
                                    onUpClickEvent=msgEvent)
         
+        line_h = config_get_fontsize()
         
         # -- name label at top-right of the screen
         rect = pygame.Rect((self.win_w * 3 / 4, 0),
-                            (self.win_w / 4 - 1, 19)) 
+                            (self.win_w / 4 - 1, line_h - 1))
         evt_txt_dict = {ClNameChangeEvent: 'newname', ClGreetEvent: 'newname'}
         namebox = TextLabelWidget(evManager, '', events_attrs=evt_txt_dict, rect=rect)
                 
-        line_h = 20
+        
         # -- chat box input at bottom-right of the screen
         rect = pygame.Rect((self.win_w * 3 / 4, self.win_h * 11 / 12 - line_h),
                            (self.win_w / 4 - 1, line_h - 1)) 

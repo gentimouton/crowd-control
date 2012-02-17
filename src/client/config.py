@@ -14,17 +14,59 @@ def load_client_config():
         _dict[k] = v
 
 
+def int_tuple(str_):
+    """ transform a string of integers into a tuple
+    example: '1,2,3' becomes (1,2,3)
+    """
+    strlist = str_.strip().split(',') # ['1','2','3']
+    return tuple([int(i) for i in strlist]) #tuple of int: (1,2,3)
 
+    
 # --- graphics config
 
 def config_get_fps():
     return int(_dict['fps'])
 
 def config_get_screenres():
-    res = _dict['screenres'].strip().split(',')
-    w = int(res[0])
-    h = int(res[1])
-    return w, h
+    a = int_tuple(_dict['screenres'])
+    return a
+
+
+# --- colors
+
+def config_get_fontsize():
+    return int(_dict['fontsize'])
+def config_get_loadingscreen_bgcolor():
+    return int_tuple(_dict['loadingscreen_bgcolor'])
+
+def config_get_focusedbtn_txtcolor():
+    return int_tuple(_dict['focusedbtn_txtcolor'])
+def config_get_focusedbtn_bgcolor():
+    return int_tuple(_dict['focusedbtn_bgcolor'])
+def config_get_unfocusedbtn_txtcolor():
+    return int_tuple(_dict['unfocusedbtn_txtcolor'])
+def config_get_unfocusedbtn_bgcolor():
+    return int_tuple(_dict['unfocusedbtn_bgcolor'])
+
+def config_get_unfocusedinput_txtcolor():
+    return int_tuple(_dict['unfocusedinput_txtcolor'])
+def config_get_unfocusedinput_bgcolor():
+    return int_tuple(_dict['unfocusedinput_bgcolor'])
+def config_get_focusedinput_txtcolor():
+    return int_tuple(_dict['focusedinput_txtcolor'])
+def config_get_focusedinput_bgcolor():
+    return int_tuple(_dict['focusedinput_bgcolor'])
+        
+def config_get_txtlabel_txtcolor():
+    return int_tuple(_dict['txtlabel_txtcolor'])
+def config_get_txtlabel_bgcolor():
+    return int_tuple(_dict['txtlabel_bgcolor'])
+
+def config_get_chatlog_txtcolor():
+    return int_tuple(_dict['chatlog_txtcolor'])
+def config_get_chatlog_bgcolor():
+    return int_tuple(_dict['chatlog_bgcolor'])
+
 
 
 # --- network
