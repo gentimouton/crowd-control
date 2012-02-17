@@ -2,11 +2,12 @@ from client.config import config_get_screenres
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvent, \
     CharactorRemoveEvent, OtherCharactorPlaceEvent, LocalCharactorPlaceEvent, \
     LocalCharactorMoveEvent, RemoteCharactorMoveEvent, ClNameChangeEvent, \
-    ClGreetEvent, NetworkReceivedGameStartEvent
+    ClGreetEvent
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget
 from common.events import TickEvent
 from pygame.sprite import RenderUpdates, Sprite
+import logging
 import pygame
 
 
@@ -40,6 +41,8 @@ class RenderUpdatesDict(RenderUpdates):
 class MasterView:
     """ links to presentations of game world and HUD """
     
+    log = logging.getLogger('client')
+
     def __init__(self, evManager):
         # -- set the callbacks
         self._em = evManager
@@ -53,54 +56,58 @@ class MasterView:
 
         # -- init pygame's screen
         pygame.init() #calling init() multiple times does not mess anything
-        self.win_size = config_get_screenres()[0]
+        self.win_size = self.win_w, self.win_h = config_get_screenres()
+        if self.win_w != 4 * self.win_h / 3:
+            self.log.warn('Resolution ' + str(self.win_size) + ' is not 4x3.')
+
         # make a square window screen
-        self.window = pygame.display.set_mode((self.win_size, self.win_size))
+        self.window = pygame.display.set_mode(self.win_size)
         pygame.display.set_caption('CC')
         
         # blit the loading screen: a black screen
-        self.background = pygame.Surface(self.window.get_size())
+        self.background = pygame.Surface((self.win_h, self.win_h)) #or self.window.get_size()?
         self.background.fill((0, 0, 0)) #black
         self.window.blit(self.background, (0, 0))
      
         
         # -- add quit button  at bottom-right 
-        rect = pygame.Rect((self.win_size * 5 / 6, self.win_size * 11 / 12),
-                           (self.win_size / 6 - 1, self.win_size / 12 - 1)) 
+        rect = pygame.Rect((self.win_w * 7 / 8, self.win_h * 11 / 12),
+                           (self.win_w / 8 - 1, self.win_h / 12 - 1)) 
         quitEvent = QuitEvent()
         quit_btn = ButtonWidget(evManager, "Quit", rect=rect,
-                             onUpClickEvent=quitEvent)
+                                onUpClickEvent=quitEvent)
         # -- meh_btn at bottom right
-        rect = pygame.Rect((self.win_size * 5 / 6, self.win_size * 5 / 6),
-                            (self.win_size / 6 - 1, self.win_size / 12 - 1)) 
+        rect = pygame.Rect((self.win_w * 6 / 8, self.win_h * 11 / 12),
+                            (self.win_w / 8 - 1, self.win_h / 12 - 1)) 
         msgEvent = SendChatEvent('meh...') #ask to send 'meh' to the server
         meh_btn = ButtonWidget(evManager, "Meh.", rect=rect,
                                    onUpClickEvent=msgEvent)
         
         
-        # -- name label at bottom-left of the screen
-        rect = pygame.Rect((0, self.win_size - 20),
-                            (self.win_size / 8 - 1, 19)) 
+        # -- name label at top-right of the screen
+        rect = pygame.Rect((self.win_w * 3 / 4, 0),
+                            (self.win_w / 4 - 1, 19)) 
         evt_txt_dict = {ClNameChangeEvent: 'newname', ClGreetEvent: 'newname'}
         namebox = TextLabelWidget(evManager, '', events_attrs=evt_txt_dict, rect=rect)
                 
-        # -- chat box input at bottom-left of the screen
-        rect = pygame.Rect((self.win_size / 8, self.win_size - 20),
-                            (self.win_size * 5 / 6 - self.win_size / 8 - 1, 19)) 
+        line_h = 20
+        # -- chat box input at bottom-right of the screen
+        rect = pygame.Rect((self.win_w * 3 / 4, self.win_h * 11 / 12 - line_h),
+                           (self.win_w / 4 - 1, line_h - 1)) 
         chatbox = InputFieldWidget(evManager, rect=rect)
 
 
         # -- chat window display, just above the chat input field
-        numlines = int(self.win_size / 200) 
-        # rough estimate: for 400px, 2 lines of chat don't take too much room,
-        # and for 600px, 3 lines are still OK
-        rect = pygame.Rect((0, self.win_size * 5 / 6),
-                           (self.win_size * 5 / 6 - 1, self.win_size / 6 - 20 - 1)) 
+        rect = pygame.Rect((self.win_w * 3 / 4, self.win_h * 6 / 12),
+                           (self.win_w / 4 - 1, self.win_h * 5 / 12 - line_h - 1))
+        numlines = int(rect.height / line_h) 
         chatwindow = ChatLogWidget(evManager, numlines=numlines, rect=rect)
         
         pygame.display.flip()
 
-        self.charactor_sprites = RenderUpdatesDict()
+        self.charactor_sprites = RenderUpdatesDict() # all in game charactors 
+        self.active_charactor_sprites = RenderUpdatesDict() # chars currently visible on screen
+        
         self.gui_sprites = RenderUpdates()   
         self.gui_sprites.add(quit_btn)
         self.gui_sprites.add(meh_btn)
@@ -126,7 +133,7 @@ class MasterView:
         # determine width and height of cell spr from map visibility 
         self.visib_rad = worldmap.visibility_radius
         self.visib_diam = 2 * self.visib_rad + 1
-        self.cspr_size = int(self.win_size / self.visib_diam)
+        self.cspr_size = int(self.win_h / self.visib_diam)
         
         # Build world background to be scrolled when the charactor moves
         # so that world_bg can be scrolled 
@@ -179,21 +186,21 @@ class MasterView:
         
         
     def display_charactor(self, charspr, cleft, ctop):
-        """ display a charactor on the screen given his cell coords """
+        """ display (or not) a charactor on the screen given his cell coords """
         
         cell_shift_left = cleft - self.bg_shift_left
         cell_shift_top = ctop - self.bg_shift_top
         
         if abs(cell_shift_left) <= self.visib_rad\
         and abs(cell_shift_top) <= self.visib_rad:
-            # charactor got out of screen
-            pass
-         
-        # determine the screen position of the char's spr
-        charleft = (self.visib_diam / 2 + cell_shift_left) * self.cspr_size
-        chartop = (self.visib_diam / 2 + cell_shift_top) * self.cspr_size
-        charspr.rect.center = (charleft, chartop)
-
+            self.active_charactor_sprites.add(charspr)
+            # char is near: display his spr on the screen
+            charleft = (self.visib_diam / 2 + cell_shift_left) * self.cspr_size
+            chartop = (self.visib_diam / 2 + cell_shift_top) * self.cspr_size
+            charspr.rect.center = (charleft, chartop)
+            
+        else: # charactor got out of screen: remove his spr from the groups
+            self.active_charactor_sprites.remove(charspr)
     
     
     
@@ -217,7 +224,7 @@ class MasterView:
         sprdims = (self.cspr_size, self.cspr_size)
         charspr = CharactorSprite(charactor, sprdims, self.charactor_sprites)
         cleft, ctop = charactor.cell.coords
-        self.center_screen_on_coords(cleft, ctop)
+        self.center_screen_on_coords(cleft, ctop) #must be done before display_char
         self.display_charactor(charspr, cleft, ctop)
         
 
@@ -230,11 +237,11 @@ class MasterView:
     
     
     def move_local_charactor(self, event):
-        """ move my charactor: scroll the background """
-        charactor = event.charactor
-        cleft, ctop = charactor.cell.coords
+        """ move my mychar: scroll the background """
+        mychar = event.charactor
+        cleft, ctop = mychar.cell.coords
         self.center_screen_on_coords(cleft, ctop)
-        # redisplay the other charactors
+        # redisplay the other charactors 
         for charspr in self.charactor_sprites:
             cleft, ctop = charspr.charactor.cell.coords
             self.display_charactor(charspr, cleft, ctop)
@@ -253,15 +260,15 @@ class MasterView:
 
     def render_dirty_sprites(self, event):    
         # clear the window from all the sprites, replacing them with the bg
-        self.charactor_sprites.clear(self.window, self.background)
+        self.active_charactor_sprites.clear(self.window, self.background)
         self.gui_sprites.clear(self.window, self.background)
         
         # update all the sprites - calls update() on each sprite of the groups
-        self.charactor_sprites.update()
+        self.active_charactor_sprites.update()
         self.gui_sprites.update()
         
         # collect the display areas that have changed
-        dirty_rects_chars = self.charactor_sprites.draw(self.window)
+        dirty_rects_chars = self.active_charactor_sprites.draw(self.window)
         dirty_rects_gui = self.gui_sprites.draw(self.window)
         
         # and redisplay those areas only
