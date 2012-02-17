@@ -226,17 +226,24 @@ class InputFieldWidget(Widget):
             self.set_focus(True)
             self.dirty = 1
         elif self.focused: #user clicked on something else
-                self.set_focus(False)
+            self.set_focus(False)
 
     
     def on_invisiblekeypushed(self, event):
         """ Add/remove characters and 'submit' the string."""
         if self.focused:
             if event.key == K_BACKSPACE:# erase last character
-                newtxt = self.text[:(len(self.text) - 1)]
+                newtxt = self.text[:-1]
                 self.set_text(newtxt)
-            elif event.key == K_RETURN: #submit string
-                self.submit_text()
+            elif event.key == K_RETURN: #submit non-empty string
+                if self.text:
+                    self.submit_text()
+                else: # lose focus
+                    self.set_focus(False)
+                
+        else: # not focused => grab focus if K_RETURN pushed
+            if event.key == K_RETURN:
+                self.set_focus(True)
         
     
     def on_visiblekeypushed(self, event):
