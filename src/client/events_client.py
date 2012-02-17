@@ -46,6 +46,11 @@ class ModelBuiltMapEvent():
     def __init__(self, worldmap):
         self.worldmap = worldmap
 
+class NetworkReceivedGameStartEvent():
+    def __init__(self, pname):
+        self.pname = pname
+
+
 
 ###############################################################################
 """ MOVEMENT """

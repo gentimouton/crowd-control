@@ -4,7 +4,7 @@ from server.events_server import SModelBuiltWorldEvent, SSendGreetEvent, \
     SBroadcastNameChangeEvent, SBroadcastChatEvent, SBroadcastMoveEvent, \
     SPlayerArrivedEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
     SReceivedChatEvent, SReceivedMoveEvent, SBroadcastArrivedEvent, \
-    SBroadcastLeftEvent
+    SBroadcastLeftEvent, SGameStart
 import logging
 
 
@@ -124,14 +124,22 @@ class SGame():
 ##############################################################################
             
     def received_chat(self, event):
-        """ when chat msg received, broadcast it to all connected users """
+        """ When a chat message is received, 
+        parse eventual commands,
+        or broadcast the text to all connected users.
+        """
         
         pname, txt = event.pname, event.txt 
         
         self.log.debug(pname + ' says ' + txt)
         
-        event = SBroadcastChatEvent(pname, txt)
-        self._em.post(event)
+        if txt and txt[0] == '/': # command
+            args = txt.split()
+            self.exec_cmd(pname, args[0][1:], args[1:])
+            
+        else:
+            event = SBroadcastChatEvent(pname, txt)
+            self._em.post(event)
 
 
 
@@ -151,4 +159,15 @@ class SGame():
             self.log.warn('Possible cheat: ' + pname 
                           + ' walks in non-walkable cell' + str(coords))
             
+        
+
+#############################################################################
+
+    def exec_cmd(self, pname, cmd, args):
+        """ Execute a player command. """
+
+        if cmd == 'start':
+            ev = SGameStart(pname)
+            self._em.post(ev)
+
         

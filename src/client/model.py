@@ -2,7 +2,7 @@ from client.events_client import MoveMyCharactorRequest, ModelBuiltMapEvent, \
     NetworkReceivedChatEvent, ChatlogUpdatedEvent, ClGreetEvent, ClPlayerLeft, \
     CharactorRemoveEvent, NetworkReceivedCharactorMoveEvent, ClPlayerArrived, \
     ClNameChangeEvent, LocalCharactorPlaceEvent, OtherCharactorPlaceEvent, \
-    LocalCharactorMoveEvent, RemoteCharactorMoveEvent
+    LocalCharactorMoveEvent, RemoteCharactorMoveEvent, NetworkReceivedGameStartEvent
 from collections import deque
 from common.world import World
 import logging
@@ -72,11 +72,16 @@ class Game:
 
 
     
-    def start_map(self, mapname):
+    def build_map(self, mapname):
         """ load world from file """
         self.mapname = mapname
         self.world.build_world(self.mapname, ModelBuiltMapEvent)
 
+    
+    
+    def start_game(self, event):
+        print('Game started by ' + event.pname)
+        
     
     def greeted(self, event):
         """ When the server greets me, set my name,
@@ -89,7 +94,7 @@ class Game:
             
         self.myname = newname
         
-        self.start_map(mapname)
+        self.build_map(mapname)
          
         self.add_player(newname, newpos)
         
@@ -101,6 +106,7 @@ class Game:
         self._em.reg_cb(ClPlayerLeft, self.remove_player)
         self._em.reg_cb(ClPlayerArrived, self.on_playerarrived) 
         self._em.reg_cb(ClNameChangeEvent, self.update_player_name)
+        self._em.reg_cb(NetworkReceivedGameStartEvent, self.start_game)
         # start listening to player input events
         self._em.reg_cb(MoveMyCharactorRequest, self.move_char_relative)
         

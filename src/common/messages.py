@@ -43,7 +43,7 @@ class SerializableMsg():
 
 class AdminSerializableMsg(SerializableMsg):
     """ Abstract class representing admin messages:
-    connection, disocnnection, name change, and greeting.
+    connection, disconnection, name change, and greeting.
     """
     mtype = 'not set' #should be overriden in subclasses
     
@@ -85,8 +85,6 @@ class NameChangeNotifMsg(AdminSerializableMsg):
     
 ################# CHAT #####################################################
 
-
-
 class ClChatMsg(SerializableMsg):
     """ chat msg sent from a client to the server """        
     attrs = ['txt'] 
@@ -97,11 +95,20 @@ class SrvChatMsg(SerializableMsg):
     
 ################# MOVEMENT #####################################################
 
-
-
 class ClMoveMsg(SerializableMsg):
     """ mvt msg sent from a client to the server """        
     attrs = ['coords'] 
 class SrvMoveMsg(SerializableMsg):
     """ brodcast of a mvt msg by the server """        
     attrs = ['pname', 'coords'] 
+
+
+
+################# GAME #####################################################
+
+ 
+class SrvGameStartMsg(SerializableMsg):
+    """ broadcast that the game started """        
+    attrs = ['pname'] 
+
+

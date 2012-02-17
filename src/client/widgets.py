@@ -1,5 +1,6 @@
 from client.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
-    UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ChatlogUpdatedEvent
+    UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ChatlogUpdatedEvent, \
+    NetworkReceivedGameStartEvent
 from collections import deque
 from pygame.font import Font
 from pygame.locals import K_BACKSPACE, K_RETURN
@@ -332,6 +333,7 @@ class ChatLogWidget(Widget):
         Widget.__init__(self, evManager)
 
         self._em.reg_cb(ChatlogUpdatedEvent, self.on_chatmsg)
+        self._em.reg_cb(NetworkReceivedGameStartEvent, self.on_game_start)
 
         self.font = Font(None, 22)
         if rect:
@@ -352,12 +354,23 @@ class ChatLogWidget(Widget):
         
         
     def on_chatmsg(self, event):
+        """ display a chat msg """
+        linetxt = event.author + ': ' + event.txt        
+        self.log.debug('Chatlog widget printed chat line: ' + linetxt)
+        self.addline(linetxt)
+        
+        
+    def on_game_start(self, event):
+        """ print in chatlog that the game has started """
+        linetxt = '-- Game started by ' + event.pname
+        self.log.debug('Chatlog widget printed game line: ' + linetxt)
+        self.addline(linetxt)
+        
+        
+    def addline(self, linetxt):
         """ If there's room, add a line on top, and then shift all widget texts upwards.
         If there's no room, only shift the texts upwards (don't add new widgets). 
         """
-        
-        linetxt = event.author + ': ' + event.txt        
-        self.log.debug('Chatlog widget added line: ' + linetxt)
         
         if len(self.linewidgets) < self.maxnumlines: 
             # there's room to add another text widget on top of existing ones
@@ -379,7 +392,7 @@ class ChatLogWidget(Widget):
         
         self.dirty = 1 # causes all linewidgets to be updated
         
-    
+        
     def update(self):
         """ update all the contained linewidgets """
         

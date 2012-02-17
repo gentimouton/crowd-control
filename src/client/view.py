@@ -1,8 +1,8 @@
 from client.config import config_get_screenres
-from client.events_client import ModelBuiltMapEvent, QuitEvent, \
-    SendChatEvent, CharactorRemoveEvent, OtherCharactorPlaceEvent, \
-    LocalCharactorPlaceEvent, LocalCharactorMoveEvent, RemoteCharactorMoveEvent, \
-    ClNameChangeEvent, ClGreetEvent
+from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvent, \
+    CharactorRemoveEvent, OtherCharactorPlaceEvent, LocalCharactorPlaceEvent, \
+    LocalCharactorMoveEvent, RemoteCharactorMoveEvent, ClNameChangeEvent, \
+    ClGreetEvent, NetworkReceivedGameStartEvent
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget
 from common.events import TickEvent
@@ -248,7 +248,7 @@ class MasterView:
         self.display_charactor(charspr, cleft, ctop) 
         
         
-    #####################################################################
+    ###################### RENDERING OF SPRITES and BG ######################
     
 
     def render_dirty_sprites(self, event):    

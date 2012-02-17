@@ -1,11 +1,12 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client.events_client import SendChatEvent, \
-    NetworkReceivedChatEvent, ClGreetEvent, ClNameChangeEvent, ClPlayerArrived, \
-    ClPlayerLeft, NetworkReceivedCharactorMoveEvent, LocalCharactorMoveEvent
+from client.events_client import SendChatEvent, NetworkReceivedChatEvent, \
+    ClGreetEvent, ClNameChangeEvent, ClPlayerArrived, ClPlayerLeft, \
+    NetworkReceivedCharactorMoveEvent, LocalCharactorMoveEvent, \
+    NetworkReceivedGameStartEvent
 from common.events import TickEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
-    SrvMoveMsg
+    SrvMoveMsg, SrvGameStartMsg
 import logging
 
 class NetworkController(ConnectionListener):
@@ -100,8 +101,17 @@ class NetworkController(ConnectionListener):
         ev = NetworkReceivedCharactorMoveEvent(pname, coords)
         self._em.post(ev)
 
+
+
+    ################### GAME ##################
+
+    def Network_gamestart(self, data):
+        mmsg = SrvGameStartMsg(data['msg'])
+        pname = mmsg.d['pname']
+        ev = NetworkReceivedGameStartEvent(pname)
+        self._em.post(ev)
         
-            
+        
              
     ################## (DIS)CONNECTION + NAME CHANGE CALLBACKS ################    
     

@@ -12,7 +12,7 @@ def main():
     logging.config.fileConfig('srv_logging.conf')
     log = logging.getLogger('server')
 
-    log.debug('Server started')
+    log.info('Server started')
     
     load_srv_config()
 
@@ -25,7 +25,8 @@ def main():
     
     sclock.start()
         
-    log.debug('Server stopped')
+    log.info('Server stopped')
 
         
-if __name__ == '__main__': main()
+if __name__ == '__main__': 
+    main()

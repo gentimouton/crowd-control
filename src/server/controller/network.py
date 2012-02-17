@@ -3,12 +3,12 @@ from PodSixNet.Server import Server
 from common.events import TickEvent
 from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, ClChatMsg, SrvChatMsg, GreetMsg, NameChangeNotifMsg, \
-    ClMoveMsg, SrvMoveMsg
+    ClMoveMsg, SrvMoveMsg, SrvGameStartMsg
 from server.config import config_get_hostport
 from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
     SPlayerLeftEvent, SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, \
     SReceivedChatEvent, SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent, \
-    SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent
+    SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, SGameStart
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 import logging
@@ -74,6 +74,8 @@ class NetworkController(Server):
         self._em.reg_cb(SBroadcastNameChangeEvent, self.broadcast_name_change)
         self._em.reg_cb(SBroadcastChatEvent, self.broadcast_chat)
         self._em.reg_cb(SBroadcastMoveEvent, self.broadcast_move)
+        self._em.reg_cb(SGameStart, self.broadcast_gamestart)
+        
                 
         self.accept_connections = False # start accepting when model is ready
         
@@ -82,8 +84,7 @@ class NetworkController(Server):
         #WeakKeyDictionary's key is garbage collected and removed from dictionary 
         # when used nowhere else but in the dict's mapping
         
-        self.log.info('Server Network up')
-
+        self.log.debug('Server Network up')
 
 
 
@@ -260,7 +261,14 @@ class NetworkController(Server):
             self.send(chan, data) 
  
  
-        
+    ###################### GAME #############################################
+    
+    def broadcast_gamestart(self, event):
+        pname = event.pname
+        mmsg = SrvGameStartMsg({"pname":pname})
+        data = {"action": "gamestart", "msg": mmsg.d}
+        for chan in self.chan_to_name:
+            self.send(chan, data) 
         
         
         
