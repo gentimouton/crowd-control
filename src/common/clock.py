@@ -1,4 +1,4 @@
-from time import sleep
+from time import sleep, time
 
 class Clock():
     
@@ -14,16 +14,26 @@ class Clock():
         Irregular frames: those with more work will take longer than those with fewer. 
         """
         self.keep_going = True
+        beforetick = aftertick = time()
         
         while self.keep_going:
-            sleep(1. / self.fps)
-            self.on_tick(self.elapsed_frames)
+            workduration = aftertick - beforetick #0 on first tick
+            sleepduration = 1 / self.fps - workduration
+            sleepduration = max(0, sleepduration)# dont sleep if late
+            if sleepduration > 0: 
+                sleep(sleepduration)
+                
+            beforetick = time()
+            wholeloopdur = (sleepduration + workduration)
+            self.on_tick(workduration * 1000, wholeloopdur * 1000)
+            aftertick = time()
+            
             self.elapsed_frames += 1
-            # TODO: make the clock more accurate, 
-            # by sleeping less if on_tick lasted longer 
+
+
     
     def stop(self):
         self.keep_going = False
         
-    def on_tick(self, frame_num):
+    def on_tick(self, worktime, totaltime):
         raise NotImplementedError

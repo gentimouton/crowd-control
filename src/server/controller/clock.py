@@ -13,18 +13,27 @@ class SClockController(Clock):
     def __init__(self, evManager):
         
         fps = config_get_fps()
-        if fps == 0:
+        if fps <= 0 or fps > 100:
             fps = 100 #100 fps is the maximum timer resolution anyway
         Clock.__init__(self, fps)
+        
+        self.avgworkdur = 0 # avg work duration per frame
         
         self._em = evManager
         self._em.reg_cb(SQuitEvent, self.stop)
 
-        
-        
             
-    def on_tick(self, frame_num):
-        event = TickEvent()
+    def on_tick(self, workduration, totalduration):
+        """ Log how much time during a frame was spent working, 
+        and send a tick event with the whole loop duration.
+        """
+        self.avgworkdur += workduration
+        if self.elapsed_frames % 1000 == 999:
+            self.avgworkdur = self.avgworkdur / 1000
+            self.log.debug('Frames %d to %d worked on average %3.3f ms',
+                           self.elapsed_frames - 999, self.elapsed_frames, self.avgworkdur)
+            
+        event = TickEvent(totalduration) #duration in millis
         self._em.post(event)
         
     

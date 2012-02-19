@@ -28,6 +28,9 @@ def config_get_loglevel():
 def config_get_fps():
     return int(_dict['fps'])
 
+def config_get_movefreq():
+    return int(_dict['movefreq'])
+
 
 # --- network
 

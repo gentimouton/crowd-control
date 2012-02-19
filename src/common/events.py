@@ -21,7 +21,8 @@ class WeakBoundMethod:
 
 
 class TickEvent:
-    pass
+    def __init__(self, millis):
+        self.duration = millis # how long since last tick
 
 
 class EventManager:

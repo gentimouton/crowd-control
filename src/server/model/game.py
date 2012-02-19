@@ -1,10 +1,12 @@
+from common.events import TickEvent
 from common.world import World
 from server.config import config_get_mapname
 from server.events_server import SModelBuiltWorldEvent, SSendGreetEvent, \
     SBroadcastNameChangeEvent, SBroadcastChatEvent, SBroadcastMoveEvent, \
     SPlayerArrivedEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
     SReceivedChatEvent, SReceivedMoveEvent, SBroadcastArrivedEvent, \
-    SBroadcastLeftEvent, SGameStart
+    SBroadcastLeftEvent, SGameStartEvent
+from server.model.ai import AiDirector
 import logging
 
 
@@ -99,7 +101,7 @@ class SGame():
     
 
 
-##############################################################################
+    #########################################################################
             
     def handle_name_change(self, event):
         """ change player's name only if newname not taken already """
@@ -121,7 +123,7 @@ class SGame():
                            + ' but someone was already using that name.')
 
     
-##############################################################################
+    ##########################################################################
             
     def received_chat(self, event):
         """ When a chat message is received, 
@@ -143,7 +145,7 @@ class SGame():
 
 
 
-##############################################################################
+    ##########################################################################
     
     def player_moved(self, event):
         """ when a player moves, notify all of them """
@@ -151,7 +153,7 @@ class SGame():
         
         if self.world.iswalkable(coords): 
             self.players[pname].coords = coords
-            self.log.debug(pname + ' moved to ' + str(coords))
+            #self.log.debug(pname + ' moved to ' + str(coords))
             event = SBroadcastMoveEvent(pname, coords)
             self._em.post(event)
 
@@ -159,15 +161,16 @@ class SGame():
             self.log.warn('Possible cheat: ' + pname 
                           + ' walks in non-walkable cell' + str(coords))
             
-        
 
-#############################################################################
+    ######################### commands parsing ##############################
 
     def exec_cmd(self, pname, cmd, args):
         """ Execute a player command. """
 
         if cmd == 'start':
-            ev = SGameStart(pname)
+            self.aidir = AiDirector(self._em)
+            ev = SGameStartEvent(pname)
             self._em.post(ev)
 
-        
+
+

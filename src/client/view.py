@@ -1,5 +1,7 @@
 from client.config import config_get_screenres, config_get_loadingscreen_bgcolor, \
-    config_get_fontsize
+    config_get_fontsize, config_get_walkable_color, config_get_nonwalkable_color, \
+    config_get_entrance_color, config_get_lair_color, config_get_avdefault_bgcolor, \
+    config_get_myav_bgcolor
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvent, \
     CharactorRemoveEvent, OtherCharactorPlaceEvent, LocalCharactorPlaceEvent, \
     LocalCharactorMoveEvent, RemoteCharactorMoveEvent, ClNameChangeEvent, \
@@ -138,11 +140,12 @@ class MasterView:
         self.cspr_size = int(self.win_h / self.visib_diam)
         
         # Build world background to be scrolled when the charactor moves
-        # so that world_bg can be scrolled 
-        # padding of visib_diam so that the bg can subsurface(world_bg)
+        # so that world_bg can be scrolled. 
+        # Padding of visib_diam so that the screen bg can subsurface(world_bg)
         world_surf_w = self.cspr_size * (worldmap.width + 2 * self.visib_rad)
         world_surf_h = self.cspr_size * (worldmap.height + 2 * self.visib_rad)
         self.world_bg = pygame.Surface((world_surf_w, world_surf_h))
+        self.world_bg.fill(config_get_nonwalkable_color())
         
         for i in range(worldmap.width):
             for j in range(worldmap.height):
@@ -212,7 +215,8 @@ class MasterView:
         """
         charactor = event.charactor
         sprdims = (self.cspr_size, self.cspr_size)
-        charspr = CharactorSprite(charactor, sprdims, self.charactor_sprites)
+        bgcolor = config_get_avdefault_bgcolor()
+        charspr = CharactorSprite(charactor, sprdims, bgcolor, self.charactor_sprites)
         cleft, ctop = charactor.cell.coords
         self.display_charactor(charspr, cleft, ctop)
 
@@ -224,7 +228,8 @@ class MasterView:
         """
         charactor = event.charactor
         sprdims = (self.cspr_size, self.cspr_size)
-        charspr = CharactorSprite(charactor, sprdims, self.charactor_sprites)
+        bgcolor = config_get_myav_bgcolor()
+        charspr = CharactorSprite(charactor, sprdims, bgcolor, self.charactor_sprites)
         cleft, ctop = charactor.cell.coords
         self.center_screen_on_coords(cleft, ctop) #must be done before display_char
         self.display_charactor(charspr, cleft, ctop)
@@ -288,14 +293,7 @@ class MasterView:
 class CellSprite(Sprite):
     """ The representation of a map cell. 
     Used to draw the map background.
-     """
-    
-    # rgb cell colors
-    walkable_cell_color = 139, 119, 101 
-    nonwalkable_cell_color = 0, 0, 0 
-    entrance_cell_color = 139, 0, 101 
-    lair_cell_color = 139, 119, 0 
-    
+     """    
     
     def __init__(self, cell, rect, group=()):
         Sprite.__init__(self, group)
@@ -305,13 +303,13 @@ class CellSprite(Sprite):
         # fill self.image filled with the appropriate color
         self.image = pygame.Surface(self.dims)
         if cell.isentrance:
-            color = self.entrance_cell_color
+            color = config_get_entrance_color()
         elif cell.islair:
-            color = self.lair_cell_color
+            color = config_get_lair_color()
         elif cell.iswalkable:
-            color = self.walkable_cell_color
+            color = config_get_walkable_color()
         else: # non-walkable
-            color = self.nonwalkable_cell_color
+            color = config_get_nonwalkable_color()
         self.image.fill(color) 
         self.rect = rect
         
@@ -326,7 +324,7 @@ class CellSprite(Sprite):
 class CharactorSprite(IndexableSprite):
     """ The representation of a character """
     
-    def __init__(self, charactor, sprdims, groups=None):
+    def __init__(self, charactor, sprdims, bgcolor, groups=None):
         self.key = charactor # must be set before adding the spr to group(s)
         Sprite.__init__(self, groups)
         
@@ -337,7 +335,7 @@ class CharactorSprite(IndexableSprite):
         w, h = sprdims
         ctr_coords = int(w / 2), int(h / 2)
         radius = int(min(w / 2, h / 2)) #don't overflow the given sprdims
-        pygame.draw.circle(charactorSurf, (255, 140, 0), ctr_coords, radius)
+        pygame.draw.circle(charactorSurf, bgcolor, ctr_coords, radius)
         self.image = charactorSurf
         self.rect = charactorSurf.get_rect()
 

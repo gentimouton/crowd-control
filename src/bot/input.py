@@ -1,4 +1,4 @@
-from bot.config import config_get_fps
+from bot.config import config_get_fps, config_get_movefreq
 from client.events_client import MoveMyCharactorRequest, ModelBuiltMapEvent
 from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
     DIRECTION_RIGHT
@@ -24,8 +24,8 @@ class BotInputController():
     def on_tick(self, event):
         """ Move every now and then """
                 
-        if self.mvtimer == 0:
-            self.mvtimer = int(config_get_fps())
+        if self.mvtimer <= 0:
+            self.mvtimer = int(config_get_fps() / config_get_movefreq())
             ev = MoveMyCharactorRequest(random.choice(self.moves))
             self._em.post(ev)
         

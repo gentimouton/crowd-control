@@ -1,4 +1,3 @@
-
 from client.events_client import QuitEvent
 from common.clock import Clock
 from common.events import TickEvent
@@ -33,7 +32,7 @@ class CClockController(Clock):
 
 
 
-    def on_tick(self, frame_num):
-        event = TickEvent()
+    def on_tick(self, workdur, wholedur):
+        event = TickEvent(wholedur)
         self._em.post(event)
             

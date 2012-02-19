@@ -38,6 +38,27 @@ def config_get_fontsize():
     return int(_dict['fontsize'])
 def config_get_loadingscreen_bgcolor():
     return int_tuple(_dict['loadingscreen_bgcolor'])
+def config_get_avdefault_bgcolor():
+    return int_tuple(_dict['avdefault_bgcolor'])
+def config_get_myav_bgcolor():
+    return int_tuple(_dict['myav_bgcolor'])
+
+
+
+
+# --- cell colors
+def config_get_walkable_color():
+    return int_tuple(_dict['walkable_color'])
+def config_get_nonwalkable_color():
+    return int_tuple(_dict['nonwalkable_color'])
+def config_get_entrance_color():
+    return int_tuple(_dict['entrance_color'])
+def config_get_lair_color():
+    return int_tuple(_dict['lair_color'])
+
+
+
+# --- widget colors
 
 def config_get_focusedbtn_txtcolor():
     return int_tuple(_dict['focusedbtn_txtcolor'])

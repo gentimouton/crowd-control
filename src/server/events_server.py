@@ -96,7 +96,7 @@ class SBroadcastMoveEvent():
 
 ######################### GAME #############################################
 
-class SGameStart():
+class SGameStartEvent():
     def __init__(self, pname):
         self.pname = pname
 

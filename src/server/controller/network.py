@@ -8,7 +8,8 @@ from server.config import config_get_hostport
 from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
     SPlayerLeftEvent, SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, \
     SReceivedChatEvent, SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent, \
-    SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, SGameStart
+    SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, \
+    SGameStartEvent
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 import logging
@@ -27,7 +28,7 @@ class ClientChannel(Channel):
     
     def Network(self, data):
         """ called for all received msgs """
-        self.log.debug('Received from ' + str(self.addr) + ' : ' + str(data))
+        #self.log.debug('Received from ' + str(self.addr) + ' : ' + str(data))
         
     
 
@@ -74,7 +75,7 @@ class NetworkController(Server):
         self._em.reg_cb(SBroadcastNameChangeEvent, self.broadcast_name_change)
         self._em.reg_cb(SBroadcastChatEvent, self.broadcast_chat)
         self._em.reg_cb(SBroadcastMoveEvent, self.broadcast_move)
-        self._em.reg_cb(SGameStart, self.broadcast_gamestart)
+        self._em.reg_cb(SGameStartEvent, self.broadcast_gamestart)
         
                 
         self.accept_connections = False # start accepting when model is ready
@@ -100,7 +101,7 @@ class NetworkController(Server):
         
     def send(self, chan, data):
         """ send data to a channel """
-        self.log.debug('Send to ' + str(chan.addr) + ' : ' + str(data))
+        #self.log.debug('Send to ' + str(chan.addr) + ' : ' + str(data))
         chan.Send(data)
         
         
