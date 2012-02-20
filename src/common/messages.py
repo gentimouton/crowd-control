@@ -58,7 +58,7 @@ class AdminSerializableMsg(SerializableMsg):
 class GreetMsg(AdminSerializableMsg):
     """ sent from the server to a player when he just arrived """
     mtype = 'greet'
-    attrs = ['mapname', 'pname', 'coords', 'onlineppl']
+    attrs = ['mapname', 'pname', 'coords', 'onlineppl', 'creeps']
     
     
 class PlayerArrivedNotifMsg(AdminSerializableMsg):
@@ -112,3 +112,10 @@ class SrvGameStartMsg(SerializableMsg):
     attrs = ['pname'] 
 
 
+class SrvCreepMovedMsg(SerializableMsg):
+    """ broadcast creep movement """
+    attrs = ['creepid', 'act', 'coords']
+class SrvCreepJoinedMsg(SerializableMsg):
+    """ broadcast creep creation """
+    attrs = ['creepid', 'act']
+    

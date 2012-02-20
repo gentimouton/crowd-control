@@ -21,16 +21,17 @@ def main():
     
     load_client_config() #config contains all the constants for the game
     
-    evManager = ClientEventManager()
+    em = ClientEventManager()
 
     # These components are shared with bots. Their config is given to them. 
-    clock = CClockController(evManager, config_get_fps()) #the main loop is in there
-    n = NetworkController(evManager, config_get_hostport(), config_get_nick())
-    g = Game(evManager)
+    clock = CClockController(em, config_get_fps()) #main loop is in there
+    n = NetworkController(em, config_get_hostport(), config_get_nick())
+    g = Game(em)
     
-    # These components are specific to human clients; they can grab the client config themselves. 
-    kb = InputController(evManager)
-    mv = MasterView(evManager)
+    # These components are specific to human clients. 
+    # They can grab the client config themselves. 
+    kb = InputController(em)
+    mv = MasterView(em)
     
     
     clock.start()

@@ -1,12 +1,11 @@
-from common.events import TickEvent
 from common.world import World
+from server.ai import AiDirector
 from server.config import config_get_mapname
 from server.events_server import SModelBuiltWorldEvent, SSendGreetEvent, \
     SBroadcastNameChangeEvent, SBroadcastChatEvent, SBroadcastMoveEvent, \
     SPlayerArrivedEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
     SReceivedChatEvent, SReceivedMoveEvent, SBroadcastArrivedEvent, \
     SBroadcastLeftEvent, SGameStartEvent
-from server.model.ai import AiDirector
 import logging
 
 
@@ -30,20 +29,21 @@ class SGame():
         self._em.reg_cb(SPlayerNameChangeRequestEvent, self.handle_name_change)
         self._em.reg_cb(SReceivedChatEvent, self.received_chat)
         self._em.reg_cb(SReceivedMoveEvent, self.player_moved)
-
-        # player list
-        self.players = dict() 
+        
+        # Players are here; creeps are in the AI director. 
+        self.players = dict()
         
         # build world
         self.world = World(evManager)
         self.mapname = config_get_mapname()
         self.world.build_world(self.mapname, SModelBuiltWorldEvent)
 
+        # TODO: temporary: AI dir should only starts when a player types '/start'
+        self.aidir = AiDirector(self._em, self.world)
 
-
+      
     ############### (dis)connection and name changes ##########################
-
-
+        
     # notifying for pausing/resuming the game could also fit in there
         
     def player_left(self, event):
@@ -62,30 +62,38 @@ class SGame():
         self._em.post(event)
         
         
-        
+                    
+            
+            
     def player_arrived(self, event):
         """ Create player's avatar, and send him the list of connected ppl.
+        Send also the list of creeps in range.
         Do not include him in the list of connected people. 
         """
         
         pname = event.pname
-        
+
         if pname not in self.players:
 
             self.log.info(pname + ' joined')
 
-            # build list of connected players with their coords
+            # Build list of connected players with their coords.
             onlineppl = dict()
             for (otherpname, otherplayer) in self.players.items():
                 onlineppl[otherpname] = otherplayer.coords
-                
+            
+            # Build list of creeps with their coords.
+            creeps = dict()
+            for (cid, creep) in self.aidir.creeps.items():
+                creeps[cid] = creep.cell.coords
+            
             # build the new player    
             coords = self.world.entrance_coords
             player = SPlayer(pname, coords)
             self.players[pname] = player
             
             # greet the new player 
-            event = SSendGreetEvent(self.mapname, pname, coords, onlineppl)
+            event = SSendGreetEvent(self.mapname, pname, coords, onlineppl, creeps)
             self._em.post(event) 
             
             # notify the connected players of this arrival
@@ -168,7 +176,7 @@ class SGame():
         """ Execute a player command. """
 
         if cmd == 'start':
-            self.aidir = AiDirector(self._em)
+            #self.aidir = AiDirector(self._em, self.world)
             ev = SGameStartEvent(pname)
             self._em.post(ev)
 

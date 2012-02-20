@@ -3,13 +3,13 @@ from PodSixNet.Server import Server
 from common.events import TickEvent
 from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, ClChatMsg, SrvChatMsg, GreetMsg, NameChangeNotifMsg, \
-    ClMoveMsg, SrvMoveMsg, SrvGameStartMsg
+    ClMoveMsg, SrvMoveMsg, SrvGameStartMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg
 from server.config import config_get_hostport
 from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
     SPlayerLeftEvent, SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, \
     SReceivedChatEvent, SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent, \
     SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, \
-    SGameStartEvent
+    SGameStartEvent, SBroadcastCreepArrivedEvent, SBroadcastCreepMoveEvent
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 import logging
@@ -76,8 +76,9 @@ class NetworkController(Server):
         self._em.reg_cb(SBroadcastChatEvent, self.broadcast_chat)
         self._em.reg_cb(SBroadcastMoveEvent, self.broadcast_move)
         self._em.reg_cb(SGameStartEvent, self.broadcast_gamestart)
+        self._em.reg_cb(SBroadcastCreepArrivedEvent, self.broadcast_creepjoined)
+        self._em.reg_cb(SBroadcastCreepMoveEvent, self.broadcast_creepmoved)
         
-                
         self.accept_connections = False # start accepting when model is ready
         
         self.chan_to_name = WeakKeyDictionary() #maps channel to name
@@ -179,7 +180,8 @@ class NetworkController(Server):
         dic = {'mapname':event.mapname,
                'pname':event.pname,
                'coords':event.coords,
-               'onlineppl':event.onlineppl}
+               'onlineppl':event.onlineppl,
+               'creeps':event.creeps}
         greetmsg = GreetMsg(dic)
             
         name = greetmsg.d['pname']
@@ -272,4 +274,16 @@ class NetworkController(Server):
             self.send(chan, data) 
         
         
+    def broadcast_creepjoined(self, event):
+        cid = event.creepid
+        mmsg = SrvCreepJoinedMsg({"creepid":cid, 'act':'join'})
+        data = {"action": "creep", "msg": mmsg.d}
+        for chan in self.chan_to_name:
+            self.send(chan, data) 
         
+    def broadcast_creepmoved(self, event):
+        cid, coords = event.creepid, event.coords
+        mmsg = SrvCreepMovedMsg({"creepid":cid, 'act':'move', 'coords':coords})
+        data = {"action": "creep", "msg": mmsg.d}
+        for chan in self.chan_to_name:
+            self.send(chan, data) 

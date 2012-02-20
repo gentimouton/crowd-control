@@ -2,7 +2,8 @@ from client.events_client import MoveMyCharactorRequest, ModelBuiltMapEvent, \
     NetworkReceivedChatEvent, ChatlogUpdatedEvent, ClGreetEvent, ClPlayerLeft, \
     CharactorRemoveEvent, NetworkReceivedCharactorMoveEvent, ClPlayerArrived, \
     ClNameChangeEvent, LocalCharactorPlaceEvent, OtherCharactorPlaceEvent, \
-    LocalCharactorMoveEvent, RemoteCharactorMoveEvent, NetworkReceivedGameStartEvent
+    LocalCharactorMoveEvent, RemoteCharactorMoveEvent, NetworkReceivedGameStartEvent, \
+    NetworkReceivedCreepJoinEvent, CreepPlaceEvent, NetworkReceivedCreepMoveEvent
 from collections import deque
 from common.world import World
 import logging
@@ -19,8 +20,11 @@ class Game:
     def __init__(self, evManager):
         self._em = evManager
         self._em.reg_cb(ClGreetEvent, self.greeted)
+        # all other callbacks are registered AFTER having been greeted
         
         self.players = dict() #unlike WeakValueDict, I need to remove players manually
+        self.creeps = dict() #need to remove creeps manually when they die
+        
         self.world = World(evManager)
         self.chatlog = ChatLog(evManager)
 
@@ -79,9 +83,29 @@ class Game:
 
     
     
-    def start_game(self, event):
-        print('Game started by ' + event.pname)
+    def on_gamestart(self, event):
+        self.log.info(event.pname + ' started the game')
+    
+    ################################ creeps ##########################
+    
+    def on_creepjoined(self, event):
+        self.log.info('Creep %d appeared' % (str(event.cid))) 
         
+    def on_creepmoved(self, event):
+        cid, coords = event.cid, event.coords
+        creep = self.creeps[cid]
+        cell = self.world.get_cell(coords)
+        creep.move_absolute(cell)
+        
+        
+    def add_creep(self, cid, pos):
+        """ Add a new creep to the list of existing creeps. """
+        cell = self.world.get_cell(pos)
+        creep = Creep(self._em, cid, cell)       
+        self.creeps[cid] = creep
+
+
+    ############################### admin ############################    
     
     def greeted(self, event):
         """ When the server greets me, set my name,
@@ -91,13 +115,19 @@ class Game:
         
         mapname, newname = event.mapname, event.newname
         newpos, onlineppl = event.newpos, event.onlineppl
+        creeps = event.creeps
             
         self.myname = newname
         
         self.build_map(mapname)
-         
-        self.add_player(newname, newpos)
         
+        # creeps
+        for cid, coords in creeps.items():
+            self.add_creep(cid, coords)
+            
+        # my avatar
+        self.add_player(newname, newpos)
+        # other avatars
         for name, pos in onlineppl.items():
             self.add_player(name, pos)
            
@@ -106,7 +136,10 @@ class Game:
         self._em.reg_cb(ClPlayerLeft, self.remove_player)
         self._em.reg_cb(ClPlayerArrived, self.on_playerarrived) 
         self._em.reg_cb(ClNameChangeEvent, self.update_player_name)
-        self._em.reg_cb(NetworkReceivedGameStartEvent, self.start_game)
+        self._em.reg_cb(NetworkReceivedGameStartEvent, self.on_gamestart)
+        self._em.reg_cb(NetworkReceivedCreepJoinEvent, self.on_creepjoined)
+        self._em.reg_cb(NetworkReceivedCreepMoveEvent, self.on_creepmoved)
+        
         # start listening to player input events
         self._em.reg_cb(MoveMyCharactorRequest, self.move_char_relative)
         
@@ -137,7 +170,7 @@ class Game:
 
 
 
-class Player(object):
+class Player():
     """ the model structure for a person playing the game 
     It has name, score, etc. 
     """
@@ -209,13 +242,37 @@ class Charactor:
             ev = RemoteCharactorMoveEvent(self, destcell.coords)
             self._em.post(ev)
         else:
-            self.log.warning('Illegal move from ' + self.player.name 
-                             + ' towards ' + str(destcell.coords))
+            self.log.warning('Illegal move from ' + self.player.name)
             #TODO: should report to server of potential cheat/hack
             pass
 
 
 
+class Creep():
+    """ representation of an ennemy monster """
+    
+    log = logging.getLogger('client')
+    
+    def __init__(self, em, cid, cell):
+        self._em = em
+        self.cid = cid
+        self.cell = cell
+        
+        ev = CreepPlaceEvent(self, cell)# ask view to display the new creep
+        self._em.post(ev)
+        
+    
+    def move_absolute(self, destcell):
+        """ move creep to the specified destination;
+        TODO: refactorable with Player code?
+        """ 
+        if destcell:
+            self.cell = destcell
+            ev = RemoteCharactorMoveEvent(self, destcell.coords)
+            self._em.post(ev)
+        else:
+            self.log.warning('Illegal move from creep ' + self.cid)
+        
 
 ##############################################################################
 

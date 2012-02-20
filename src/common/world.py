@@ -89,7 +89,14 @@ class World():
         self._em.post(ev)
         
         
-        
+    
+    def get_lair(self):
+        return self.get_cell(self.lair_coords)
+    def get_entrance(self):
+        return self.get_cell(self.entrance_coords)
+    
+    
+    
     def get_cell(self, lefttop, top=None):
         """ cell from coords;
         accepts get_cell(left,top) or get_cell(coords)
@@ -131,6 +138,20 @@ class Cell():
         return '<Cell %s %s>' % (self.coords, id(self))
     
     
+    def get_neighbors(self):
+        """ Return the neighbor cells. """
+        directions = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT]
+        adjs = []
+        for  d in directions:
+            c = self.get_adjacent_cell(d)
+            if c:
+                adjs.append(c)
+        return adjs
+        # could be done in 1 line, but would require 2 calls to each non-None cell:
+        # return [c for c in self.get_adjacent_cell(d) if self.get_adjacent_cell(d)]
+        
+        
+         
     def get_adjacent_cell(self, direction):
         if direction == DIRECTION_UP:
             dest_coords = self.left, self.top - 1
@@ -146,6 +167,8 @@ class Cell():
             return dest_cell
         else: #non walkable or out of grid
             return None
+        
+        
             
     def set_entrance(self, value):
         self.isentrance = value

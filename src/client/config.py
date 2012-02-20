@@ -42,9 +42,8 @@ def config_get_avdefault_bgcolor():
     return int_tuple(_dict['avdefault_bgcolor'])
 def config_get_myav_bgcolor():
     return int_tuple(_dict['myav_bgcolor'])
-
-
-
+def config_get_creep_bgcolor():
+    return int_tuple(_dict['creep_bgcolor'])
 
 # --- cell colors
 def config_get_walkable_color():

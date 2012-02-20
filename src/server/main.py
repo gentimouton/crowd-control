@@ -1,8 +1,8 @@
 from server.config import load_srv_config
-from server.controller.clock import SClockController
-from server.controller.network import NetworkController
+from server.clock import SClockController
+from server.network import NetworkController
 from server.events_server import SrvEventManager
-from server.model.game import SGame
+from server.game import SGame
 import logging.config
 
 

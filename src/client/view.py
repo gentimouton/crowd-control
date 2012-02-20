@@ -1,11 +1,11 @@
 from client.config import config_get_screenres, config_get_loadingscreen_bgcolor, \
     config_get_fontsize, config_get_walkable_color, config_get_nonwalkable_color, \
     config_get_entrance_color, config_get_lair_color, config_get_avdefault_bgcolor, \
-    config_get_myav_bgcolor
+    config_get_myav_bgcolor, config_get_creep_bgcolor
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvent, \
     CharactorRemoveEvent, OtherCharactorPlaceEvent, LocalCharactorPlaceEvent, \
     LocalCharactorMoveEvent, RemoteCharactorMoveEvent, ClNameChangeEvent, \
-    ClGreetEvent
+    ClGreetEvent, CreepPlaceEvent
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget
 from common.events import TickEvent
@@ -54,6 +54,7 @@ class MasterView:
         self._em.reg_cb(CharactorRemoveEvent, self.remove_remote_charactor)
         self._em.reg_cb(LocalCharactorPlaceEvent, self.add_local_charactor)
         self._em.reg_cb(OtherCharactorPlaceEvent, self.add_remote_charactor)
+        self._em.reg_cb(CreepPlaceEvent, self.add_creep)
         self._em.reg_cb(ModelBuiltMapEvent, self.show_map)
         self._em.reg_cb(TickEvent, self.render_dirty_sprites)
 
@@ -262,6 +263,21 @@ class MasterView:
         self.display_charactor(charspr, cleft, ctop) 
         
         
+        
+    ############################ creeps ####################################
+    
+    def add_creep(self, event):
+        """ Add creep spr on screen.
+        TODO: this code should be refactored with add_remote_player. 
+        """
+        creep = event.creep
+        sprdims = (self.cspr_size, self.cspr_size)
+        bgcolor = config_get_creep_bgcolor()
+        creepspr = CharactorSprite(creep, sprdims, bgcolor, self.charactor_sprites)
+        cleft, ctop = creep.cell.coords
+        self.display_charactor(creepspr, cleft, ctop)
+
+        
     ###################### RENDERING OF SPRITES and BG ######################
     
 
@@ -348,8 +364,3 @@ class CharactorSprite(IndexableSprite):
         if self.dest:
             self.rect.center = self.dest
             self.dest = None
-
-
-
-            
-            

@@ -32,12 +32,12 @@ class SPlayerLeftEvent():
         
         
 class SSendGreetEvent():
-    def __init__(self, mapname, pname, coords, onlineppl):
+    def __init__(self, mapname, pname, coords, onlineppl, creeps):
         self.mapname = mapname
         self.pname = pname
         self.coords = coords
         self.onlineppl = onlineppl
-        
+        self.creeps = creeps
         
 class SBroadcastArrivedEvent():
     def __init__(self, pname, coords):
@@ -94,6 +94,18 @@ class SBroadcastMoveEvent():
         self.coords = coords
     
 
+####################### CREEPS ##########################################
+ 
+class SBroadcastCreepArrivedEvent():
+    def __init__(self, creepid):
+        self.creepid = creepid
+
+class SBroadcastCreepMoveEvent():
+    def __init__(self, creepid, coords):
+        self.creepid = creepid
+        self.coords = coords
+
+        
 ######################### GAME #############################################
 
 class SGameStartEvent():

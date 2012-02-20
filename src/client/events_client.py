@@ -50,6 +50,19 @@ class NetworkReceivedGameStartEvent():
     def __init__(self, pname):
         self.pname = pname
 
+class NetworkReceivedCreepJoinEvent():
+    def __init__(self, cid):
+        self.cid = cid
+
+class CreepPlaceEvent():
+    def __init__(self, creep, cell):
+        self.creep = creep
+        self.cell = cell
+
+class NetworkReceivedCreepMoveEvent():
+    def __init__(self, cid, coords):
+        self.cid = cid
+        self.coords = coords
 
 
 ###############################################################################
@@ -125,11 +138,12 @@ class ChatlogUpdatedEvent():
 
 
 class ClGreetEvent():
-    def __init__(self, mapname, newname, newpos, onlineppl):
+    def __init__(self, mapname, newname, newpos, onlineppl, creeps):
         self.mapname = mapname
         self.newname = newname
         self.newpos = newpos
         self.onlineppl = onlineppl
+        self.creeps = creeps
 
 class ClNameChangeEvent():
     def __init__(self, oldname, newname):

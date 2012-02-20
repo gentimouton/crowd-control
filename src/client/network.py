@@ -2,11 +2,12 @@ from PodSixNet.Connection import connection, ConnectionListener
 from client.events_client import SendChatEvent, NetworkReceivedChatEvent, \
     ClGreetEvent, ClNameChangeEvent, ClPlayerArrived, ClPlayerLeft, \
     NetworkReceivedCharactorMoveEvent, LocalCharactorMoveEvent, \
-    NetworkReceivedGameStartEvent
+    NetworkReceivedGameStartEvent, NetworkReceivedCreepJoinEvent, \
+    NetworkReceivedCreepMoveEvent
 from common.events import TickEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
-    SrvMoveMsg, SrvGameStartMsg
+    SrvMoveMsg, SrvGameStartMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg
 import logging
 
 class NetworkController(ConnectionListener):
@@ -111,8 +112,22 @@ class NetworkController(ConnectionListener):
         ev = NetworkReceivedGameStartEvent(pname)
         self._em.post(ev)
         
-        
-             
+    def Network_creep(self, data):
+        act = data['msg']['act'] # all creep msg have an act
+
+        if act == 'join': # creep creation
+            jmsg = SrvCreepJoinedMsg(data['msg']) #build msg from dictionary
+            cid = jmsg.d['creepid']
+            ev = NetworkReceivedCreepJoinEvent(cid)
+            self._em.post(ev)
+            
+        elif act == 'move': # creep movement
+            mmsg = SrvCreepMovedMsg(data['msg'])
+            cid, coords = mmsg.d['creepid'], mmsg.d['coords']
+            ev = NetworkReceivedCreepMoveEvent(cid, coords)
+            self._em.post(ev)
+
+    
     ################## (DIS)CONNECTION + NAME CHANGE CALLBACKS ################    
     
     """ PROTOCOL for (dis)connections and name changes:
@@ -137,7 +152,8 @@ class NetworkController(ConnectionListener):
             if gmsg.d['pname'] is not preferred_name:
                 self.ask_for_name_change(preferred_name)
             ev = ClGreetEvent(gmsg.d['mapname'], gmsg.d['pname'],
-                              gmsg.d['coords'], gmsg.d['onlineppl'])
+                              gmsg.d['coords'], gmsg.d['onlineppl'],
+                              gmsg.d['creeps'])
             self._em.post(ev)
 
         elif actiontype == 'namechange':
