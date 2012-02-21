@@ -184,8 +184,11 @@ class SGame():
             self._em.post(ev)
 
         elif cmd == 'nick':
-            newname = args[0]
-            ev = SPlayerNameChangeRequestEvent(pname, newname)
-            self._em.post(ev)
+            try:
+                newname = args[0]
+                ev = SPlayerNameChangeRequestEvent(pname, newname)
+                self._em.post(ev)
+            except IndexError: # new nick only contained spaces
+                pass 
             
 

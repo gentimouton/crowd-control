@@ -98,13 +98,17 @@ class MasterView:
         
         # -- name label at top-right of the screen
         rect = pygame.Rect((self.win_w * 3 / 4, 0),
-                            (self.win_w / 4 - 1, line_h - 1))
+                           (self.win_w / 4 - 1, line_h - 1))
         evt_txt_dict = {MyNameChangedEvent: 'newname', NwRecGreetEvt: 'newname'}
         namebox = TextLabelWidget(evManager, '', events_attrs=evt_txt_dict, rect=rect)
                 
         # -- list of connected players at right of the screen
         rect = pygame.Rect((self.win_w * 3 / 4, line_h),
-                            (self.win_w / 4 - 1, self.win_h / 2 - line_h - 1))
+                           (self.win_w / 4 - 1, line_h - 1))
+        whosonlinetitle = TextLabelWidget(evManager, 'Connected players:', rect=rect)
+        
+        rect = pygame.Rect((self.win_w * 3 / 4, 2 * line_h),
+                            (self.win_w / 4 - 1, self.win_h / 2 - 2 * line_h - 1))
         numlines = int(rect.height / line_h) 
         whosonlinebox = PlayerListWidget(evManager, numlines, rect=rect)
         
@@ -131,6 +135,7 @@ class MasterView:
         self.gui_sprites.add(meh_btn)
         self.gui_sprites.add(chatbox)
         self.gui_sprites.add(namebox)
+        self.gui_sprites.add(whosonlinetitle)
         self.gui_sprites.add(whosonlinebox)
         self.gui_sprites.add(chatwindow)
 
