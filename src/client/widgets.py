@@ -371,7 +371,7 @@ class ChatLogWidget(Widget):
         
     def on_chatmsg(self, event):
         """ display a chat msg """
-        linetxt = event.author + ': ' + event.txt        
+        linetxt = event.pname + ': ' + event.txt        
         self.log.debug('Chatlog widget printed chat line: ' + linetxt)
         self.addline(linetxt)
         

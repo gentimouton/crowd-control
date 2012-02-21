@@ -2,7 +2,7 @@ from server.config import load_srv_config
 from server.clock import SClockController
 from server.network import NetworkController
 from server.events_server import SrvEventManager
-from server.game import SGame
+from server.model import SGame
 import logging.config
 
 

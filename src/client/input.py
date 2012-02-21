@@ -1,4 +1,4 @@
-from client.events_client import MoveMyCharactorRequest, QuitEvent, UpClickEvent, \
+from client.events_client import MoveMyAvatarRequest, QuitEvent, UpClickEvent, \
     DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, NonprintableKeyEvent
 from common.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
@@ -21,7 +21,7 @@ class InputController:
         self._nonprintable_keys = (K_RETURN, K_BACKSPACE)
         
         #if key pushed for more than 150ms, then send KEYDOWN event every 50ms
-        # TODO: keyboard sensitivity should be configurable
+        # TODO: should keyboard sensitivity be configurable?
         pygame.init() #calling init() multiple times does not mess anything
         pygame.key.set_repeat(150, 50) 
     
@@ -43,13 +43,13 @@ class InputController:
                 elif pevent.key in self._nonprintable_keys: 
                     ev = NonprintableKeyEvent(pevent.key)
                 elif pevent.key == K_UP:
-                    ev = MoveMyCharactorRequest(DIRECTION_UP)
+                    ev = MoveMyAvatarRequest(DIRECTION_UP)
                 elif pevent.key == K_DOWN:
-                    ev = MoveMyCharactorRequest(DIRECTION_DOWN)
+                    ev = MoveMyAvatarRequest(DIRECTION_DOWN)
                 elif pevent.key == K_LEFT:
-                    ev = MoveMyCharactorRequest(DIRECTION_LEFT)
+                    ev = MoveMyAvatarRequest(DIRECTION_LEFT)
                 elif pevent.key == K_RIGHT:
-                    ev = MoveMyCharactorRequest(DIRECTION_RIGHT)
+                    ev = MoveMyAvatarRequest(DIRECTION_RIGHT)
                 elif pevent.unicode is not '': 
                     # visible chars: letters, numbers, punctuation, space
                     ev = UnicodeKeyPushedEvent(pevent.key, pevent.unicode)

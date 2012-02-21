@@ -3,6 +3,7 @@ from server.events_server import SBroadcastCreepArrivedEvent, \
     SBroadcastCreepMoveEvent
 from uuid import uuid4
 import random
+from collections import defaultdict
         
 class AiDirector():
     
@@ -18,15 +19,18 @@ class AiDirector():
         # when overflow > timestep, we should increase the cursor to the next frame(s) 
         
         # Each frame of actionq contains a set of entity callbacks 
-        self.actionq = [set() for x in range(50)] # each slot for a timestep  
+        self.actionq = [set() for _ in range(10)] # each slot for a timestep  
         self.actioncursor = 0 #loops over the actionq
-        self.distantactions = set() # slot for actions so distant in the future that they dont fit in actionq
+        
+        # actions so distant in the future that they dont fit in actionq
+        self.distantactions = defaultdict(list) 
         
         # create a dummy creep
         self.creeps = dict()
-        creepid = int(uuid4())
-        creep = Creep(self._em, self, creepid)
-        self.creeps[creepid] = creep
+        for _ in range(4):
+            creepid = int(uuid4())
+            creep = Creep(self._em, self, creepid)
+            self.creeps[creepid] = creep
         
         
     def add_action(self, millis, callback):
@@ -36,9 +40,11 @@ class AiDirector():
             # if millis < timestep, do it next frame
             index = max(1, index % len(self.actionq)) 
             self.actionq[index].add(callback)
-        else: # far-future action
-            self.distantactions.add({'millis':millis, 'cb':callback})
             
+        else: # adding far-future actions should happen rarely
+            # so it's OK if it costs a tiny bit
+            self.distantactions[millis].append(callback)
+                        
         
     def on_tick(self, event):
         """ """
@@ -55,14 +61,15 @@ class AiDirector():
             # last frame of the queue: add distant events if they need to
             if self.actioncursor == len(self.actionq) - 1:
                 self.actioncursor = 0
+                
                 # set aside the far-future actions
-                oldcbs = self.distantactions
+                oldcbs = self.distantactions.copy()
                 self.distantactions.clear()
                 # try to insert all the far-future actions in actionq
-                for item in oldcbs:
-                    millis, cb = item.millis, item.cb
-                    newmillis = millis - len(self.actionq) * self.timestep
-                    self.add_action(newmillis, cb)
+                for millis, cbs in oldcbs.items():
+                    for cb in cbs:
+                        newmillis = millis - len(self.actionq) * self.timestep
+                        self.add_action(newmillis, cb)
             
             else: #usual frame
                 self.actioncursor += 1
@@ -85,20 +92,24 @@ class Creep():
         self.state = 'idle'
         self.cell = self.aidir.world.get_lair()
         self.aidir.add_action(500, self.update) # trigger a move in 500 ms
-        self._em.post(SBroadcastCreepArrivedEvent(self.creepid))
+        ev = SBroadcastCreepArrivedEvent(self.creepid, self.cell.coords)
+        self._em.post(ev)
 
 
     def update(self):
         """ Handle creep's state machine and comm with AI director. """
-        if self.state == 'idle': # Dummy: Always move to a random neighbor cell. TODO: Could also attack.
+        if self.state == 'idle': 
+            # Dummy: Always move to a random neighbor cell. TODO: Could also attack.
             cell = random.choice(self.cell.get_neighbors())
             self.move(cell)
             self.state = 'moving'
-            self.aidir.add_action(1000, self.update) # movement lasts for 1000 ms
+            duration = 500 # movement lasts for 500 ms
+            self.aidir.add_action(duration, self.update) 
         
         elif self.state == 'moving': # Dummy: after-move-delay
             self.state = 'idle'
-            self.aidir.add_action(200, self.update) # pretend to 'think' for 200 ms
+            duration = random.randint(500, 2500)# pretend to 'think' for 500-2500 ms
+            self.aidir.add_action(duration, self.update) 
         
         
     def move(self, cell):

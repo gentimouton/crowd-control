@@ -3,8 +3,8 @@ from client.config import config_get_screenres, config_get_loadingscreen_bgcolor
     config_get_entrance_color, config_get_lair_color, config_get_avdefault_bgcolor, \
     config_get_myav_bgcolor, config_get_creep_bgcolor
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvent, \
-    CharactorRemoveEvent, OtherCharactorPlaceEvent, LocalCharactorPlaceEvent, \
-    LocalCharactorMoveEvent, RemoteCharactorMoveEvent, ClNameChangeEvent, \
+    CharactorRemoveEvent, OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, \
+    LocalAvatarMoveEvent, RemoteCharactorMoveEvent, ClNameChangeEvent, \
     ClGreetEvent, CreepPlaceEvent
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget
@@ -49,12 +49,19 @@ class MasterView:
     def __init__(self, evManager):
         # -- set the callbacks
         self._em = evManager
-        self._em.reg_cb(RemoteCharactorMoveEvent, self.move_remote_charactor)
-        self._em.reg_cb(LocalCharactorMoveEvent, self.move_local_charactor)
-        self._em.reg_cb(CharactorRemoveEvent, self.remove_remote_charactor)
-        self._em.reg_cb(LocalCharactorPlaceEvent, self.add_local_charactor)
-        self._em.reg_cb(OtherCharactorPlaceEvent, self.add_remote_charactor)
-        self._em.reg_cb(CreepPlaceEvent, self.add_creep)
+        
+        # local = my avatar
+        self._em.reg_cb(LocalAvatarPlaceEvent, self.on_localavplace)
+        self._em.reg_cb(LocalAvatarMoveEvent, self.on_localavmove)
+        
+        # remote = creeps + other avatars
+        # different creation, but same movement and removal
+        self._em.reg_cb(OtherAvatarPlaceEvent, self.on_remoteavplace)
+        self._em.reg_cb(CreepPlaceEvent, self.on_creepplace)
+        self._em.reg_cb(RemoteCharactorMoveEvent, self.on_remotecharmove)
+        self._em.reg_cb(CharactorRemoveEvent, self.on_remotecharremove)
+        
+        # misc
         self._em.reg_cb(ModelBuiltMapEvent, self.show_map)
         self._em.reg_cb(TickEvent, self.render_dirty_sprites)
 
@@ -122,7 +129,7 @@ class MasterView:
 
     
     
-    ###################### map and charactor ###############################
+    ###################### map and avatar ###############################
     
     
     def show_map(self, event):
@@ -140,7 +147,7 @@ class MasterView:
         self.visib_diam = 2 * self.visib_rad + 1
         self.cspr_size = int(self.win_h / self.visib_diam)
         
-        # Build world background to be scrolled when the charactor moves
+        # Build world background to be scrolled when the avatar moves
         # so that world_bg can be scrolled. 
         # Padding of visib_diam so that the screen bg can subsurface(world_bg)
         world_surf_w = self.cspr_size * (worldmap.width + 2 * self.visib_rad)
@@ -189,10 +196,10 @@ class MasterView:
         self.window.blit(self.background, (0, 0))
         pygame.display.flip() 
         
-        
-        
+
+
     def display_charactor(self, charspr, cleft, ctop):
-        """ display (or not) a charactor on the screen given his cell coords """
+        """ display (or not) a avatar on the screen given his cell coords """
         
         cell_shift_left = cleft - self.bg_shift_left
         cell_shift_top = ctop - self.bg_shift_top
@@ -205,77 +212,78 @@ class MasterView:
             chartop = (self.visib_diam / 2 + cell_shift_top) * self.cspr_size
             charspr.rect.center = (charleft, chartop)
             
-        else: # charactor got out of screen: remove his spr from the groups
+        else: # avatar got out of screen: remove his spr from the groups
             self.active_charactor_sprites.remove(charspr)
-    
-    
-    
-    def add_remote_charactor(self, event):
-        """ Make a sprite and center the sprite 
-        based on the cell location of the charactor.
-        """
-        charactor = event.charactor
-        sprdims = (self.cspr_size, self.cspr_size)
-        bgcolor = config_get_avdefault_bgcolor()
-        charspr = CharactorSprite(charactor, sprdims, bgcolor, self.charactor_sprites)
-        cleft, ctop = charactor.cell.coords
-        self.display_charactor(charspr, cleft, ctop)
 
 
-    def add_local_charactor(self, event):
-        """ Center the map on the charactor's cell,
+    ################ local avatar ###########################################
+    
+    def on_localavplace(self, event):
+        """ Center the map on the avatar's cell,
         build a charactor sprite in that cell, 
         and reblit background, charactor sprites, and GUI.
         """
-        charactor = event.charactor
+        avatar = event.avatar
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_myav_bgcolor()
-        charspr = CharactorSprite(charactor, sprdims, bgcolor, self.charactor_sprites)
-        cleft, ctop = charactor.cell.coords
+        charspr = CharactorSprite(avatar, sprdims, bgcolor, self.charactor_sprites)
+        cleft, ctop = avatar.cell.coords
         self.center_screen_on_coords(cleft, ctop) #must be done before display_char
         self.display_charactor(charspr, cleft, ctop)
-        
 
-    def remove_remote_charactor(self, event):
-        """ """
-        charactor = event.charactor
-        char_spr = self.charactor_sprites.get_spr(charactor)
-        char_spr.kill() # remove from all sprite groups
-        del char_spr
-    
-    
-    def move_local_charactor(self, event):
-        """ move my mychar: scroll the background """
-        mychar = event.charactor
-        cleft, ctop = mychar.cell.coords
+    def on_localavmove(self, event):
+        """ move my avatar: scroll the background """
+        myav = event.avatar
+        cleft, ctop = myav.cell.coords
         self.center_screen_on_coords(cleft, ctop)
         # redisplay the other charactors 
         for charspr in self.charactor_sprites:
-            cleft, ctop = charspr.charactor.cell.coords
+            cleft, ctop = charspr.avatar.cell.coords
             self.display_charactor(charspr, cleft, ctop)
-        
-
-    def move_remote_charactor(self, event):
-        """ move the spr of other clients' charactors """
-        charactor = event.charactor
-        charspr = self.charactor_sprites.get_spr(charactor)
-        cleft, ctop = charactor.cell.coords
-        self.display_charactor(charspr, cleft, ctop) 
-        
-        
-        
-    ############################ creeps ####################################
     
-    def add_creep(self, event):
-        """ Add creep spr on screen.
-        TODO: this code should be refactored with add_remote_player. 
+    
+
+    ##################### REMOTE CHARACTORS #################################        
+
+    def on_remoteavplace(self, event):
+        """ Make a sprite and center the sprite 
+        based on the cell location of the remote avatar.
         """
+        avatar = event.avatar
+        sprdims = (self.cspr_size, self.cspr_size)
+        bgcolor = config_get_avdefault_bgcolor()
+        charspr = CharactorSprite(avatar, sprdims, bgcolor, self.charactor_sprites)
+        cleft, ctop = avatar.cell.coords
+        self.display_charactor(charspr, cleft, ctop)
+
+
+    def on_creepplace(self, event):
+        """ Add creep spr on screen. """
         creep = event.creep
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_creep_bgcolor()
         creepspr = CharactorSprite(creep, sprdims, bgcolor, self.charactor_sprites)
+        # TODO: CreepSprite() instead of CharactorSprite()
         cleft, ctop = creep.cell.coords
         self.display_charactor(creepspr, cleft, ctop)
+            
+
+    def on_remotecharmove(self, event):
+        """ Move the spr of creeps or other avatars. """
+        char = event.charactor
+        charspr = self.charactor_sprites.get_spr(char)
+        cleft, ctop = char.cell.coords
+        self.display_charactor(charspr, cleft, ctop) 
+        
+
+    def on_remotecharremove(self, event):
+        """ A Charactor can be an avatar or a creep. """
+        charactor = event.charactor
+        char_spr = self.charactor_sprites.get_spr(charactor)
+        char_spr.kill() # remove from all sprite groups
+        del char_spr
+            
+
 
         
     ###################### RENDERING OF SPRITES and BG ######################
@@ -340,8 +348,8 @@ class CellSprite(Sprite):
 class CharactorSprite(IndexableSprite):
     """ The representation of a character """
     
-    def __init__(self, charactor, sprdims, bgcolor, groups=None):
-        self.key = charactor # must be set before adding the spr to group(s)
+    def __init__(self, av, sprdims, bgcolor, groups=None):
+        self.key = av # must be set before adding the spr to group(s)
         Sprite.__init__(self, groups)
         
         charactorSurf = pygame.Surface(sprdims)
@@ -355,7 +363,7 @@ class CharactorSprite(IndexableSprite):
         self.image = charactorSurf
         self.rect = charactorSurf.get_rect()
 
-        self.charactor = charactor
+        self.avatar = av
         self.dest = None
 
     

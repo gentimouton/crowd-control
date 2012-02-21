@@ -51,8 +51,9 @@ class NetworkReceivedGameStartEvent():
         self.pname = pname
 
 class NetworkReceivedCreepJoinEvent():
-    def __init__(self, cid):
+    def __init__(self, cid, coords):
         self.cid = cid
+        self.coords = coords
 
 class CreepPlaceEvent():
     def __init__(self, creep, cell):
@@ -68,50 +69,54 @@ class NetworkReceivedCreepMoveEvent():
 ###############################################################################
 """ MOVEMENT """
 
-class MoveMyCharactorRequest():
+class MoveMyAvatarRequest():
     """ sent from controller to model """
     def __init__(self, direction):
         self.direction = direction
 
 
-class OtherCharactorPlaceEvent():
-    """this event occurs when another client's Charactor is *placed* in a cell,
+class OtherAvatarPlaceEvent():
+    """this event occurs when another client's avatar is *placed* in a cell,
     ie it doesn't move there from an adjacent cell."""
-    def __init__(self, charactor, cell):
-        self.charactor = charactor
+    def __init__(self, av, cell):
+        self.avatar = av
         self.cell = cell
         
-class LocalCharactorPlaceEvent():
-    """this event occurs when the client's Charactor is *placed* in a cell,
+class LocalAvatarPlaceEvent():
+    """this event occurs when the client's avatar is *placed* in a cell,
     ie it doesn't move there from an adjacent cell."""
-    def __init__(self, charactor, cell):
-        self.charactor = charactor
+    def __init__(self, av, cell):
+        self.avatar = av
         self.cell = cell
 
 class CharactorRemoveEvent():
-    """this event occurs when a Charactor is removed from the model, 
-    and the view needs to be notified of that removal """
-    def __init__(self, charactor):
-        self.charactor = charactor
+    """this event occurs when a creep or avatar is removed from the model, 
+    and the view needs to be notified of that removal. """
+    def __init__(self, ch):
+        self.charactor = ch
         
-        
-class RemoteCharactorMoveEvent():
-    """ sent from model to view when another client moved """
-    def __init__(self, charactor, coords):
-        self.charactor = charactor
-        self.coords = coords
-        
-class LocalCharactorMoveEvent():
-    """ sent from model to view and network controller when my charactor moved """
-    def __init__(self, charactor, coords):
-        self.charactor = charactor
+class LocalAvatarMoveEvent():
+    """ sent from model to view and network controller when my avatar moved """
+    def __init__(self, av, coords):
+        self.avatar = av
         self.coords = coords
 
-
-class NetworkReceivedCharactorMoveEvent():
+class NetworkReceivedAvatarMoveEvent():
+    """ The network component was notified that a remote player moved his avatar. """
     def __init__(self, pname, dest):
-        self.author = pname
+        self.pname = pname
         self.dest = dest
+
+
+
+class RemoteCharactorMoveEvent():
+    """ sent from model to view when an avatar or a creep moved """
+    def __init__(self, char, coords):
+        self.charactor = char
+        self.coords = coords
+        
+
+
         
         
 ##############################################################################
@@ -123,13 +128,13 @@ class SendChatEvent():
 
 class NetworkReceivedChatEvent():
     def __init__(self, pname, txt):
-        self.author = pname
+        self.pname = pname
         self.txt = txt
 
 class ChatlogUpdatedEvent():
     """ The model asks the view to refresh the chatlog """
     def __init__(self, pname, txt):
-        self.author = pname
+        self.pname = pname
         self.txt = txt
 
 

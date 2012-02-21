@@ -97,8 +97,9 @@ class SBroadcastMoveEvent():
 ####################### CREEPS ##########################################
  
 class SBroadcastCreepArrivedEvent():
-    def __init__(self, creepid):
+    def __init__(self, creepid, coords):
         self.creepid = creepid
+        self.coords = coords
 
 class SBroadcastCreepMoveEvent():
     def __init__(self, creepid, coords):

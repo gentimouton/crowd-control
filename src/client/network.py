@@ -1,7 +1,7 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client.events_client import SendChatEvent, NetworkReceivedChatEvent, \
     ClGreetEvent, ClNameChangeEvent, ClPlayerArrived, ClPlayerLeft, \
-    NetworkReceivedCharactorMoveEvent, LocalCharactorMoveEvent, \
+    NetworkReceivedAvatarMoveEvent, LocalAvatarMoveEvent, \
     NetworkReceivedGameStartEvent, NetworkReceivedCreepJoinEvent, \
     NetworkReceivedCreepMoveEvent
 from common.events import TickEvent
@@ -20,7 +20,7 @@ class NetworkController(ConnectionListener):
         self._em = evManager
         self._em.reg_cb(TickEvent, self.on_tick)
         self._em.reg_cb(SendChatEvent, self.send_chat)
-        self._em.reg_cb(LocalCharactorMoveEvent, self.send_move)
+        self._em.reg_cb(LocalAvatarMoveEvent, self.send_move)
         
         self.preferrednick = nick
         host, port = hostport
@@ -62,7 +62,7 @@ class NetworkController(ConnectionListener):
     
 
     def Network_disconnected(self, data):
-        # TODO: should try to get back the connection instead of exit()
+        """ don't let the player in game if the server goes down """
         self.log.info("Network disconnected.")
         connection.Close()
         exit()
@@ -99,7 +99,7 @@ class NetworkController(ConnectionListener):
         mmsg = SrvMoveMsg(data['msg'])
         pname = mmsg.d['pname']
         coords = mmsg.d['coords']
-        ev = NetworkReceivedCharactorMoveEvent(pname, coords)
+        ev = NetworkReceivedAvatarMoveEvent(pname, coords)
         self._em.post(ev)
 
 
@@ -117,8 +117,8 @@ class NetworkController(ConnectionListener):
 
         if act == 'join': # creep creation
             jmsg = SrvCreepJoinedMsg(data['msg']) #build msg from dictionary
-            cid = jmsg.d['creepid']
-            ev = NetworkReceivedCreepJoinEvent(cid)
+            cid, coords = jmsg.d['creepid'], jmsg.d['coords']
+            ev = NetworkReceivedCreepJoinEvent(cid, coords)
             self._em.post(ev)
             
         elif act == 'move': # creep movement
@@ -183,7 +183,7 @@ class NetworkController(ConnectionListener):
     
     
     def on_tick(self, event):
-        # TODO: only push and pull every once in a while, not every game loop
+        """ push and pull every game loop """
         self.pull()
         self.push()
             

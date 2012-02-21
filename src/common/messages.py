@@ -117,5 +117,5 @@ class SrvCreepMovedMsg(SerializableMsg):
     attrs = ['creepid', 'act', 'coords']
 class SrvCreepJoinedMsg(SerializableMsg):
     """ broadcast creep creation """
-    attrs = ['creepid', 'act']
+    attrs = ['creepid', 'act', 'coords']
     

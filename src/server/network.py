@@ -275,8 +275,8 @@ class NetworkController(Server):
         
         
     def broadcast_creepjoined(self, event):
-        cid = event.creepid
-        mmsg = SrvCreepJoinedMsg({"creepid":cid, 'act':'join'})
+        cid, coords = event.creepid, event.coords
+        mmsg = SrvCreepJoinedMsg({"creepid":cid, 'coords':coords, 'act':'join'})
         data = {"action": "creep", "msg": mmsg.d}
         for chan in self.chan_to_name:
             self.send(chan, data) 
