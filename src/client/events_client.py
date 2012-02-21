@@ -3,8 +3,8 @@ import logging
 
 
         
-##############################################################################
-""" INPUT CONTROLLER EVENTS """
+######################## USER INPUT ########################################
+
 
 class QuitEvent():
     pass
@@ -38,19 +38,32 @@ class NonprintableKeyEvent():
     def __init__(self, key):
         self.key = key
         
+
+
+#################### MODEL TO VIEW #######################################
+""" message passing from model to view """
+
+class MdAddPlayerEvt():
+    """ Add a player name to the list of connected players 
+    in a text widget from the view. 
+    """
+    def __init__(self, pname):
+        self.pname = pname
         
-##############################################################################
-""" GAME LOGIC """
+        
+                
+################# GAME LOGIC ##############################################
+
 
 class ModelBuiltMapEvent():
     def __init__(self, worldmap):
         self.worldmap = worldmap
 
-class NetworkReceivedGameStartEvent():
+class NwRecGameStartEvt():
     def __init__(self, pname):
         self.pname = pname
 
-class NetworkReceivedCreepJoinEvent():
+class NwRecCreepJoinEvt():
     def __init__(self, cid, coords):
         self.cid = cid
         self.coords = coords
@@ -60,14 +73,25 @@ class CreepPlaceEvent():
         self.creep = creep
         self.cell = cell
 
-class NetworkReceivedCreepMoveEvent():
+class NwRecCreepMoveEvt():
     def __init__(self, cid, coords):
         self.cid = cid
         self.coords = coords
 
 
-###############################################################################
-""" MOVEMENT """
+
+######################### ADMIN ######################################
+
+class MyNameChangedEvent():
+    """ sent from model to a text label widget 
+    to notify that the local player changed name. 
+    """
+    def __init__(self, oldname, newname):
+        self.oldname = oldname
+        self.newname = newname
+        
+######################### MOVEMENT #########################################
+
 
 class MoveMyAvatarRequest():
     """ sent from controller to model """
@@ -101,7 +125,7 @@ class LocalAvatarMoveEvent():
         self.avatar = av
         self.coords = coords
 
-class NetworkReceivedAvatarMoveEvent():
+class NwRecAvatarMoveEvt():
     """ The network component was notified that a remote player moved his avatar. """
     def __init__(self, pname, dest):
         self.pname = pname
@@ -119,14 +143,14 @@ class RemoteCharactorMoveEvent():
 
         
         
-##############################################################################
-""" CHAT """
+################# CHAT ###################################################
+
 
 class SendChatEvent():
     def __init__(self, txt):
         self.txt = txt
 
-class NetworkReceivedChatEvent():
+class NwRecChatEvt():
     def __init__(self, pname, txt):
         self.pname = pname
         self.txt = txt
@@ -138,11 +162,11 @@ class ChatlogUpdatedEvent():
         self.txt = txt
 
 
-##############################################################################
-""" NETWORK """
+################### NETWORK ##############################################
 
 
-class ClGreetEvent():
+
+class NwRecGreetEvt():
     def __init__(self, mapname, newname, newpos, onlineppl, creeps):
         self.mapname = mapname
         self.newname = newname
@@ -150,19 +174,19 @@ class ClGreetEvent():
         self.onlineppl = onlineppl
         self.creeps = creeps
 
-class ClNameChangeEvent():
+class NwRecNameChangeEvt():
     def __init__(self, oldname, newname):
         self.oldname = oldname
         self.newname = newname
     
-class ClPlayerArrived():
+class NwRecPlayerJoinEvt():
     def __init__(self, pname, pos):
         self.pname = pname
         self.pos = pos
         
-class ClPlayerLeft():
+class NwRecPlayerLeft():
     def __init__(self, pname):
-        self.playername = pname
+        self.pname = pname
 
 
 ##############################################################################

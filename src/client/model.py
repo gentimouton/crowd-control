@@ -1,9 +1,9 @@
 from client.events_client import MoveMyAvatarRequest, ModelBuiltMapEvent, \
-    NetworkReceivedChatEvent, ChatlogUpdatedEvent, ClGreetEvent, ClPlayerLeft, \
-    CharactorRemoveEvent, NetworkReceivedAvatarMoveEvent, ClPlayerArrived, \
-    ClNameChangeEvent, LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, \
-    LocalAvatarMoveEvent, RemoteCharactorMoveEvent, NetworkReceivedGameStartEvent, \
-    NetworkReceivedCreepJoinEvent, CreepPlaceEvent, NetworkReceivedCreepMoveEvent
+    NwRecChatEvt, ChatlogUpdatedEvent, NwRecGreetEvt, NwRecPlayerLeft, \
+    CharactorRemoveEvent, NwRecAvatarMoveEvt, NwRecPlayerJoinEvt, NwRecNameChangeEvt, \
+    LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, LocalAvatarMoveEvent, \
+    RemoteCharactorMoveEvent, NwRecGameStartEvt, NwRecCreepJoinEvt, CreepPlaceEvent, \
+    NwRecCreepMoveEvt, MyNameChangedEvent, MdAddPlayerEvt
 from collections import deque
 from common.world import World
 import logging
@@ -19,7 +19,7 @@ class Game:
     
     def __init__(self, evManager):
         self._em = evManager
-        self._em.reg_cb(ClGreetEvent, self.greeted)
+        self._em.reg_cb(NwRecGreetEvt, self.greeted)
         # all other callbacks are registered AFTER having been greeted
         
         self.players = dict() #unlike WeakValueDict, I need to remove players manually
@@ -66,18 +66,18 @@ class Game:
         # start listening to game events coming from the network
         
         # -- PLAYERS
-        self._em.reg_cb(ClPlayerArrived, self.on_playerjoin)
-        self._em.reg_cb(ClPlayerLeft, self.on_playerleft)
-        self._em.reg_cb(ClNameChangeEvent, self.on_namechange)
+        self._em.reg_cb(NwRecPlayerJoinEvt, self.on_playerjoin)
+        self._em.reg_cb(NwRecPlayerLeft, self.on_playerleft)
+        self._em.reg_cb(NwRecNameChangeEvt, self.on_namechange)
         
         # -- AVATARS (remote and local)
-        self._em.reg_cb(NetworkReceivedAvatarMoveEvent, self.on_remoteavmove)
+        self._em.reg_cb(NwRecAvatarMoveEvt, self.on_remoteavmove)
         self._em.reg_cb(MoveMyAvatarRequest, self.on_localavmove)
         
         # -- RUNNING GAME and CREEPS
-        self._em.reg_cb(NetworkReceivedGameStartEvent, self.on_gamestart)
-        self._em.reg_cb(NetworkReceivedCreepJoinEvent, self.on_creepjoin)
-        self._em.reg_cb(NetworkReceivedCreepMoveEvent, self.on_creepmove)
+        self._em.reg_cb(NwRecGameStartEvt, self.on_gamestart)
+        self._em.reg_cb(NwRecCreepJoinEvt, self.on_creepjoin)
+        self._em.reg_cb(NwRecCreepMoveEvt, self.on_creepmove)
         
         
 
@@ -99,10 +99,14 @@ class Game:
         newplayer = Player(pname, cell, islocal, self._em)       
         self.players[pname] = newplayer
         
+        # notify the view 
+        ev = MdAddPlayerEvt(pname)
+        self._em.post(ev)
+        
         
     def on_playerleft(self, event):
         """ remove a player """
-        pname = event.playername
+        pname = event.pname
         try:
             self.players[pname].remove()
             #don't forget to clean the player data from the dict
@@ -110,7 +114,6 @@ class Game:
         except KeyError:
             self.log.error('Player' + pname + ' had already been removed') 
         
-            
     
     def on_namechange(self, event):
         """ update players' names when they change it """
@@ -123,6 +126,9 @@ class Game:
         
         if self.myname == oldname:
             self.myname = newname
+            # notify the widget in charge of holding my name
+            ev = MyNameChangedEvent(oldname, newname)
+            self._em.post(ev)
             
         player = self.players[oldname]
         player.name = newname
@@ -299,7 +305,7 @@ class ChatLog():
     
     def __init__(self, evManager):
         self._em = evManager
-        self._em.reg_cb(NetworkReceivedChatEvent, self.add_chatmsg)
+        self._em.reg_cb(NwRecChatEvt, self.add_chatmsg)
         
         #double-ended queue to remember the most recent 30 messages
         self.chatlog = deque(maxlen=30) 

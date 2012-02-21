@@ -1,5 +1,5 @@
 from bot.config import config_get_fps, config_get_movefreq
-from client.events_client import MoveMyCharactorRequest, ModelBuiltMapEvent
+from client.events_client import ModelBuiltMapEvent, MoveMyAvatarRequest
 from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
     DIRECTION_RIGHT
 from common.events import TickEvent
@@ -26,7 +26,7 @@ class BotInputController():
                 
         if self.mvtimer <= 0:
             self.mvtimer = int(config_get_fps() / config_get_movefreq())
-            ev = MoveMyCharactorRequest(random.choice(self.moves))
+            ev = MoveMyAvatarRequest(random.choice(self.moves))
             self._em.post(ev)
         
         else:

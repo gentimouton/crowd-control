@@ -173,12 +173,19 @@ class SGame():
     ######################### commands parsing ##############################
 
     def exec_cmd(self, pname, cmd, args):
-        """ Execute a player command. """
+        """ Execute a player command. 
+        args[0] is not the command's name, it's the first argument!! 
+        """
 
         if cmd == 'start':
-            #self.aidir = AiDirector(self._em, self.world)
+            self.aidir = AiDirector(self._em, self.world)
+            self.log.info('Gane started by ' + pname)
             ev = SGameStartEvent(pname)
             self._em.post(ev)
 
-
+        elif cmd == 'nick':
+            newname = args[0]
+            ev = SPlayerNameChangeRequestEvent(pname, newname)
+            self._em.post(ev)
+            
 

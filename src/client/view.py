@@ -4,10 +4,10 @@ from client.config import config_get_screenres, config_get_loadingscreen_bgcolor
     config_get_myav_bgcolor, config_get_creep_bgcolor
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvent, \
     CharactorRemoveEvent, OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, \
-    LocalAvatarMoveEvent, RemoteCharactorMoveEvent, ClNameChangeEvent, \
-    ClGreetEvent, CreepPlaceEvent
+    LocalAvatarMoveEvent, RemoteCharactorMoveEvent, NwRecGreetEvt, CreepPlaceEvent, \
+    MyNameChangedEvent, NwRecPlayerJoinEvt, NwRecNameChangeEvt, NwRecPlayerLeft
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
-    TextLabelWidget
+    TextLabelWidget, PlayerListWidget
 from common.events import TickEvent
 from pygame.sprite import RenderUpdates, Sprite
 import logging
@@ -99,9 +99,15 @@ class MasterView:
         # -- name label at top-right of the screen
         rect = pygame.Rect((self.win_w * 3 / 4, 0),
                             (self.win_w / 4 - 1, line_h - 1))
-        evt_txt_dict = {ClNameChangeEvent: 'newname', ClGreetEvent: 'newname'}
+        evt_txt_dict = {MyNameChangedEvent: 'newname', NwRecGreetEvt: 'newname'}
         namebox = TextLabelWidget(evManager, '', events_attrs=evt_txt_dict, rect=rect)
                 
+        # -- list of connected players at right of the screen
+        rect = pygame.Rect((self.win_w * 3 / 4, line_h),
+                            (self.win_w / 4 - 1, self.win_h / 2 - line_h - 1))
+        numlines = int(rect.height / line_h) 
+        whosonlinebox = PlayerListWidget(evManager, numlines, rect=rect)
+        
         
         # -- chat box input at bottom-right of the screen
         rect = pygame.Rect((self.win_w * 3 / 4, self.win_h * 11 / 12 - line_h),
@@ -125,6 +131,7 @@ class MasterView:
         self.gui_sprites.add(meh_btn)
         self.gui_sprites.add(chatbox)
         self.gui_sprites.add(namebox)
+        self.gui_sprites.add(whosonlinebox)
         self.gui_sprites.add(chatwindow)
 
     

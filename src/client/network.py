@@ -1,9 +1,9 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client.events_client import SendChatEvent, NetworkReceivedChatEvent, \
-    ClGreetEvent, ClNameChangeEvent, ClPlayerArrived, ClPlayerLeft, \
-    NetworkReceivedAvatarMoveEvent, LocalAvatarMoveEvent, \
-    NetworkReceivedGameStartEvent, NetworkReceivedCreepJoinEvent, \
-    NetworkReceivedCreepMoveEvent
+from client.events_client import SendChatEvent, NwRecChatEvt, \
+    NwRecGreetEvt, NwRecNameChangeEvt, NwRecPlayerJoinEvt, NwRecPlayerLeft, \
+    NwRecAvatarMoveEvt, LocalAvatarMoveEvent, \
+    NwRecGameStartEvt, NwRecCreepJoinEvt, \
+    NwRecCreepMoveEvt
 from common.events import TickEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
@@ -57,7 +57,8 @@ class NetworkController(ConnectionListener):
         try:
             self.log.error("Network error: " + data['error'][1])
         except TypeError:
-            self.log.error('Network error: ' + data['error'])
+            self.log.error('Network error: ' + str(data['error']))
+            self.log.error('The server is not running.')
         connection.Close()
     
 
@@ -75,7 +76,7 @@ class NetworkController(ConnectionListener):
         cmsg = SrvChatMsg(data['msg'])
         author = cmsg.d['pname']
         txt = cmsg.d['txt']
-        ev = NetworkReceivedChatEvent(author, txt)
+        ev = NwRecChatEvt(author, txt)
         self._em.post(ev)
         
         
@@ -99,7 +100,7 @@ class NetworkController(ConnectionListener):
         mmsg = SrvMoveMsg(data['msg'])
         pname = mmsg.d['pname']
         coords = mmsg.d['coords']
-        ev = NetworkReceivedAvatarMoveEvent(pname, coords)
+        ev = NwRecAvatarMoveEvt(pname, coords)
         self._em.post(ev)
 
 
@@ -109,7 +110,7 @@ class NetworkController(ConnectionListener):
     def Network_gamestart(self, data):
         mmsg = SrvGameStartMsg(data['msg'])
         pname = mmsg.d['pname']
-        ev = NetworkReceivedGameStartEvent(pname)
+        ev = NwRecGameStartEvt(pname)
         self._em.post(ev)
         
     def Network_creep(self, data):
@@ -118,13 +119,13 @@ class NetworkController(ConnectionListener):
         if act == 'join': # creep creation
             jmsg = SrvCreepJoinedMsg(data['msg']) #build msg from dictionary
             cid, coords = jmsg.d['creepid'], jmsg.d['coords']
-            ev = NetworkReceivedCreepJoinEvent(cid, coords)
+            ev = NwRecCreepJoinEvt(cid, coords)
             self._em.post(ev)
             
         elif act == 'move': # creep movement
             mmsg = SrvCreepMovedMsg(data['msg'])
             cid, coords = mmsg.d['creepid'], mmsg.d['coords']
-            ev = NetworkReceivedCreepMoveEvent(cid, coords)
+            ev = NwRecCreepMoveEvt(cid, coords)
             self._em.post(ev)
 
     
@@ -137,7 +138,7 @@ class NetworkController(ConnectionListener):
     the client asks the server to change to its preferred name. 
     The client knows if the server accepted the
     name change by a server broadcast which triggers 
-    a ClNameChangeEvent(oldname, newname). 
+    a NwRecNameChangeEvt(oldname, newname). 
     TODO: if the name change was rejected, the client should be notified
     and the user should be told that his preferred name is already in use.
     """
@@ -151,7 +152,7 @@ class NetworkController(ConnectionListener):
             preferred_name = self.preferrednick
             if gmsg.d['pname'] is not preferred_name:
                 self.ask_for_name_change(preferred_name)
-            ev = ClGreetEvent(gmsg.d['mapname'], gmsg.d['pname'],
+            ev = NwRecGreetEvt(gmsg.d['mapname'], gmsg.d['pname'],
                               gmsg.d['coords'], gmsg.d['onlineppl'],
                               gmsg.d['creeps'])
             self._em.post(ev)
@@ -160,17 +161,17 @@ class NetworkController(ConnectionListener):
             nmsg = NameChangeNotifMsg(data['msg'])
             oldname = nmsg.d['oldname']
             newname = nmsg.d['newname']
-            ev = ClNameChangeEvent(oldname, newname)
+            ev = NwRecNameChangeEvt(oldname, newname)
             self._em.post(ev)
 
         elif actiontype == 'arrived': # new player connected
                 amsg = PlayerArrivedNotifMsg(data['msg']) 
-                ev = ClPlayerArrived(amsg.d['pname'], amsg.d['coords'])
+                ev = NwRecPlayerJoinEvt(amsg.d['pname'], amsg.d['coords'])
                 self._em.post(ev)
     
         elif actiontype == 'left': # player left
             lmsg = PlayerLeftNotifMsg(data['msg'])
-            ev = ClPlayerLeft(lmsg.d['pname'])
+            ev = NwRecPlayerLeft(lmsg.d['pname'])
             self._em.post(ev)
         
             

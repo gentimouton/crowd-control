@@ -9,8 +9,8 @@ from client.model import Game
 from client.network import NetworkController
 from threading import current_thread
 
-    
-    
+
+
 def main():
     
     load_bot_config() # bot-specific config (e.g. logger)

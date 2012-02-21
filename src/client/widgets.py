@@ -7,7 +7,8 @@ from client.config import config_get_fontsize, config_get_unfocusedbtn_bgcolor, 
     config_get_chatlog_bgcolor
 from client.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
     UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ChatlogUpdatedEvent, \
-    NetworkReceivedGameStartEvent
+    NwRecGameStartEvt, NwRecGreetEvt, NwRecPlayerJoinEvt, NwRecNameChangeEvt, \
+    NwRecPlayerLeft, MdAddPlayerEvt, MyNameChangedEvent
 from collections import deque
 from pygame.font import Font
 from pygame.locals import K_BACKSPACE, K_RETURN
@@ -336,20 +337,127 @@ class TextLabelWidget(Widget):
         self.dirty = 0
         
         
+    
+
+############################################################################
+class PlayerListWidget(Widget):
+    """ Display lines of text. Some events tell which lines should be removed. 
+    Other events tell which lines should be added.
+    """
+    
+    def __init__(self, evManager, numlines=3, rect=None):
+        Widget.__init__(self, evManager)
+        
+        # When receiving an event containing text, 
+        # add or remove that text to the widget's set of text lines to display.
+        
+        # addevents_attrs maps event classes to the text attr of events 
+        # that add text to display.
+        self.addevents_attrs = {MdAddPlayerEvt:'pname',  
+                                NwRecNameChangeEvt:'newname'}
+        for evtClass in self.addevents_attrs:
+            self._em.reg_cb(evtClass, self.on_addtextevent)
+        
+        # rmevents_attrs maps event classes to the text attributes of events 
+        # that remove text to display.
+        self.rmevents_attrs = {NwRecPlayerLeft: 'pname', 
+                               NwRecNameChangeEvt:'oldname'}
+        for evtClass in self.rmevents_attrs:
+            self._em.reg_cb(evtClass, self.on_rmtextevent)
+        
+        self.texts = [] # Each text is a player name.
+        
+        # gfx
+        self.font = Font(None, config_get_fontsize())
+        if rect:
+            self.rect = rect
+        else:
+            self.rect = Rect((0, 0), (100, config_get_fontsize() + 4)) 
+            #default width = 100px,
+            # 4px from 1px each of  border bottom,
+            # padding bottom, padding top, and border top 
+        
+        self.txtcolor = config_get_chatlog_txtcolor()
+        self.bgcolor = config_get_chatlog_bgcolor()
+        self.image = Surface(self.rect.size).fill(self.bgcolor)
+        
+        self.maxnumlines = numlines
+        self.linewidgets = deque(maxlen=numlines) # deque of TextLabelWidgets
+        
+        
+        
+
+    def on_addtextevent(self, event):
+        """ add the event's text to the current set of texts """
+        evt_txt_attr = self.addevents_attrs[event.__class__]
+        linetxt = getattr(event, evt_txt_attr)
+        self.texts.append(linetxt) # no need to check if txt was already in 
+        
+        # add lines from the top
+        if len(self.linewidgets) < self.maxnumlines: 
+            # there's room to add another text widget under the existing ones
+            lines_from_top = len(self.linewidgets)
+            line_height = self.rect.height / self.maxnumlines
+            newline_top = lines_from_top * line_height
+            newline_rect = Rect(0, newline_top, self.rect.width, line_height)
+            txtwidget = TextLabelWidget(self._em, '', rect=newline_rect)
+            # this empty text will be replaced when we shift all the texts upwards
+            self.linewidgets.append(txtwidget)
+        
+        self.dirty = 1 # causes all text widgets to be updated
+        
+        
+        
+    def on_rmtextevent(self, event):
+        """ remove the event's text from the current set of texts """
+        evt_txt_attr = self.rmevents_attrs[event.__class__]
+        txt = getattr(event, evt_txt_attr)
+        try:
+            self.texts.remove(txt)
+        except ValueError:
+            self.log.warning('Tried to remove ' + txt + ', but it was not in the widget.')
+            return
+        # remove the most recently added line widget if there are less texts than line widgets 
+        if len(self.texts) < len(self.linewidgets):
+            self.linewidgets.pop()
+        # refill all lines with text and reblit all line widgets
+        self.dirty = 1
+        
+        
+        
+        
+    def update(self):
+        """ update all the contained linewidgets """
+        
+        if self.dirty == 0:
+            return
+        
+        self.image = Surface(self.rect.size) 
+        self.image.fill(self.bgcolor)
+        
+        numelemts = min(len(self.texts), self.maxnumlines)
+        for i in range(numelemts):
+            wid = self.linewidgets[i]
+            wid.set_text(self.texts[-i - 1])
+            wid.update()
+            self.image.blit(wid.image, wid.rect)
+
+        self.dirty = 0
+        
+        
 
 
 ############################################################################
 
 
-
 class ChatLogWidget(Widget):
-    """ display static text """ 
+    """ display chat messages """ 
     
     def __init__(self, evManager, numlines=3, rect=None):
         Widget.__init__(self, evManager)
 
         self._em.reg_cb(ChatlogUpdatedEvent, self.on_chatmsg)
-        self._em.reg_cb(NetworkReceivedGameStartEvent, self.on_game_start)
+        self._em.reg_cb(NwRecGameStartEvt, self.on_game_start)
 
         self.font = Font(None, config_get_fontsize())
         if rect:
@@ -390,9 +498,9 @@ class ChatLogWidget(Widget):
         
         if len(self.linewidgets) < self.maxnumlines: 
             # there's room to add another text widget on top of existing ones
-            lines_from_top = self.maxnumlines - len(self.linewidgets)
+            lines_from_top = self.maxnumlines - len(self.linewidgets) -1 
             line_height = self.rect.height / self.maxnumlines
-            newline_top = (lines_from_top - 1) * line_height
+            newline_top = lines_from_top * line_height
             newline_rect = Rect(0, newline_top, self.rect.width, line_height)
             txtwidget = TextLabelWidget(self._em, '', rect=newline_rect)
             # this empty text will be replaced when we shift all the texts upwards
