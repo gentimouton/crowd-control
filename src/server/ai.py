@@ -1,11 +1,15 @@
+from collections import defaultdict
 from common.events import TickEvent
 from server.events_server import SBroadcastCreepArrivedEvent, \
     SBroadcastCreepMoveEvent
 from uuid import uuid4
+import logging
 import random
-from collections import defaultdict
         
 class AiDirector():
+
+    log = logging.getLogger('server')
+
     
     def __init__(self, evManager, world):
         self.world = world
@@ -18,60 +22,74 @@ class AiDirector():
         self.frameoverflow = 0 #how much time overflowed from previous frame
         # when overflow > timestep, we should increase the cursor to the next frame(s) 
         
-        # Each frame of actionq contains a set of entity callbacks 
-        self.actionq = [set() for _ in range(10)] # each slot for a timestep  
-        self.actioncursor = 0 #loops over the actionq
+        # Each frame of actionframes contains a set of entity callbacks 
+        self.actionframes = [set() for x in range(5)] # each slot for a timestep  
+        self.actioncursor = 0 #loops over the actionframes
         
-        # actions so distant in the future that they dont fit in actionq
+        # actions so distant in the future that they dont fit in actionframes
         self.distantactions = defaultdict(list) 
         
-        # create a dummy creep
         self.creeps = dict()
-        for _ in range(4):
+        
+        # create a dummy creep
+        for x in range(10):
             creepid = int(uuid4())
             creep = Creep(self._em, self, creepid)
             self.creeps[creepid] = creep
         
         
-    def add_action(self, millis, callback):
+        
+        
+    def schedule_action(self, millis, callback):
         """ Add an entity's callback to be called in millis +/- timestep ms."""
-        if millis < len(self.actionq) * self.timestep:
-            index = self.actioncursor + int(millis / self.timestep)
-            # if millis < timestep, do it next frame
-            index = max(1, index % len(self.actionq)) 
-            self.actionq[index].add(callback)
+        if millis < len(self.actionframes) * self.timestep:
+            # if millis < timestep, schedule for next frame (not this current frame)
+            index = self.actioncursor + max(1, int(millis / self.timestep))
+            index = index % len(self.actionframes)
             
+            self.actionframes[index].add(callback)
+#            self.log.info(str(self.actioncursor) 
+#                          + ' - closeby ' + callback.__name__ 
+#                          + ' sched in ' + str(millis) 
+#                          + ' insert[' + str(index) + ']')
+                
         else: # adding far-future actions should happen rarely
             # so it's OK if it costs a tiny bit
             self.distantactions[millis].append(callback)
+#            self.log.info(str(self.actioncursor) + ' - far action ' + str(millis))
                         
         
     def on_tick(self, event):
-        """ """
+        """ Iterate over the near-future frames (= actionframes). 
+        When reaching the last frame, 
+        try to schedule the distant-future actions within the near-future frames,
+        and restart iterating at the beginning of the near-future frames.
+        """
+        
         self.frameoverflow += event.duration
         
         while self.frameoverflow >= self.timestep: #current frame's time is over
             # call this frame's entities
-            for callback in self.actionq[self.actioncursor]:
+            for callback in self.actionframes[self.actioncursor]:
                 callback()
             
             # done with all entities for this frame    
-            self.actionq[self.actioncursor].clear()
+            self.actionframes[self.actioncursor].clear()
             
-            # last frame of the queue: add distant events if they need to
-            if self.actioncursor == len(self.actionq) - 1:
+            # last frame of the near-future: add far-future actions if they fit
+            if self.actioncursor == len(self.actionframes) - 1:
                 self.actioncursor = 0
                 
                 # set aside the far-future actions
                 oldcbs = self.distantactions.copy()
                 self.distantactions.clear()
-                # try to insert all the far-future actions in actionq
+                # try to insert all the far-future actions in the near-future frames
                 for millis, cbs in oldcbs.items():
                     for cb in cbs:
-                        newmillis = millis - len(self.actionq) * self.timestep
-                        self.add_action(newmillis, cb)
+                        newmillis = millis - len(self.actionframes) * self.timestep
+                        self.schedule_action(newmillis, cb)
             
-            else: #usual frame
+            else: #usual near-future frame
                 self.actioncursor += 1
             
             self.frameoverflow -= self.timestep
@@ -82,7 +100,7 @@ class AiDirector():
 
 
 class Creep():
-    
+        
     def __init__(self, evManager, aidir, creepid):
         """ Default state is idle. Move in 500ms. """
         self._em = evManager
@@ -91,7 +109,7 @@ class Creep():
         
         self.state = 'idle'
         self.cell = self.aidir.world.get_lair()
-        self.aidir.add_action(500, self.update) # trigger a move in 500 ms
+        self.aidir.schedule_action(500, self.update) # trigger a move in 500 ms
         ev = SBroadcastCreepArrivedEvent(self.creepid, self.cell.coords)
         self._em.post(ev)
 
@@ -103,14 +121,14 @@ class Creep():
             cell = random.choice(self.cell.get_neighbors())
             self.move(cell)
             self.state = 'moving'
-            duration = 500 # movement lasts for 500 ms
-            self.aidir.add_action(duration, self.update) 
+            mvtduration = 100 
+            self.aidir.schedule_action(mvtduration, self.update) 
         
         elif self.state == 'moving': # Dummy: after-move-delay
             self.state = 'idle'
-            duration = random.randint(500, 2500)# pretend to 'think' for 500-2500 ms
-            self.aidir.add_action(duration, self.update) 
-        
+            duration = random.randint(2, 12) * 100# pretend to 'think' for 200-1200 ms
+            self.aidir.schedule_action(duration, self.update) 
+
         
     def move(self, cell):
         self.cell = cell
