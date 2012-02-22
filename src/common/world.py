@@ -2,15 +2,17 @@ from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
     DIRECTION_RIGHT
 import logging
 import os
+import random
 
 
 
 class World():
     
 
-    def __init__(self, evManager):
+    def __init__(self, evManager, log):
         """ ... """
 
+        self.log = log
         self._em = evManager
         #self._em.register_listener(self)
         
@@ -46,7 +48,7 @@ class World():
         if self.height == 0:
             logging.error('Map ' + mapname + ' has no lines.')
         else:
-            self.width = len(lines[1].strip().split(','))
+            self.width = len(lines[0].strip().split(','))
             if self.width == 0:
                 logging.error('The first row of map ' + mapname 
                               + ' has no cells.')
@@ -85,10 +87,32 @@ class World():
             cell = self.get_cell(l_coords)
             cell.set_lair(True)
           
+        
         ev = buildevent(self)
         self._em.post(ev)
         
         
+    def buildpath(self):
+        """ Starting from entrance (d=0),
+        a cell's distance to the entrance is d+1
+        if the shortest distance of its neighbor cells to the entrance is d.
+        """
+        def recursive_dist_fill(cell, d):
+            try:
+                assert self.iswalkable(cell.coords)
+            except AssertionError:
+                self.log.warning('Cell ' + str(cell) + ' should not be reachable')
+                return
+            
+            if cell.entrance_dist is not None and cell.entrance_dist <= d:
+                return
+            else:
+                cell.entrance_dist = d
+                [recursive_dist_fill(c, d + 1) for c in cell.get_neighbors()]            
+        
+        recursive_dist_fill(self.get_entrance(), 0)
+        
+    
     
     def get_lair(self):
         return self.get_cell(self.lair_coords)
@@ -98,21 +122,23 @@ class World():
     
     
     def get_cell(self, lefttop, top=None):
-        """ cell from coords;
-        accepts get_cell(left,top) or get_cell(coords)
+        """ Get a cell from its coords.
+        Accepts get_cell(left,top) or get_cell(coords).
+        Returns None if out of map.        
         """ 
         try:
-            if top is not None: #top can be 0, and 0 != None
-                if -1 in [lefttop, top]: # outside of the map
+            if top is not None: #top is specified ('is not None' because top can be 0)
+                left = lefttop
+                if left < 0 or top < 0: # outside of the map
                     return None
                 else:
-                    return self.__cellgrid[top][lefttop]
-            else: #top was specified
-                if -1 in lefttop:
+                    return self.__cellgrid[top][left]
+            else: #top was not specified
+                left, top = lefttop
+                if left < 0 or top < 0:
                     return None
                 else:
-                    l, t = lefttop
-                    return self.__cellgrid[t][l]
+                    return self.__cellgrid[top][left]
         except IndexError: #outside of the map
             return None
         
@@ -133,6 +159,7 @@ class Cell():
         self.world = world
         self.iswalkable = walkable
         self.isentrance = self.islair = False
+        self.entrance_dist = None # server-side: to be filled in world.buildpath
 
     def __str__(self):
         return '<Cell %s %s>' % (self.coords, id(self))
@@ -153,6 +180,9 @@ class Cell():
         
          
     def get_adjacent_cell(self, direction):
+        """ Return the adjacent cell in that direction.
+        Return None if not walkable or out of grid.
+        """
         if direction == DIRECTION_UP:
             dest_coords = self.left, self.top - 1
         elif direction == DIRECTION_DOWN:
@@ -169,6 +199,16 @@ class Cell():
             return None
         
         
+        
+    def get_nextcell_inpath(self):
+        """ Return a cell that is on the path towards the map entrance. """
+        neighbors = self.get_neighbors()
+        random.shuffle(neighbors) #shuffle for randomness
+        if not neighbors:#no adjacent cell is walkable
+            return None 
+        else: # return the neighbor closest to entrance
+            return min(neighbors, key=lambda c: c.entrance_dist)
+            
             
     def set_entrance(self, value):
         self.isentrance = value

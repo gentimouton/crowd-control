@@ -25,7 +25,7 @@ class Game:
         self.players = dict() #unlike WeakValueDict, I need to remove players manually
         self.creeps = dict() #need to remove creeps manually when they die
         
-        self.world = World(evManager)
+        self.world = World(evManager, self.log)
         self.chatlog = ChatLog(evManager)
 
 

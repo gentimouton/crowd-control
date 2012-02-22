@@ -12,18 +12,34 @@ class AiDirector():
 
     
     def __init__(self, evManager, world):
-        self.world = world
+
         self._em = evManager
         self._em.reg_cb(TickEvent, self.on_tick)
 
-        # action frames and delays
-        self.timestep = 100 #in milliseconds; means that AI logic runs at 10Hz
+        self.world = world
         
         self.creeps = dict()
         
+        # action frames and delays
+        self.timestep = 100 #in milliseconds; means that AI logic runs at 10Hz
         self.isrunning = False
         
         
+        
+    def buildpath(self):  
+        """ starting from entrance (d=0) assign d+1 recursively to neighbor cells as the cell's distance to entrance """
+        def recursive_dist_fill(cell, d):
+            assert(cell.is_walkable()) #if cell is not walkable, it should not be reached by the algorithm
+            if(cell.get_dist_from_entrance() > d):
+                cell.set_dist_from_entrance(d)
+                for neighborcell in self._get_adjacent_walkable_cells(cell):
+                    recursive_dist_fill(neighborcell, d + 1)
+            return
+        recursive_dist_fill(self.cellgrid(self.get_entrance_coords()), 0)
+        return
+    
+    
+    
     def start(self):
         """ activate the AI director """
                  
@@ -38,7 +54,7 @@ class AiDirector():
         self.distantactions = defaultdict(list) 
         
         # create dummy creeps
-        for x in range(200):
+        for x in range(1):
             creepid = int(uuid4())
             creep = Creep(self._em, self, creepid)
             self.creeps[creepid] = creep
@@ -128,7 +144,8 @@ class Creep():
         """ Handle creep's state machine and comm with AI director. """
         if self.state == 'idle': 
             # Dummy: Always move to a random neighbor cell. TODO: Could also attack.
-            cell = random.choice(self.cell.get_neighbors())
+            #cell = random.choice(self.cell.get_neighbors())
+            cell = self.cell.get_nextcell_inpath()
             self.move(cell)
             self.state = 'moving'
             mvtduration = 100 

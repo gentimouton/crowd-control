@@ -34,9 +34,10 @@ class SGame():
         self.players = dict()
         
         # build world
-        self.world = World(evManager)
+        self.world = World(evManager, self.log)
         self.mapname = config_get_mapname()
         self.world.build_world(self.mapname, SModelBuiltWorldEvent)
+        self.world.buildpath()
 
         # AI dir is activated when a player sends '/start'
         self.aidir = AiDirector(self._em, self.world)
