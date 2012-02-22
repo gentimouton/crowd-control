@@ -3,13 +3,13 @@ from PodSixNet.Server import Server
 from common.events import TickEvent
 from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, ClChatMsg, SrvChatMsg, GreetMsg, NameChangeNotifMsg, \
-    ClMoveMsg, SrvMoveMsg, SrvGameStartMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg
+    ClMoveMsg, SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg
 from server.config import config_get_hostport
 from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
     SPlayerLeftEvent, SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, \
     SReceivedChatEvent, SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent, \
     SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, \
-    SGameStartEvent, SBroadcastCreepArrivedEvent, SBroadcastCreepMoveEvent
+    NwBcAdminEvt, SBroadcastCreepArrivedEvent, SBroadcastCreepMoveEvent
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 import logging
@@ -75,7 +75,7 @@ class NetworkController(Server):
         self._em.reg_cb(SBroadcastNameChangeEvent, self.broadcast_name_change)
         self._em.reg_cb(SBroadcastChatEvent, self.broadcast_chat)
         self._em.reg_cb(SBroadcastMoveEvent, self.broadcast_move)
-        self._em.reg_cb(SGameStartEvent, self.broadcast_gamestart)
+        self._em.reg_cb(NwBcAdminEvt, self.broadcast_gameadmin)
         self._em.reg_cb(SBroadcastCreepArrivedEvent, self.broadcast_creepjoined)
         self._em.reg_cb(SBroadcastCreepMoveEvent, self.broadcast_creepmoved)
         
@@ -266,10 +266,10 @@ class NetworkController(Server):
  
     ###################### GAME #############################################
     
-    def broadcast_gamestart(self, event):
-        pname = event.pname
-        mmsg = SrvGameStartMsg({"pname":pname})
-        data = {"action": "gamestart", "msg": mmsg.d}
+    def broadcast_gameadmin(self, event):
+        pname, cmd = event.pname, event.cmd
+        mmsg = SrvGameAdminMsg({"pname":pname, 'cmd':cmd})
+        data = {"action": "gameadmin", "msg": mmsg.d}
         for chan in self.chan_to_name:
             self.send(chan, data) 
         

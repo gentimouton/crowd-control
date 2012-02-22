@@ -7,7 +7,7 @@ from client.config import config_get_fontsize, config_get_unfocusedbtn_bgcolor, 
     config_get_chatlog_bgcolor
 from client.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
     UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ChatlogUpdatedEvent, \
-    NwRecGameStartEvt, NwRecGreetEvt, NwRecPlayerJoinEvt, NwRecNameChangeEvt, \
+    NwRecGameAdminEvt, NwRecGreetEvt, NwRecPlayerJoinEvt, NwRecNameChangeEvt, \
     NwRecPlayerLeft, MdAddPlayerEvt, MyNameChangedEvent
 from collections import deque
 from pygame.font import Font
@@ -353,14 +353,14 @@ class PlayerListWidget(Widget):
         
         # addevents_attrs maps event classes to the text attr of events 
         # that add text to display.
-        self.addevents_attrs = {MdAddPlayerEvt:'pname',  
+        self.addevents_attrs = {MdAddPlayerEvt:'pname',
                                 NwRecNameChangeEvt:'newname'}
         for evtClass in self.addevents_attrs:
             self._em.reg_cb(evtClass, self.on_addtextevent)
         
         # rmevents_attrs maps event classes to the text attributes of events 
         # that remove text to display.
-        self.rmevents_attrs = {NwRecPlayerLeft: 'pname', 
+        self.rmevents_attrs = {NwRecPlayerLeft: 'pname',
                                NwRecNameChangeEvt:'oldname'}
         for evtClass in self.rmevents_attrs:
             self._em.reg_cb(evtClass, self.on_rmtextevent)
@@ -457,7 +457,7 @@ class ChatLogWidget(Widget):
         Widget.__init__(self, evManager)
 
         self._em.reg_cb(ChatlogUpdatedEvent, self.on_chatmsg)
-        self._em.reg_cb(NwRecGameStartEvt, self.on_game_start)
+        self._em.reg_cb(NwRecGameAdminEvt, self.on_gameadmin)
 
         self.font = Font(None, config_get_fontsize())
         if rect:
@@ -484,9 +484,9 @@ class ChatLogWidget(Widget):
         self.addline(linetxt)
         
         
-    def on_game_start(self, event):
+    def on_gameadmin(self, event):
         """ print in chatlog that the game has started """
-        linetxt = '-- Game started by ' + event.pname
+        linetxt = event.pname + ' ' + event.cmd + ' the game' #game start or stop
         self.log.debug('Chatlog widget printed game line: ' + linetxt)
         self.addline(linetxt)
         
@@ -498,7 +498,7 @@ class ChatLogWidget(Widget):
         
         if len(self.linewidgets) < self.maxnumlines: 
             # there's room to add another text widget on top of existing ones
-            lines_from_top = self.maxnumlines - len(self.linewidgets) -1 
+            lines_from_top = self.maxnumlines - len(self.linewidgets) - 1 
             line_height = self.rect.height / self.maxnumlines
             newline_top = lines_from_top * line_height
             newline_rect = Rect(0, newline_top, self.rect.width, line_height)

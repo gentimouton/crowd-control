@@ -14,11 +14,19 @@ class AiDirector():
     def __init__(self, evManager, world):
         self.world = world
         self._em = evManager
-        # callbacks
         self._em.reg_cb(TickEvent, self.on_tick)
-        
+
         # action frames and delays
         self.timestep = 100 #in milliseconds; means that AI logic runs at 10Hz
+        
+        self.creeps = dict()
+        
+        self.isrunning = False
+        
+        
+    def start(self):
+        """ activate the AI director """
+                 
         self.frameoverflow = 0 #how much time overflowed from previous frame
         # when overflow > timestep, we should increase the cursor to the next frame(s) 
         
@@ -29,14 +37,19 @@ class AiDirector():
         # actions so distant in the future that they dont fit in actionframes
         self.distantactions = defaultdict(list) 
         
-        self.creeps = dict()
-        
-        # create a dummy creep
-        for x in range(10):
+        # create dummy creeps
+        for x in range(200):
             creepid = int(uuid4())
             creep = Creep(self._em, self, creepid)
             self.creeps[creepid] = creep
+            
+        self.isrunning = True
         
+        
+        
+    def stop(self):
+        self.isrunning = False
+        self.creeps.clear()
         
         
         
@@ -45,18 +58,12 @@ class AiDirector():
         if millis < len(self.actionframes) * self.timestep:
             # if millis < timestep, schedule for next frame (not this current frame)
             index = self.actioncursor + max(1, int(millis / self.timestep))
-            index = index % len(self.actionframes)
-            
+            index = index % len(self.actionframes)            
             self.actionframes[index].add(callback)
-#            self.log.info(str(self.actioncursor) 
-#                          + ' - closeby ' + callback.__name__ 
-#                          + ' sched in ' + str(millis) 
-#                          + ' insert[' + str(index) + ']')
                 
         else: # adding far-future actions should happen rarely
             # so it's OK if it costs a tiny bit
             self.distantactions[millis].append(callback)
-#            self.log.info(str(self.actioncursor) + ' - far action ' + str(millis))
                         
         
     def on_tick(self, event):
@@ -65,6 +72,9 @@ class AiDirector():
         try to schedule the distant-future actions within the near-future frames,
         and restart iterating at the beginning of the near-future frames.
         """
+        
+        if not self.isrunning: # when turned off, dont do anything
+            return
         
         self.frameoverflow += event.duration
         

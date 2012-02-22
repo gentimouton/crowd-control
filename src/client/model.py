@@ -2,7 +2,7 @@ from client.events_client import MoveMyAvatarRequest, ModelBuiltMapEvent, \
     NwRecChatEvt, ChatlogUpdatedEvent, NwRecGreetEvt, NwRecPlayerLeft, \
     CharactorRemoveEvent, NwRecAvatarMoveEvt, NwRecPlayerJoinEvt, NwRecNameChangeEvt, \
     LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, LocalAvatarMoveEvent, \
-    RemoteCharactorMoveEvent, NwRecGameStartEvt, NwRecCreepJoinEvt, CreepPlaceEvent, \
+    RemoteCharactorMoveEvent, NwRecGameAdminEvt, NwRecCreepJoinEvt, CreepPlaceEvent, \
     NwRecCreepMoveEvt, MyNameChangedEvent, MdAddPlayerEvt
 from collections import deque
 from common.world import World
@@ -55,7 +55,7 @@ class Game:
         
         # creeps
         for cid, coords in creeps.items():
-            self.on_creepplace(cid, coords)
+            self.add_creep(cid, coords)
             
         # myself, local player
         self.add_player(newname, newpos)
@@ -75,7 +75,7 @@ class Game:
         self._em.reg_cb(MoveMyAvatarRequest, self.on_localavmove)
         
         # -- RUNNING GAME and CREEPS
-        self._em.reg_cb(NwRecGameStartEvt, self.on_gamestart)
+        self._em.reg_cb(NwRecGameAdminEvt, self.on_gameadmin)
         self._em.reg_cb(NwRecCreepJoinEvt, self.on_creepjoin)
         self._em.reg_cb(NwRecCreepMoveEvt, self.on_creepmove)
         
@@ -108,11 +108,11 @@ class Game:
         """ remove a player """
         pname = event.pname
         try:
-            self.players[pname].remove()
+            self.players[pname].remov()
             #don't forget to clean the player data from the dict
             del self.players[pname]
         except KeyError:
-            self.log.error('Player' + pname + ' had already been removed') 
+            self.log.warning('Player ' + pname + ' had already been removed') 
         
     
     def on_namechange(self, event):
@@ -159,14 +159,22 @@ class Game:
     
     ###################### RUNNING GAME + CREEPS ############################
     
-    def on_gamestart(self, event):
-        self.log.info(event.pname + ' started the game')
-
+    def on_gameadmin(self, event):
+        """ If game stops, remove creeps. """
+        if event.cmd == 'stop':
+            # '/stop' happens rarely, so we can afford to copy the whole dict
+            oldcreeps = self.creeps.copy()
+            for cid in oldcreeps.keys():
+                self.remove_creep(cid)
+            
+        self.log.info(event.pname + ' ' + event.cmd + ' the game')
+        
+        
     
     def on_creepjoin(self, event):
         """ Create a creep. """
         cid, coords = event.cid, event.coords
-        self.on_creepplace(cid, coords)
+        self.add_creep(cid, coords)
         
         
     def on_creepmove(self, event):
@@ -175,8 +183,17 @@ class Game:
         creep = self.creeps[cid]
         creep.move_absolute(self.world.get_cell(coords))
         
+    
+    def remove_creep(self, cid):
+        """ remove a creep """
+        try:
+            self.creeps[cid].rmv()
+            del self.creeps[cid]
+        except KeyError:
+            self.log.warning('Creep ' + str(cid) + ' had already been removed') 
         
-    def on_creepplace(self, cid, coords):
+        
+    def add_creep(self, cid, coords):
         """ Add a new creep to the existing creeps. """
         cell = self.world.get_cell(coords)
         creep = Creep(self._em, cid, cell)       
@@ -204,11 +221,9 @@ class Player():
         return '<Player %s %s>' % (self.name, id(self))
 
 
-    def remove(self):
-        """ tell the view to remove that avatar """
-        ev = CharactorRemoveEvent(self.avatar)
-        self._em.post(ev)
-
+    def remov(self):
+        """ tell the view to remove that player's avatar """
+        self.avatar.rmv()
 
 
 
@@ -239,6 +254,12 @@ class Charactor():
             self.log.warning('Illegal move from ' + self.name)
             #TODO: should report to server of potential cheat/hack
             pass
+        
+    def rmv(self):
+        """ tell the view to remove this charactor's spr """ 
+        ev = CharactorRemoveEvent(self)
+        self._em.post(ev)
+
         
     
     

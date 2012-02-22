@@ -1,13 +1,11 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client.events_client import SendChatEvent, NwRecChatEvt, \
-    NwRecGreetEvt, NwRecNameChangeEvt, NwRecPlayerJoinEvt, NwRecPlayerLeft, \
-    NwRecAvatarMoveEvt, LocalAvatarMoveEvent, \
-    NwRecGameStartEvt, NwRecCreepJoinEvt, \
-    NwRecCreepMoveEvt
+from client.events_client import SendChatEvent, NwRecChatEvt, NwRecGreetEvt, \
+    NwRecNameChangeEvt, NwRecPlayerJoinEvt, NwRecPlayerLeft, NwRecAvatarMoveEvt, \
+    LocalAvatarMoveEvent, NwRecGameAdminEvt, NwRecCreepJoinEvt, NwRecCreepMoveEvt
 from common.events import TickEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
-    SrvMoveMsg, SrvGameStartMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg
+    SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg
 import logging
 
 class NetworkController(ConnectionListener):
@@ -37,13 +35,13 @@ class NetworkController(ConnectionListener):
 
     def send(self, data):
         """ data is a dict """
-        self.log.debug('Network sends: ' + str(data))
+        #self.log.debug('Network sends: ' + str(data))
         connection.Send(data)
         
                         
     def Network(self, data):
         """ triggered for any Network_* callback """
-        self.log.debug("Network received: " + str(data))
+        #self.log.debug("Network received: " + str(data))
 
 
     ################## DEFAULT ADMIN ##########
@@ -107,10 +105,10 @@ class NetworkController(ConnectionListener):
 
     ################### GAME ##################
 
-    def Network_gamestart(self, data):
-        mmsg = SrvGameStartMsg(data['msg'])
-        pname = mmsg.d['pname']
-        ev = NwRecGameStartEvt(pname)
+    def Network_gameadmin(self, data):
+        mmsg = SrvGameAdminMsg(data['msg'])
+        pname, cmd = mmsg.d['pname'], mmsg.d['cmd']
+        ev = NwRecGameAdminEvt(pname, cmd)
         self._em.post(ev)
         
     def Network_creep(self, data):

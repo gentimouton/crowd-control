@@ -107,9 +107,9 @@ class SrvMoveMsg(SerializableMsg):
 ################# GAME #####################################################
 
  
-class SrvGameStartMsg(SerializableMsg):
-    """ broadcast that the game started """        
-    attrs = ['pname'] 
+class SrvGameAdminMsg(SerializableMsg):
+    """ broadcast that someone started or stopped the game """        
+    attrs = ['pname', 'cmd'] 
 
 
 class SrvCreepMovedMsg(SerializableMsg):

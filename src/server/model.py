@@ -5,7 +5,7 @@ from server.events_server import SModelBuiltWorldEvent, SSendGreetEvent, \
     SBroadcastNameChangeEvent, SBroadcastChatEvent, SBroadcastMoveEvent, \
     SPlayerArrivedEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
     SReceivedChatEvent, SReceivedMoveEvent, SBroadcastArrivedEvent, \
-    SBroadcastLeftEvent, SGameStartEvent
+    SBroadcastLeftEvent, NwBcAdminEvt
 import logging
 
 
@@ -38,7 +38,7 @@ class SGame():
         self.mapname = config_get_mapname()
         self.world.build_world(self.mapname, SModelBuiltWorldEvent)
 
-        # TODO: temporary: AI dir should only starts when a player types '/start'
+        # AI dir is activated when a player sends '/start'
         self.aidir = AiDirector(self._em, self.world)
 
       
@@ -178,11 +178,21 @@ class SGame():
         """
 
         if cmd == 'start':
-            self.aidir = AiDirector(self._em, self.world)
-            self.log.info('Gane started by ' + pname)
-            ev = SGameStartEvent(pname)
+            if self.aidir.isrunning:
+                self.aidir.stop()
+                ev = NwBcAdminEvt(pname, 'stop')
+                self._em.post(ev)
+            self.aidir.start()
+            self.log.info('Game started by ' + pname)
+            ev = NwBcAdminEvt(pname, 'start')
             self._em.post(ev)
 
+        elif cmd == 'stop':
+            self.aidir.stop()
+            self.log.info('Game stopped by ' + pname)
+            ev = NwBcAdminEvt(pname, 'stop')
+            self._em.post(ev)
+            
         elif cmd == 'nick':
             try:
                 newname = args[0]

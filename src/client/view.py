@@ -5,7 +5,7 @@ from client.config import config_get_screenres, config_get_loadingscreen_bgcolor
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvent, \
     CharactorRemoveEvent, OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, \
     LocalAvatarMoveEvent, RemoteCharactorMoveEvent, NwRecGreetEvt, CreepPlaceEvent, \
-    MyNameChangedEvent, NwRecPlayerJoinEvt, NwRecNameChangeEvt, NwRecPlayerLeft
+    MyNameChangedEvent
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
 from common.events import TickEvent
@@ -57,7 +57,7 @@ class MasterView:
         # remote = creeps + other avatars
         # different creation, but same movement and removal
         self._em.reg_cb(OtherAvatarPlaceEvent, self.on_remoteavplace)
-        self._em.reg_cb(CreepPlaceEvent, self.on_creepplace)
+        self._em.reg_cb(CreepPlaceEvent, self.add_creep)
         self._em.reg_cb(RemoteCharactorMoveEvent, self.on_remotecharmove)
         self._em.reg_cb(CharactorRemoveEvent, self.on_remotecharremove)
         
@@ -250,7 +250,7 @@ class MasterView:
         self.center_screen_on_coords(cleft, ctop)
         # redisplay the other charactors 
         for charspr in self.charactor_sprites:
-            cleft, ctop = charspr.avatar.cell.coords
+            cleft, ctop = charspr.char.cell.coords
             self.display_charactor(charspr, cleft, ctop)
     
     
@@ -269,7 +269,7 @@ class MasterView:
         self.display_charactor(charspr, cleft, ctop)
 
 
-    def on_creepplace(self, event):
+    def add_creep(self, event):
         """ Add creep spr on screen. """
         creep = event.creep
         sprdims = (self.cspr_size, self.cspr_size)
@@ -278,8 +278,8 @@ class MasterView:
         # TODO: CreepSprite() instead of CharactorSprite()
         cleft, ctop = creep.cell.coords
         self.display_charactor(creepspr, cleft, ctop)
-            
-
+        
+        
     def on_remotecharmove(self, event):
         """ Move the spr of creeps or other avatars. """
         char = event.charactor
@@ -290,8 +290,7 @@ class MasterView:
 
     def on_remotecharremove(self, event):
         """ A Charactor can be an avatar or a creep. """
-        charactor = event.charactor
-        char_spr = self.charactor_sprites.get_spr(charactor)
+        char_spr = self.charactor_sprites.get_spr(event.charactor)
         char_spr.kill() # remove from all sprite groups
         del char_spr
             
@@ -360,8 +359,8 @@ class CellSprite(Sprite):
 class CharactorSprite(IndexableSprite):
     """ The representation of a character """
     
-    def __init__(self, av, sprdims, bgcolor, groups=None):
-        self.key = av # must be set before adding the spr to group(s)
+    def __init__(self, char, sprdims, bgcolor, groups=None):
+        self.key = char # must be set before adding the spr to group(s)
         Sprite.__init__(self, groups)
         
         charactorSurf = pygame.Surface(sprdims)
@@ -375,7 +374,7 @@ class CharactorSprite(IndexableSprite):
         self.image = charactorSurf
         self.rect = charactorSurf.get_rect()
 
-        self.avatar = av
+        self.char = char
         self.dest = None
 
     

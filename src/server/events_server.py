@@ -109,9 +109,11 @@ class SBroadcastCreepMoveEvent():
         
 ######################### GAME #############################################
 
-class SGameStartEvent():
-    def __init__(self, pname):
+class NwBcAdminEvt():
+    """ ask the network to broadcast 'game start' or 'game stop' """
+    def __init__(self, pname, cmd):
         self.pname = pname
+        self.cmd = cmd # doesnt have to be the same string as the player's cmd
 
 
 

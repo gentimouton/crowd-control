@@ -59,20 +59,23 @@ class ModelBuiltMapEvent():
     def __init__(self, worldmap):
         self.worldmap = worldmap
 
-class NwRecGameStartEvt():
-    def __init__(self, pname):
+class NwRecGameAdminEvt():
+    def __init__(self, pname, cmd):
         self.pname = pname
+        self.cmd = cmd
 
 class NwRecCreepJoinEvt():
+    """ Sent from nw ctrler to model to notify of creep join """
     def __init__(self, cid, coords):
         self.cid = cid
         self.coords = coords
 
 class CreepPlaceEvent():
+    """ Sent from model to view to notify of creep appearance """
     def __init__(self, creep, cell):
         self.creep = creep
         self.cell = cell
-
+        
 class NwRecCreepMoveEvt():
     def __init__(self, cid, coords):
         self.cid = cid
@@ -94,35 +97,28 @@ class MyNameChangedEvent():
 
 
 class MoveMyAvatarRequest():
-    """ sent from controller to model """
+    """ sent from input controller to model """
     def __init__(self, direction):
         self.direction = direction
-
 
 class OtherAvatarPlaceEvent():
     """this event occurs when another client's avatar is *placed* in a cell,
     ie it doesn't move there from an adjacent cell."""
-    def __init__(self, av, cell):
-        self.avatar = av
+    def __init__(self, char, cell):
+        self.avatar = char
         self.cell = cell
         
 class LocalAvatarPlaceEvent():
     """this event occurs when the client's avatar is *placed* in a cell,
     ie it doesn't move there from an adjacent cell."""
-    def __init__(self, av, cell):
-        self.avatar = av
+    def __init__(self, char, cell):
+        self.avatar = char
         self.cell = cell
 
-class CharactorRemoveEvent():
-    """this event occurs when a creep or avatar is removed from the model, 
-    and the view needs to be notified of that removal. """
-    def __init__(self, ch):
-        self.charactor = ch
-        
 class LocalAvatarMoveEvent():
     """ sent from model to view and network controller when my avatar moved """
-    def __init__(self, av, coords):
-        self.avatar = av
+    def __init__(self, char, coords):
+        self.avatar = char
         self.coords = coords
 
 class NwRecAvatarMoveEvt():
@@ -139,6 +135,11 @@ class RemoteCharactorMoveEvent():
         self.charactor = char
         self.coords = coords
         
+class CharactorRemoveEvent():
+    """this event occurs when a creep or avatar is removed from the model, 
+    and the view needs to be notified of that removal. """
+    def __init__(self, ch):
+        self.charactor = ch
 
 
         
