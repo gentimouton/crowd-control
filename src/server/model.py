@@ -7,13 +7,15 @@ from server.events_server import SModelBuiltWorldEvent, SSendGreetEvent, \
     SReceivedChatEvent, SReceivedMoveEvent, SBroadcastArrivedEvent, \
     SBroadcastLeftEvent, NwBcAdminEvt
 import logging
+from common.constants import DIRECTION_UP
 
 
 class SPlayer():
     
-    def __init__(self, pname, pos):
+    def __init__(self, pname, coords, facing):
         self.pname = pname
-        self.coords = pos
+        self.coords = coords
+        self.facing = facing #direction the player is facing
         
 
 class SGame():
@@ -24,7 +26,7 @@ class SGame():
     def __init__(self, evManager):
         self._em = evManager
         # callbacks
-        self._em.reg_cb(SPlayerArrivedEvent, self.player_arrived)
+        self._em.reg_cb(SPlayerArrivedEvent, self.on_playerjoined)
         self._em.reg_cb(SPlayerLeftEvent, self.player_left)
         self._em.reg_cb(SPlayerNameChangeRequestEvent, self.handle_name_change)
         self._em.reg_cb(SReceivedChatEvent, self.received_chat)
@@ -66,7 +68,7 @@ class SGame():
                     
             
             
-    def player_arrived(self, event):
+    def on_playerjoined(self, event):
         """ Create player's avatar, and send him the list of connected ppl.
         Send also the list of creeps in range.
         Do not include him in the list of connected people. 
@@ -78,27 +80,28 @@ class SGame():
 
             self.log.info(pname + ' joined')
 
-            # Build list of connected players with their coords.
+            # Build list of connected players with their coords and facing direction.
             onlineppl = dict()
             for (otherpname, otherplayer) in self.players.items():
-                onlineppl[otherpname] = otherplayer.coords
+                onlineppl[otherpname] = otherplayer.coords, otherplayer.facing
             
             # Build list of creeps with their coords.
             creeps = dict()
             for (cid, creep) in self.aidir.creeps.items():
-                creeps[cid] = creep.cell.coords
+                creeps[cid] = creep.cell.coords, creep.facing
             
-            # build the new player    
+            # build the new player on the entrance cell and facing upwards
             coords = self.world.entrance_coords
-            player = SPlayer(pname, coords)
+            facing = DIRECTION_UP
+            player = SPlayer(pname, coords, facing)
             self.players[pname] = player
             
             # greet the new player 
-            event = SSendGreetEvent(self.mapname, pname, coords, onlineppl, creeps)
+            event = SSendGreetEvent(self.mapname, pname, coords, facing, onlineppl, creeps)
             self._em.post(event) 
             
             # notify the connected players of this arrival
-            event = SBroadcastArrivedEvent(pname, coords)
+            event = SBroadcastArrivedEvent(pname, coords, facing)
             self._em.post(event)
             
         else: 
@@ -158,12 +161,14 @@ class SGame():
     
     def player_moved(self, event):
         """ when a player moves, notify all of them """
-        pname, coords = event.pname, event.coords
+        pname, coords, facing = event.pname, event.coords, event.facing
         
         if self.world.iswalkable(coords): 
             self.players[pname].coords = coords
+            self.players[pname].facing = facing
             #self.log.debug(pname + ' moved to ' + str(coords))
-            event = SBroadcastMoveEvent(pname, coords)
+            # dont have anything to do about facing yet
+            event = SBroadcastMoveEvent(pname, coords, facing)
             self._em.post(event)
 
         else:

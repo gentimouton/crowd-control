@@ -1,12 +1,13 @@
-from client.events_client import MoveMyAvatarRequest, ModelBuiltMapEvent, \
+from client.events_client import InputMoveRequest, ModelBuiltMapEvent, \
     NwRecChatEvt, ChatlogUpdatedEvent, NwRecGreetEvt, NwRecPlayerLeft, \
     CharactorRemoveEvent, NwRecAvatarMoveEvt, NwRecPlayerJoinEvt, NwRecNameChangeEvt, \
     LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, LocalAvatarMoveEvent, \
     RemoteCharactorMoveEvent, NwRecGameAdminEvt, NwRecCreepJoinEvt, CreepPlaceEvent, \
-    NwRecCreepMoveEvt, MyNameChangedEvent, MdAddPlayerEvt
+    NwRecCreepMoveEvt, MyNameChangedEvent, MdAddPlayerEvt, InputAtkRequest
 from collections import deque
 from common.world import World
 import logging
+from common.constants import DIRECTION_UP
 
 
 
@@ -19,7 +20,7 @@ class Game:
     
     def __init__(self, evManager):
         self._em = evManager
-        self._em.reg_cb(NwRecGreetEvt, self.greeted)
+        self._em.reg_cb(NwRecGreetEvt, self.on_greeted)
         # all other callbacks are registered AFTER having been greeted
         
         self.players = dict() #unlike WeakValueDict, I need to remove players manually
@@ -39,29 +40,31 @@ class Game:
 
     
     
-    def greeted(self, event):
+    def on_greeted(self, event):
         """ When the server greets me, set my name,
         start world building process, and add other connected players.
         Start also listening to player inputs, and other network messages.
         """
         
         mapname, newname = event.mapname, event.newname
-        newpos, onlineppl = event.newpos, event.onlineppl
-        creeps = event.creeps
+        newpos, facing = event.newpos, event.facing
+        onlineppl, creeps = event.onlineppl, event.creeps
             
         self.myname = newname
         
         self.build_map(mapname)
         
         # creeps
-        for cid, coords in creeps.items():
-            self.add_creep(cid, coords)
+        for cid, coords_facing in creeps.items():
+            coords, facing = coords_facing
+            self.add_creep(cid, coords, facing)
             
         # myself, local player
-        self.add_player(newname, newpos)
+        self.add_player(newname, newpos, facing)
         # others, remote players
-        for name, pos in onlineppl.items():
-            self.add_player(name, pos)
+        for name, pos_facing in onlineppl.items():
+            pos, facing = pos_facing
+            self.add_player(name, pos, facing)
            
         # start listening to game events coming from the network
         
@@ -72,7 +75,8 @@ class Game:
         
         # -- AVATARS (remote and local)
         self._em.reg_cb(NwRecAvatarMoveEvt, self.on_remoteavmove)
-        self._em.reg_cb(MoveMyAvatarRequest, self.on_localavmove)
+        self._em.reg_cb(InputMoveRequest, self.on_localavmove)
+        self._em.reg_cb(InputAtkRequest, self.on_localatk)
         
         # -- RUNNING GAME and CREEPS
         self._em.reg_cb(NwRecGameAdminEvt, self.on_gameadmin)
@@ -86,17 +90,17 @@ class Game:
     
     def on_playerjoin(self, event):
         """ When a new player arrives, add him to the connected players. """
-        self.add_player(event.pname, event.pos)
+        self.add_player(event.pname, event.pos, event.facing)
         
         
-    def add_player(self, pname, pos):
+    def add_player(self, pname, pos, facing):
         """ add a new player to the list of connected players """
         cell = self.world.get_cell(pos)
         
         # whether that Player is the local client or a remote client
         islocal = hasattr(self, 'myname') and pname == self.myname 
         
-        newplayer = Player(pname, cell, islocal, self._em)       
+        newplayer = Player(pname, cell, facing, islocal, self._em)       
         self.players[pname] = newplayer
         
         # notify the view 
@@ -156,6 +160,11 @@ class Game:
         mychar.move_relative(event.direction)
 
 
+    def on_localatk(self, event):
+        """ When user pressed atk button, make him atk. """
+        mychar = self.players[self.myname].avatar
+        mychar.atk_local()
+
     
     ###################### RUNNING GAME + CREEPS ############################
     
@@ -173,8 +182,8 @@ class Game:
     
     def on_creepjoin(self, event):
         """ Create a creep. """
-        cid, coords = event.cid, event.coords
-        self.add_creep(cid, coords)
+        cid, coords, facing = event.cid, event.coords, event.facing
+        self.add_creep(cid, coords, facing)
         
         
     def on_creepmove(self, event):
@@ -193,10 +202,10 @@ class Game:
             self.log.warning('Creep ' + str(cid) + ' had already been removed') 
         
         
-    def add_creep(self, cid, coords):
+    def add_creep(self, cid, coords, facing):
         """ Add a new creep to the existing creeps. """
         cell = self.world.get_cell(coords)
-        creep = Creep(self._em, cid, cell)       
+        creep = Creep(self._em, cid, cell, facing)       
         self.creeps[cid] = creep
 
 
@@ -210,11 +219,11 @@ class Player():
     """ the model structure for a person playing the game 
     It has name, score, etc. 
     """
-    def __init__(self, name, cell, islocal, evManager):
+    def __init__(self, name, cell, facing, islocal, evManager):
         self._em = evManager
 
         self.name = name
-        self.avatar = Avatar(self, cell, islocal, evManager) 
+        self.avatar = Avatar(self, cell, facing, islocal, evManager) 
 
 
     def __str__(self):
@@ -238,10 +247,12 @@ class Charactor():
     
     log = logging.getLogger('client')
 
-    def __init__(self, cell, name, evManager):
+    def __init__(self, cell, facing, name, evManager):
         self._em = evManager
         self.cell = cell
+        self.facing = facing # which direction the charactor is facing
         self.name = name
+                
 
     def move_absolute(self, destcell):
         """ move to the specified destination """ 
@@ -268,16 +279,16 @@ class Avatar(Charactor):
     Right now, the mapping is 1-to-1: one avatar per player. 
     """
     
-    def __init__(self, player, cell, islocal, evManager):
+    def __init__(self, player, cell, facing, islocal, evManager):
         
         self.player = player
-        Charactor.__init__(self, cell, self.player.name, evManager)
+        Charactor.__init__(self, cell, facing, player.name, evManager)
         
         self.islocal = islocal #whether the avatar is controlled by the client
         
         if islocal:
             ev = LocalAvatarPlaceEvent(self, cell)
-        else:
+        else: #avatar from someone else
             ev = OtherAvatarPlaceEvent(self, cell)
         self._em.post(ev)
         
@@ -287,28 +298,37 @@ class Avatar(Charactor):
 
 
     def move_relative(self, direction):
-        """ move towards that direction if possible """
+        """ If possible, move towards that direction. """
 
         dest_cell = self.cell.get_adjacent_cell(direction)
         if dest_cell:
             self.cell = dest_cell
+            self.facing = direction
             # send to view and server that I moved
-            ev = LocalAvatarMoveEvent(self, dest_cell.coords)
+            ev = LocalAvatarMoveEvent(self, dest_cell.coords, direction)
             self._em.post(ev)
 
         else: #move is not possible: TODO: give (audio?) feedback 
             pass 
 
-
+    
+    def atk_local(self):
+        """ Attack a creep in the vicinity, 
+        and send action + amount of damage to the server. 
+        """
+        cell = self.cell.get_adjacent_cell(self.facing)
+        # TODO: ATTACK!
+        
+        
 
 class Creep(Charactor):
     """ Representation of a remote enemy monster. """
         
-    def __init__(self, evManager, cid, cell):
+    def __init__(self, evManager, cid, cell, facing):
         
-        Charactor.__init__(self, cell, str(cid), evManager)
+        Charactor.__init__(self, cell, str(cid), facing, evManager)
         
-        ev = CreepPlaceEvent(self, cell)# ask view to display the new creep
+        ev = CreepPlaceEvent(self)# ask view to display the new creep
         self._em.post(ev)
         
     

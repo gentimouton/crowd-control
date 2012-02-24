@@ -21,7 +21,7 @@ class SerializableMsg():
                 for k in self.attrs:
                     self.d[k] = d_src[k]
             except KeyError:
-                logging.error('Source dictionary is missing a required key')
+                logging.error('Source dictionary is missing required key ' + str(k))
 
         else:
             # default constructor: arguments have to be passed in the order
@@ -30,7 +30,7 @@ class SerializableMsg():
                 for k in self.attrs:
                     self.d[k] = d_src[k]
             except KeyError:
-                logging.error('key', k, 'was missing from d_src')
+                logging.error('Key ' + str(k) + 'was missing from d_src')
                 
                          
 
@@ -58,13 +58,13 @@ class AdminSerializableMsg(SerializableMsg):
 class GreetMsg(AdminSerializableMsg):
     """ sent from the server to a player when he just arrived """
     mtype = 'greet'
-    attrs = ['mapname', 'pname', 'coords', 'onlineppl', 'creeps']
+    attrs = ['mapname', 'pname', 'coords', 'facing', 'onlineppl', 'creeps']
     
     
 class PlayerArrivedNotifMsg(AdminSerializableMsg):
     """ sent from the server to all players when a player arrived """        
     mtype = 'arrived'
-    attrs = ['pname', 'coords'] 
+    attrs = ['pname', 'coords', 'facing'] 
 class PlayerLeftNotifMsg(AdminSerializableMsg):
     """ sent from the server to all players when a player left """        
     mtype = 'left'
@@ -97,10 +97,10 @@ class SrvChatMsg(SerializableMsg):
 
 class ClMoveMsg(SerializableMsg):
     """ mvt msg sent from a client to the server """        
-    attrs = ['coords'] 
+    attrs = ['coords', 'facing'] 
 class SrvMoveMsg(SerializableMsg):
     """ brodcast of a mvt msg by the server """        
-    attrs = ['pname', 'coords'] 
+    attrs = ['pname', 'coords', 'facing'] 
 
 
 
@@ -114,8 +114,29 @@ class SrvGameAdminMsg(SerializableMsg):
 
 class SrvCreepMovedMsg(SerializableMsg):
     """ broadcast creep movement """
-    attrs = ['creepid', 'act', 'coords']
+    attrs = ['creepid', 'act', 'coords', 'facing']
 class SrvCreepJoinedMsg(SerializableMsg):
     """ broadcast creep creation """
-    attrs = ['creepid', 'act', 'coords']
+    attrs = ['creepid', 'act', 'coords', 'facing']
     
+    
+    
+    
+    
+###################### deserialization #####################################
+
+def unpack_msg(msgobj, msgClass):
+    """ msgobj is the object sent on the network, 
+     msgClass is the class to convert this object into.
+    Example: In the callback Network_move, 
+    unpack_msg(msgobj=data['msg'], SrvMoveMsg) 
+    returns the tuple (msg.pname, msg.coords, msg.facing)
+    because SrvMoveMsg has for attrs pname, coords, and facing. 
+    """
+    cmsg = msgClass(msgobj) #unserialize
+    # TODO: how much more expensive is it to build the lambda 
+    # each time unpack_msg is called compared to calling a predefined function?
+    get_msgvals = lambda attr: cmsg.d[attr]
+    msg_attrs = msgClass.attrs
+    return tuple(map(get_msgvals, msg_attrs))
+

@@ -22,11 +22,14 @@ def main():
     
     n = NetworkController(evManager)
     g = SGame(evManager)
+    try:
+        sclock.start()
+    except KeyboardInterrupt:
+        log.info('Server closed. %d players were online.' % (len(g.players)))
     
-    sclock.start()
-        
-    log.info('Server stopped')
-
         
 if __name__ == '__main__': 
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('Closed server.')

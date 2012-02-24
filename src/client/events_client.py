@@ -38,6 +38,9 @@ class NonprintableKeyEvent():
     def __init__(self, key):
         self.key = key
         
+class InputAtkRequest():
+    """ User pushed a key to attack. """ 
+    pass
 
 
 #################### MODEL TO VIEW #######################################
@@ -66,20 +69,22 @@ class NwRecGameAdminEvt():
 
 class NwRecCreepJoinEvt():
     """ Sent from nw ctrler to model to notify of creep join """
-    def __init__(self, cid, coords):
+    def __init__(self, cid, coords, facing):
         self.cid = cid
         self.coords = coords
-
+        self.facing = facing
+        
 class CreepPlaceEvent():
     """ Sent from model to view to notify of creep appearance """
-    def __init__(self, creep, cell):
+    def __init__(self, creep):
         self.creep = creep
-        self.cell = cell
         
 class NwRecCreepMoveEvt():
-    def __init__(self, cid, coords):
+    """ Sent from network to model """
+    def __init__(self, cid, coords, facing):
         self.cid = cid
         self.coords = coords
+        self.facing = facing
 
 
 
@@ -96,7 +101,7 @@ class MyNameChangedEvent():
 ######################### MOVEMENT #########################################
 
 
-class MoveMyAvatarRequest():
+class InputMoveRequest():
     """ sent from input controller to model """
     def __init__(self, direction):
         self.direction = direction
@@ -117,15 +122,17 @@ class LocalAvatarPlaceEvent():
 
 class LocalAvatarMoveEvent():
     """ sent from model to view and network controller when my avatar moved """
-    def __init__(self, char, coords):
+    def __init__(self, char, coords, facing):
         self.avatar = char
         self.coords = coords
+        self.facing = facing
 
 class NwRecAvatarMoveEvt():
     """ The network component was notified that a remote player moved his avatar. """
-    def __init__(self, pname, dest):
+    def __init__(self, pname, dest, facing):
         self.pname = pname
         self.dest = dest
+        self.facing = facing
 
 
 
@@ -168,10 +175,11 @@ class ChatlogUpdatedEvent():
 
 
 class NwRecGreetEvt():
-    def __init__(self, mapname, newname, newpos, onlineppl, creeps):
+    def __init__(self, mapname, newname, newpos, facing, onlineppl, creeps):
         self.mapname = mapname
         self.newname = newname
         self.newpos = newpos
+        self.facing = facing
         self.onlineppl = onlineppl
         self.creeps = creeps
 
@@ -181,9 +189,10 @@ class NwRecNameChangeEvt():
         self.newname = newname
     
 class NwRecPlayerJoinEvt():
-    def __init__(self, pname, pos):
+    def __init__(self, pname, pos, facing):
         self.pname = pname
         self.pos = pos
+        self.facing = facing
         
 class NwRecPlayerLeft():
     def __init__(self, pname):

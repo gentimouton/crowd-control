@@ -32,17 +32,19 @@ class SPlayerLeftEvent():
         
         
 class SSendGreetEvent():
-    def __init__(self, mapname, pname, coords, onlineppl, creeps):
+    def __init__(self, mapname, pname, coords, facing, onlineppl, creeps):
         self.mapname = mapname
         self.pname = pname
         self.coords = coords
+        self.facing = facing
         self.onlineppl = onlineppl
         self.creeps = creeps
         
 class SBroadcastArrivedEvent():
-    def __init__(self, pname, coords):
+    def __init__(self, pname, coords, facing):
         self.pname = pname
         self.coords = coords
+        self.facing = facing
         
 class SBroadcastLeftEvent():
     def __init__(self, pname):
@@ -84,27 +86,31 @@ class SBroadcastChatEvent():
 
 
 class SReceivedMoveEvent():
-    def __init__(self, pname, coords):
+    def __init__(self, pname, coords, facing):
         self.pname = pname
         self.coords = coords
+        self.facing = facing
 
 class SBroadcastMoveEvent():
-    def __init__(self, pname, coords):
+    def __init__(self, pname, coords, facing):
         self.pname = pname
         self.coords = coords
+        self.facing = facing
     
 
 ####################### CREEPS ##########################################
  
 class SBroadcastCreepArrivedEvent():
-    def __init__(self, creepid, coords):
+    def __init__(self, creepid, coords, facing):
         self.creepid = creepid
         self.coords = coords
+        self.facing = facing
 
-class SBroadcastCreepMoveEvent():
-    def __init__(self, creepid, coords):
+class SBcCreepMoveEvent():
+    def __init__(self, creepid, coords, facing):
         self.creepid = creepid
         self.coords = coords
+        self.facing = facing
 
         
 ######################### GAME #############################################

@@ -1,10 +1,12 @@
-from client.events_client import MoveMyAvatarRequest, QuitEvent, UpClickEvent, \
-    DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, NonprintableKeyEvent
+from client.events_client import InputMoveRequest, QuitEvent, UpClickEvent, \
+    DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, NonprintableKeyEvent, \
+    InputAtkRequest
 from common.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
 from common.events import TickEvent
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, \
-    K_BACKSPACE, K_RETURN, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION
+    K_BACKSPACE, K_RETURN, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION, K_RCTRL, \
+    K_LCTRL
 import pygame
 
 
@@ -19,6 +21,7 @@ class InputController:
         
         #non-printable keys used to detect when typing in a text input field
         self._nonprintable_keys = (K_RETURN, K_BACKSPACE)
+        self._atk_keys = (K_RCTRL, K_LCTRL)
         
         #if key pushed for more than 150ms, then send KEYDOWN event every 50ms
         # TODO: should keyboard sensitivity be configurable?
@@ -40,16 +43,21 @@ class InputController:
             elif pevent.type == KEYDOWN:
                 if pevent.key == K_ESCAPE:
                     ev = QuitEvent()
+                                    
+                elif pevent.key in self._atk_keys:
+                    ev = InputAtkRequest()
+                    
+                elif pevent.key == K_UP:
+                    ev = InputMoveRequest(DIRECTION_UP)
+                elif pevent.key == K_DOWN:
+                    ev = InputMoveRequest(DIRECTION_DOWN)
+                elif pevent.key == K_LEFT:
+                    ev = InputMoveRequest(DIRECTION_LEFT)
+                elif pevent.key == K_RIGHT:
+                    ev = InputMoveRequest(DIRECTION_RIGHT)
+
                 elif pevent.key in self._nonprintable_keys: 
                     ev = NonprintableKeyEvent(pevent.key)
-                elif pevent.key == K_UP:
-                    ev = MoveMyAvatarRequest(DIRECTION_UP)
-                elif pevent.key == K_DOWN:
-                    ev = MoveMyAvatarRequest(DIRECTION_DOWN)
-                elif pevent.key == K_LEFT:
-                    ev = MoveMyAvatarRequest(DIRECTION_LEFT)
-                elif pevent.key == K_RIGHT:
-                    ev = MoveMyAvatarRequest(DIRECTION_RIGHT)
                 elif pevent.unicode is not '': 
                     # visible chars: letters, numbers, punctuation, space
                     ev = UnicodeKeyPushedEvent(pevent.key, pevent.unicode)

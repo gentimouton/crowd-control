@@ -1,7 +1,8 @@
 from collections import defaultdict
+from common.constants import DIRECTION_LEFT
 from common.events import TickEvent
 from server.events_server import SBroadcastCreepArrivedEvent, \
-    SBroadcastCreepMoveEvent
+    SBcCreepMoveEvent
 from uuid import uuid4
 import logging
 import random
@@ -56,7 +57,7 @@ class AiDirector():
         # create dummy creeps
         for x in range(1):
             creepid = int(uuid4())
-            creep = Creep(self._em, self, creepid)
+            creep = Creep(self._em, self, creepid, DIRECTION_LEFT) #face right
             self.creeps[creepid] = creep
             
         self.isrunning = True
@@ -127,16 +128,20 @@ class AiDirector():
 
 class Creep():
         
-    def __init__(self, evManager, aidir, creepid):
+    def __init__(self, evManager, aidir, creepid, facing):
         """ Default state is idle. Move in 500ms. """
         self._em = evManager
         self.aidir = aidir
-        self.creepid = creepid
         
-        self.state = 'idle'
+        self.creepid = creepid
         self.cell = self.aidir.world.get_lair()
+        self.facing = facing # direction the creep is facing when created
+
+        self.state = 'idle'
+        self.hp = 10 # TODO: hardcoded
+                
         self.aidir.schedule_action(500, self.update) # trigger a move in 500 ms
-        ev = SBroadcastCreepArrivedEvent(self.creepid, self.cell.coords)
+        ev = SBroadcastCreepArrivedEvent(self.creepid, self.cell.coords, self.facing)
         self._em.post(ev)
 
 
@@ -159,4 +164,5 @@ class Creep():
         
     def move(self, cell):
         self.cell = cell
-        self._em.post(SBroadcastCreepMoveEvent(self.creepid, self.cell.coords))
+        ev = SBcCreepMoveEvent(self.creepid, self.cell.coords, self.facing)
+        self._em.post(ev)

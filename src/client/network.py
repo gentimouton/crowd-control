@@ -5,7 +5,7 @@ from client.events_client import SendChatEvent, NwRecChatEvt, NwRecGreetEvt, \
 from common.events import TickEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
-    SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg
+    SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg, unpack_msg
 import logging
 
 class NetworkController(ConnectionListener):
@@ -90,15 +90,13 @@ class NetworkController(ConnectionListener):
     ################## MOVEMENT ################    
         
     def send_move(self, event):
-        coords = event.coords
-        mmsg = ClMoveMsg({'coords':coords})
+        coords, facing = event.coords, event.facing
+        mmsg = ClMoveMsg({'coords':coords, 'facing':facing})
         self.send({'action':'move', 'msg':mmsg.d})
     
     def Network_move(self, data):
-        mmsg = SrvMoveMsg(data['msg'])
-        pname = mmsg.d['pname']
-        coords = mmsg.d['coords']
-        ev = NwRecAvatarMoveEvt(pname, coords)
+        pname, coords, facing = unpack_msg(data['msg'], SrvMoveMsg) 
+        ev = NwRecAvatarMoveEvt(pname, coords, facing)
         self._em.post(ev)
 
 
@@ -115,15 +113,13 @@ class NetworkController(ConnectionListener):
         act = data['msg']['act'] # all creep msg have an act
 
         if act == 'join': # creep creation
-            jmsg = SrvCreepJoinedMsg(data['msg']) #build msg from dictionary
-            cid, coords = jmsg.d['creepid'], jmsg.d['coords']
-            ev = NwRecCreepJoinEvt(cid, coords)
+            cid, act, coords, facing = unpack_msg(data['msg'], SrvCreepJoinedMsg)
+            ev = NwRecCreepJoinEvt(cid, coords, facing)
             self._em.post(ev)
             
         elif act == 'move': # creep movement
-            mmsg = SrvCreepMovedMsg(data['msg'])
-            cid, coords = mmsg.d['creepid'], mmsg.d['coords']
-            ev = NwRecCreepMoveEvt(cid, coords)
+            cid, act, coords, facing = unpack_msg(data['msg'], SrvCreepMovedMsg)
+            ev = NwRecCreepMoveEvt(cid, coords, facing)
             self._em.post(ev)
 
     
@@ -146,13 +142,14 @@ class NetworkController(ConnectionListener):
         actiontype = data['msg']['mtype'] # all admin msg have an mtype
 
         if actiontype == 'greet':
-            gmsg = GreetMsg(data['msg']) #build msg from dictionary
+            tup = unpack_msg(data['msg'], GreetMsg) #deserialize 
+            mapname, pname, coords, facing, onlineppl, creeps = tup
+            
             preferred_name = self.preferrednick
-            if gmsg.d['pname'] is not preferred_name:
+            if pname is not preferred_name:
                 self.ask_for_name_change(preferred_name)
-            ev = NwRecGreetEvt(gmsg.d['mapname'], gmsg.d['pname'],
-                              gmsg.d['coords'], gmsg.d['onlineppl'],
-                              gmsg.d['creeps'])
+            #ev = NwRecGreetEvt(mapname, pname, coords, facing, onlineppl, creeps)
+            ev = NwRecGreetEvt(*tup)
             self._em.post(ev)
 
         elif actiontype == 'namechange':
@@ -163,8 +160,8 @@ class NetworkController(ConnectionListener):
             self._em.post(ev)
 
         elif actiontype == 'arrived': # new player connected
-                amsg = PlayerArrivedNotifMsg(data['msg']) 
-                ev = NwRecPlayerJoinEvt(amsg.d['pname'], amsg.d['coords'])
+                pname, coords, facing = unpack_msg(data['msg'], PlayerArrivedNotifMsg) 
+                ev = NwRecPlayerJoinEvt(pname, coords, facing)
                 self._em.post(ev)
     
         elif actiontype == 'left': # player left

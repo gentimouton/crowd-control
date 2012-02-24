@@ -157,9 +157,12 @@ class Cell():
         #self._em.register_listener( self )
         self.left, self.top = self.coords = pos
         self.world = world
-        self.iswalkable = walkable
+        
         self.isentrance = self.islair = False
         self.entrance_dist = None # server-side: to be filled in world.buildpath
+        
+        self.iswalkable = walkable
+        self.charactors = [] # charactors currently on this cell
 
     def __str__(self):
         return '<Cell %s %s>' % (self.coords, id(self))
