@@ -162,7 +162,9 @@ class Cell():
         self.entrance_dist = None # server-side: to be filled in world.buildpath
         
         self.iswalkable = walkable
-        self.charactors = [] # charactors currently on this cell
+        self._occupants = dict() # ids of things currently on this cell
+
+
 
     def __str__(self):
         return '<Cell %s %s>' % (self.coords, id(self))
@@ -219,4 +221,28 @@ class Cell():
         self.islair = value
         
 
+    #### OCCUPANTS
     
+    def add_occ(self, occ):
+        """ add occupant """
+        self._occupants[occ] = 1
+        
+    def rm_occ(self, occ):
+        """ remove occupant """
+        try:
+            del self._occupants[occ]
+        except KeyError: # TODO: should log.warning instead!
+            print('Failed to remove ' + str(occ) 
+                  + ' from cell ' + str(self.coords))
+    
+    def occ_chngname(self, oldname, newname):
+        """ An occupant changed name/id. """
+        del self._occupants[oldname]
+        self._occupants[newname] = 1 
+        
+    def get_occ(self):
+        """ TODO: return the weakest cell occupant """
+        if self._occupants:
+            return list(self._occupants.keys())[0] # ugly!
+        else:
+            return None

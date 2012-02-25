@@ -6,7 +6,7 @@ from client.config import config_get_fontsize, config_get_unfocusedbtn_bgcolor, 
     config_get_txtlabel_bgcolor, config_get_chatlog_txtcolor, \
     config_get_chatlog_bgcolor
 from client.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
-    UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvent, ChatlogUpdatedEvent, \
+    UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvt, ChatlogUpdatedEvent, \
     NwRecGameAdminEvt, NwRecGreetEvt, NwRecPlayerJoinEvt, NwRecNameChangeEvt, \
     NwRecPlayerLeft, MdAddPlayerEvt, MyNameChangedEvent
 from collections import deque
@@ -222,7 +222,7 @@ class InputFieldWidget(Widget):
     def submit_text(self):
         """ send the string typed, and reset the text input field """
         self.log.debug('Widget submit text: ' + self.text)
-        ev = SendChatEvent(self.text)
+        ev = SendChatEvt(self.text)
         self.set_text('')
         self._em.post(ev)
         

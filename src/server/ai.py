@@ -56,9 +56,9 @@ class AiDirector():
         
         # create dummy creeps
         for x in range(1):
-            creepid = int(uuid4())
-            creep = Creep(self._em, self, creepid, DIRECTION_LEFT) #face right
-            self.creeps[creepid] = creep
+            cname = str(uuid4())
+            creep = Creep(self._em, self, cname, DIRECTION_LEFT) #face right
+            self.creeps[cname] = creep
             
         self.isrunning = True
         
@@ -128,12 +128,12 @@ class AiDirector():
 
 class Creep():
         
-    def __init__(self, evManager, aidir, creepid, facing):
+    def __init__(self, evManager, aidir, cname, facing):
         """ Default state is idle. Move in 500ms. """
         self._em = evManager
         self.aidir = aidir
         
-        self.creepid = creepid
+        self.cname = cname
         self.cell = self.aidir.world.get_lair()
         self.facing = facing # direction the creep is facing when created
 
@@ -141,7 +141,7 @@ class Creep():
         self.hp = 10 # TODO: hardcoded
                 
         self.aidir.schedule_action(500, self.update) # trigger a move in 500 ms
-        ev = SBroadcastCreepArrivedEvent(self.creepid, self.cell.coords, self.facing)
+        ev = SBroadcastCreepArrivedEvent(self.cname, self.cell.coords, self.facing)
         self._em.post(ev)
 
 
@@ -158,11 +158,12 @@ class Creep():
         
         elif self.state == 'moving': # Dummy: after-move-delay
             self.state = 'idle'
-            duration = random.randint(2, 12) * 100# pretend to 'think' for 200-1200 ms
+            #duration = random.randint(2, 12) * 100# pretend to 'think' for 200-1200 ms
+            duration = 2000 # think for 2 secs
             self.aidir.schedule_action(duration, self.update) 
 
         
     def move(self, cell):
         self.cell = cell
-        ev = SBcCreepMoveEvent(self.creepid, self.cell.coords, self.facing)
+        ev = SBcCreepMoveEvent(self.cname, self.cell.coords, self.facing)
         self._em.post(ev)

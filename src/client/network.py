@@ -1,11 +1,12 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client.events_client import SendChatEvent, NwRecChatEvt, NwRecGreetEvt, \
+from client.events_client import SendChatEvt, NwRecChatEvt, NwRecGreetEvt, \
     NwRecNameChangeEvt, NwRecPlayerJoinEvt, NwRecPlayerLeft, NwRecAvatarMoveEvt, \
-    LocalAvatarMoveEvent, NwRecGameAdminEvt, NwRecCreepJoinEvt, NwRecCreepMoveEvt
+    SendMoveEvt, NwRecGameAdminEvt, NwRecCreepJoinEvt, NwRecCreepMoveEvt, SendAtkEvt
 from common.events import TickEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
-    SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg, unpack_msg
+    SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg, unpack_msg, \
+    ClAtkMsg
 import logging
 
 class NetworkController(ConnectionListener):
@@ -17,8 +18,9 @@ class NetworkController(ConnectionListener):
         """ open connection to the server """
         self._em = evManager
         self._em.reg_cb(TickEvent, self.on_tick)
-        self._em.reg_cb(SendChatEvent, self.send_chat)
-        self._em.reg_cb(LocalAvatarMoveEvent, self.send_move)
+        self._em.reg_cb(SendChatEvt, self.on_sendchat)
+        self._em.reg_cb(SendMoveEvt, self.on_sendmove)
+        self._em.reg_cb(SendAtkEvt, self.on_sendatk)
         
         self.preferrednick = nick
         host, port = hostport
@@ -78,7 +80,7 @@ class NetworkController(ConnectionListener):
         self._em.post(ev)
         
         
-    def send_chat(self, event):
+    def on_sendchat(self, event):
         txt = event.txt
         d = {'txt':txt}
         cmsg = ClChatMsg(d)
@@ -89,9 +91,9 @@ class NetworkController(ConnectionListener):
     
     ################## MOVEMENT ################    
         
-    def send_move(self, event):
-        coords, facing = event.coords, event.facing
-        mmsg = ClMoveMsg({'coords':coords, 'facing':facing})
+    def on_sendmove(self, event):
+        dic = {'coords':event.coords, 'facing':event.facing}
+        mmsg = ClMoveMsg(dic)
         self.send({'action':'move', 'msg':mmsg.d})
     
     def Network_move(self, data):
@@ -101,25 +103,38 @@ class NetworkController(ConnectionListener):
 
 
 
+    #################### ATTACKS ###############
+    
+    def on_sendatk(self, event):
+        dic = {'targetname': event.target}
+        amsg = ClAtkMsg(dic)
+        self.send({'action':'atk', 'msg':amsg.d})
+        
+        
+        
+
+    
     ################### GAME ##################
 
     def Network_gameadmin(self, data):
-        mmsg = SrvGameAdminMsg(data['msg'])
-        pname, cmd = mmsg.d['pname'], mmsg.d['cmd']
+        pname, cmd = unpack_msg(data['msg'], SrvGameAdminMsg)
         ev = NwRecGameAdminEvt(pname, cmd)
         self._em.post(ev)
         
+    
+    ################### CREEPS ##################
+
     def Network_creep(self, data):
         act = data['msg']['act'] # all creep msg have an act
 
         if act == 'join': # creep creation
-            cid, act, coords, facing = unpack_msg(data['msg'], SrvCreepJoinedMsg)
-            ev = NwRecCreepJoinEvt(cid, coords, facing)
+            act, cname, coords, facing = unpack_msg(data['msg'], SrvCreepJoinedMsg)
+            ev = NwRecCreepJoinEvt(cname, coords, facing)
             self._em.post(ev)
             
         elif act == 'move': # creep movement
-            cid, act, coords, facing = unpack_msg(data['msg'], SrvCreepMovedMsg)
-            ev = NwRecCreepMoveEvt(cid, coords, facing)
+            act, cname, coords, facing = unpack_msg(data['msg'], SrvCreepMovedMsg)
+            ev = NwRecCreepMoveEvt(cname, coords, facing)
             self._em.post(ev)
 
     
@@ -148,8 +163,7 @@ class NetworkController(ConnectionListener):
             preferred_name = self.preferrednick
             if pname is not preferred_name:
                 self.ask_for_name_change(preferred_name)
-            #ev = NwRecGreetEvt(mapname, pname, coords, facing, onlineppl, creeps)
-            ev = NwRecGreetEvt(*tup)
+            ev = NwRecGreetEvt(mapname, pname, coords, facing, onlineppl, creeps)
             self._em.post(ev)
 
         elif actiontype == 'namechange':

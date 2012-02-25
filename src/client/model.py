@@ -1,13 +1,13 @@
 from client.events_client import InputMoveRequest, ModelBuiltMapEvent, \
     NwRecChatEvt, ChatlogUpdatedEvent, NwRecGreetEvt, NwRecPlayerLeft, \
     CharactorRemoveEvent, NwRecAvatarMoveEvt, NwRecPlayerJoinEvt, NwRecNameChangeEvt, \
-    LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, LocalAvatarMoveEvent, \
+    LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, SendMoveEvt, \
     RemoteCharactorMoveEvent, NwRecGameAdminEvt, NwRecCreepJoinEvt, CreepPlaceEvent, \
-    NwRecCreepMoveEvt, MyNameChangedEvent, MdAddPlayerEvt, InputAtkRequest
+    NwRecCreepMoveEvt, MyNameChangedEvent, MdAddPlayerEvt, InputAtkRequest, \
+    SendAtkEvt
 from collections import deque
 from common.world import World
 import logging
-from common.constants import DIRECTION_UP
 
 
 
@@ -41,8 +41,8 @@ class Game:
     
     
     def on_greeted(self, event):
-        """ When the server greets me, set my name,
-        start world building process, and add other connected players.
+        """ When the server greets me, set my cname,
+        start world building process, and add other connected players and creeps.
         Start also listening to player inputs, and other network messages.
         """
         
@@ -55,9 +55,9 @@ class Game:
         self.build_map(mapname)
         
         # creeps
-        for cid, coords_facing in creeps.items():
+        for cname, coords_facing in creeps.items():
             coords, facing = coords_facing
-            self.add_creep(cid, coords, facing)
+            self.add_creep(cname, coords, facing)
             
         # myself, local player
         self.add_player(newname, newpos, facing)
@@ -125,17 +125,17 @@ class Game:
         oldname, newname = event.oldname, event.newname
          
         if newname in self.players:
-            self.log.warning(oldname + ' changed name to ' + newname 
+            self.log.warning(oldname + ' changed cname to ' + newname 
                              + ' which was already in use')
         
         if self.myname == oldname:
             self.myname = newname
-            # notify the widget in charge of holding my name
+            # notify the widget in charge of holding my cname
             ev = MyNameChangedEvent(oldname, newname)
             self._em.post(ev)
             
         player = self.players[oldname]
-        player.name = newname
+        player.changename(newname)
         self.players[newname] = player
         del self.players[oldname] #only del the mapping, not the player itself
 
@@ -145,7 +145,7 @@ class Game:
         
     
     def on_remoteavmove(self, event):
-        """ Move the avatar of the player which name is pname. """
+        """ Move the avatar of the player which cname is pname. """
         pname, dest = event.pname, event.dest
         
         if pname != self.myname:
@@ -173,8 +173,8 @@ class Game:
         if event.cmd == 'stop':
             # '/stop' happens rarely, so we can afford to copy the whole dict
             oldcreeps = self.creeps.copy()
-            for cid in oldcreeps.keys():
-                self.remove_creep(cid)
+            for cname in oldcreeps.keys():
+                self.remove_creep(cname)
             
         self.log.info(event.pname + ' ' + event.cmd + ' the game')
         
@@ -182,31 +182,31 @@ class Game:
     
     def on_creepjoin(self, event):
         """ Create a creep. """
-        cid, coords, facing = event.cid, event.coords, event.facing
-        self.add_creep(cid, coords, facing)
+        cname, coords, facing = event.cname, event.coords, event.facing
+        self.add_creep(cname, coords, facing)
         
         
     def on_creepmove(self, event):
         """ Move a creep. """
-        cid, coords = event.cid, event.coords
-        creep = self.creeps[cid]
+        cname, coords = event.cname, event.coords
+        creep = self.creeps[cname]
         creep.move_absolute(self.world.get_cell(coords))
         
     
-    def remove_creep(self, cid):
+    def remove_creep(self, cname):
         """ remove a creep """
         try:
-            self.creeps[cid].rmv()
-            del self.creeps[cid]
+            self.creeps[cname].rmv()
+            del self.creeps[cname]
         except KeyError:
-            self.log.warning('Creep ' + str(cid) + ' had already been removed') 
+            self.log.warning('Creep ' + str(cname) + ' had already been removed') 
         
         
-    def add_creep(self, cid, coords, facing):
+    def add_creep(self, cname, coords, facing):
         """ Add a new creep to the existing creeps. """
         cell = self.world.get_cell(coords)
-        creep = Creep(self._em, cid, cell, facing)       
-        self.creeps[cid] = creep
+        creep = Creep(self._em, cname, cell, facing)       
+        self.creeps[cname] = creep
 
 
 
@@ -217,18 +217,22 @@ class Game:
 
 class Player():
     """ the model structure for a person playing the game 
-    It has name, score, etc. 
+    It has cname, score, etc. 
     """
     def __init__(self, name, cell, facing, islocal, evManager):
         self._em = evManager
 
-        self.name = name
+        self.cname = name
         self.avatar = Avatar(self, cell, facing, islocal, evManager) 
 
 
     def __str__(self):
-        return '<Player %s %s>' % (self.name, id(self))
+        return '<Player %s %s>' % (self.cname, id(self))
 
+    def changename(self, name):
+        self.cname = name
+        self.avatar.changename(name)
+        
 
     def remov(self):
         """ tell the view to remove that player's avatar """
@@ -249,22 +253,37 @@ class Charactor():
 
     def __init__(self, cell, facing, name, evManager):
         self._em = evManager
-        self.cell = cell
+        
         self.facing = facing # which direction the charactor is facing
-        self.name = name
+        self.cname = name
+        
+        self.cell = cell
+        self.cell.add_occ(name)
+        
                 
 
+    def changename(self, newname):
+        """ update my cname, and notify my cell """
+        self.cell.occ_chngname(self.cname, newname)
+        self.cname = newname
+        
+        
     def move_absolute(self, destcell):
-        """ move to the specified destination """ 
+        """ move to the specified destination.
+        During a split second, the charactor is in no cell. 
+        """ 
         if destcell:
+            self.cell.rm_occ(self.cname)
             self.cell = destcell
+            self.cell.add_occ(self.cname)
             ev = RemoteCharactorMoveEvent(self, destcell.coords)
             self._em.post(ev)
             
         else: #illegal move
-            self.log.warning('Illegal move from ' + self.name)
+            self.log.warning('Illegal move from ' + self.cname)
             #TODO: should report to server of potential cheat/hack
             pass
+        
         
     def rmv(self):
         """ tell the view to remove this charactor's spr """ 
@@ -282,7 +301,7 @@ class Avatar(Charactor):
     def __init__(self, player, cell, facing, islocal, evManager):
         
         self.player = player
-        Charactor.__init__(self, cell, facing, player.name, evManager)
+        Charactor.__init__(self, cell, facing, player.cname, evManager)
         
         self.islocal = islocal #whether the avatar is controlled by the client
         
@@ -292,9 +311,9 @@ class Avatar(Charactor):
             ev = OtherAvatarPlaceEvent(self, cell)
         self._em.post(ev)
         
-
+    
     def __str__(self):
-        return '<Avatar %s from player %s>' % (id(self), self.player.name)
+        return '<Avatar %s from player %s>' % (id(self), self.player.cname)
 
 
     def move_relative(self, direction):
@@ -302,10 +321,12 @@ class Avatar(Charactor):
 
         dest_cell = self.cell.get_adjacent_cell(direction)
         if dest_cell:
+            self.cell.rm_occ(self.cname)
             self.cell = dest_cell
+            self.cell.add_occ(self.cname)
             self.facing = direction
             # send to view and server that I moved
-            ev = LocalAvatarMoveEvent(self, dest_cell.coords, direction)
+            ev = SendMoveEvt(self, dest_cell.coords, direction)
             self._em.post(ev)
 
         else: #move is not possible: TODO: give (audio?) feedback 
@@ -316,24 +337,33 @@ class Avatar(Charactor):
         """ Attack a creep in the vicinity, 
         and send action + amount of damage to the server. 
         """
-        cell = self.cell.get_adjacent_cell(self.facing)
-        # TODO: ATTACK!
-        
+        target_cell = self.cell.get_adjacent_cell(self.facing)
+        if target_cell: #only attack walkable cells
+            occupant = target_cell.get_occ() # occupant picked randomly
+            
+            if occupant: # there's creep or avatar to attack
+                ev = SendAtkEvt(occupant)
+                self._em.post(ev)
+            else:
+                # dont attack if the cell has no occupant
+                pass
+                
+                    
         
 
 class Creep(Charactor):
     """ Representation of a remote enemy monster. """
         
-    def __init__(self, evManager, cid, cell, facing):
+    def __init__(self, evManager, cname, cell, facing):
         
-        Charactor.__init__(self, cell, str(cid), facing, evManager)
+        Charactor.__init__(self, cell, facing, cname, evManager)
         
         ev = CreepPlaceEvent(self)# ask view to display the new creep
         self._em.post(ev)
         
     
     def __str__(self):
-        return '<Creep %s named %s>' % (id(self), self.name)
+        return '<Creep %s named %s>' % (id(self), self.cname)
 
 
         
@@ -354,12 +384,12 @@ class ChatLog():
     
     
     def add_chatmsg(self, event):
-        """ add a message to the chatlog.
-        if full, remove oldest message 
+        """ Add a message to the chatlog.
+        If full, remove oldest message. 
         """
         author, txt = event.pname, event.txt
         msg = {'pname':author, 'text':txt}
-        self.chatlog.appendleft(msg)
+        self.chatlog.appendleft(msg) #will remove oldest msg automatically
         
         ev = ChatlogUpdatedEvent(author, txt)
         self._em.post(ev)

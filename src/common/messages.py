@@ -99,8 +99,21 @@ class ClMoveMsg(SerializableMsg):
     """ mvt msg sent from a client to the server """        
     attrs = ['coords', 'facing'] 
 class SrvMoveMsg(SerializableMsg):
-    """ brodcast of a mvt msg by the server """        
+    """ broadcast of a mvt msg by the server """        
     attrs = ['pname', 'coords', 'facing'] 
+
+
+
+################# CREEP #####################################################
+
+class ClAtkMsg(SerializableMsg):
+    """ Attack msg sent from a client to the server """        
+    attrs = ['targetname'] 
+class SrvAtkMsg(SerializableMsg):
+    """ broadcast of an attack msg by the server """        
+    attrs = ['pname', 'coords', 'facing'] 
+
+
 
 
 
@@ -114,10 +127,10 @@ class SrvGameAdminMsg(SerializableMsg):
 
 class SrvCreepMovedMsg(SerializableMsg):
     """ broadcast creep movement """
-    attrs = ['creepid', 'act', 'coords', 'facing']
+    attrs = [ 'act', 'cname', 'coords', 'facing']
 class SrvCreepJoinedMsg(SerializableMsg):
     """ broadcast creep creation """
-    attrs = ['creepid', 'act', 'coords', 'facing']
+    attrs = ['act', 'cname', 'coords', 'facing']
     
     
     

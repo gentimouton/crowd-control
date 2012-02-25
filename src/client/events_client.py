@@ -69,8 +69,8 @@ class NwRecGameAdminEvt():
 
 class NwRecCreepJoinEvt():
     """ Sent from nw ctrler to model to notify of creep join """
-    def __init__(self, cid, coords, facing):
-        self.cid = cid
+    def __init__(self, cname, coords, facing):
+        self.cname = cname
         self.coords = coords
         self.facing = facing
         
@@ -81,12 +81,17 @@ class CreepPlaceEvent():
         
 class NwRecCreepMoveEvt():
     """ Sent from network to model """
-    def __init__(self, cid, coords, facing):
-        self.cid = cid
+    def __init__(self, cname, coords, facing):
+        self.cname = cname
         self.coords = coords
         self.facing = facing
 
 
+class SendAtkEvt():
+    """ Model to network. Local avatar attacks a cell. """
+    def __init__(self, target):
+        self.target = target
+    
 
 ######################### ADMIN ######################################
 
@@ -120,7 +125,7 @@ class LocalAvatarPlaceEvent():
         self.avatar = char
         self.cell = cell
 
-class LocalAvatarMoveEvent():
+class SendMoveEvt():
     """ sent from model to view and network controller when my avatar moved """
     def __init__(self, char, coords, facing):
         self.avatar = char
@@ -154,7 +159,7 @@ class CharactorRemoveEvent():
 ################# CHAT ###################################################
 
 
-class SendChatEvent():
+class SendChatEvt():
     def __init__(self, txt):
         self.txt = txt
 

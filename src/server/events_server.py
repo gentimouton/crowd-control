@@ -96,19 +96,34 @@ class SBroadcastMoveEvent():
         self.pname = pname
         self.coords = coords
         self.facing = facing
+        
+
+######################### ATTACK ########################################
+
+
+class SReceivedAtkEvent():
+    def __init__(self, pname, tname):
+        self.pname = pname
+        self.tname = tname
+        
+class SBroadcastAtkEvent():
+    def __init__(self, pname, coords, facing):
+        self.pname = pname
+        self.coords = coords
+        self.facing = facing
     
 
 ####################### CREEPS ##########################################
  
 class SBroadcastCreepArrivedEvent():
-    def __init__(self, creepid, coords, facing):
-        self.creepid = creepid
+    def __init__(self, cname, coords, facing):
+        self.cname = cname
         self.coords = coords
         self.facing = facing
 
 class SBcCreepMoveEvent():
-    def __init__(self, creepid, coords, facing):
-        self.creepid = creepid
+    def __init__(self, cname, coords, facing):
+        self.cname = cname
         self.coords = coords
         self.facing = facing
 

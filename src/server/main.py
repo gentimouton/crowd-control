@@ -1,8 +1,10 @@
-from server.config import load_srv_config
+#! /usr/bin/env python3.2
+
 from server.clock import SClockController
-from server.network import NetworkController
+from server.config import load_srv_config
 from server.events_server import SrvEventManager
 from server.model import SGame
+from server.network import NetworkController
 import logging.config
 
 

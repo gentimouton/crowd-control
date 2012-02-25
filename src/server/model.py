@@ -1,3 +1,4 @@
+from common.constants import DIRECTION_UP
 from common.world import World
 from server.ai import AiDirector
 from server.config import config_get_mapname
@@ -5,18 +6,24 @@ from server.events_server import SModelBuiltWorldEvent, SSendGreetEvent, \
     SBroadcastNameChangeEvent, SBroadcastChatEvent, SBroadcastMoveEvent, \
     SPlayerArrivedEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
     SReceivedChatEvent, SReceivedMoveEvent, SBroadcastArrivedEvent, \
-    SBroadcastLeftEvent, NwBcAdminEvt
+    SBroadcastLeftEvent, NwBcAdminEvt, SReceivedAtkEvent
 import logging
-from common.constants import DIRECTION_UP
 
 
 class SPlayer():
+    # TODO: SPlayer needs to have an SAvatar attribute
     
     def __init__(self, pname, coords, facing):
         self.pname = pname
         self.coords = coords
         self.facing = facing #direction the player is facing
         
+        self.atk = 6 #how much dmg inflicted per attack
+
+    
+    def __str__(self):
+        return '<SPlayer %s named %s>' % (id(self), self.pname)
+
 
 class SGame():
     
@@ -28,9 +35,10 @@ class SGame():
         # callbacks
         self._em.reg_cb(SPlayerArrivedEvent, self.on_playerjoined)
         self._em.reg_cb(SPlayerLeftEvent, self.player_left)
-        self._em.reg_cb(SPlayerNameChangeRequestEvent, self.handle_name_change)
+        self._em.reg_cb(SPlayerNameChangeRequestEvent, self.on_playerchangedname)
         self._em.reg_cb(SReceivedChatEvent, self.received_chat)
-        self._em.reg_cb(SReceivedMoveEvent, self.player_moved)
+        self._em.reg_cb(SReceivedMoveEvent, self.on_playermoved)
+        self._em.reg_cb(SReceivedAtkEvent, self.on_playerattacked)
         
         # Players are here; creeps are in the AI director. 
         self.players = dict()
@@ -95,6 +103,8 @@ class SGame():
             facing = DIRECTION_UP
             player = SPlayer(pname, coords, facing)
             self.players[pname] = player
+            cell = self.world.get_cell(coords)
+            cell.add_occ(pname)
             
             # greet the new player 
             event = SSendGreetEvent(self.mapname, pname, coords, facing, onlineppl, creeps)
@@ -115,15 +125,20 @@ class SGame():
 
     #########################################################################
             
-    def handle_name_change(self, event):
-        """ change player's name only if newname not taken already """
+    def on_playerchangedname(self, event):
+        """ Change player's name only if the new name is not taken already. """
         
         oldname, newname = event.oldname, event.newname
         
         if newname not in self.players:
             self.log.info(oldname + ' changed name into ' + newname)
             
-            self.players[newname] = self.players[oldname]
+            player = self.players[oldname]
+            player.pname = newname
+            # notify the cell the player is currently on
+            cell = self.world.get_cell(player.coords)
+            cell.occ_chngname(oldname, newname)
+            self.players[newname] = player
             del self.players[oldname]
                         
             event = SBroadcastNameChangeEvent(oldname, newname)
@@ -159,15 +174,22 @@ class SGame():
 
     ##########################################################################
     
-    def player_moved(self, event):
+    def on_playermoved(self, event):
         """ when a player moves, notify all of them """
         pname, coords, facing = event.pname, event.coords, event.facing
         
-        if self.world.iswalkable(coords): 
-            self.players[pname].coords = coords
-            self.players[pname].facing = facing
+        if self.world.iswalkable(coords):
+            player = self.players[pname]
+
+            # remove player from old cell and add player to new cell
+            oldcell = self.world.get_cell(player.coords)
+            oldcell.rm_occ(player.pname)
+            newcell = self.world.get_cell(coords)
+            newcell.add_occ(player.pname)
+            
+            player.coords = coords
+            player.facing = facing
             #self.log.debug(pname + ' moved to ' + str(coords))
-            # dont have anything to do about facing yet
             event = SBroadcastMoveEvent(pname, coords, facing)
             self._em.post(event)
 
@@ -175,6 +197,36 @@ class SGame():
             self.log.warn('Possible cheat: ' + pname 
                           + ' walks in non-walkable cell' + str(coords))
             
+
+
+
+
+    ##########################################################################
+    
+    def on_playerattacked(self, event):
+        """ when a player attacks, he can only inflict dmg 
+        to creeps in adjacent cells. No friendly fire.
+        """
+        pname, tname = event.pname, event.tname
+        player = self.players[pname]
+        try:
+            creep = self.aidir.creeps[tname]
+        except KeyError:
+            self.log.warning('creep ' + tname 
+                             + ' attacked by ' + pname + ' but not found.')
+            
+        # check that player is facing the creep, and creep is in adjacent cell
+        pcell = self.world.get_cell(player.coords)
+        if pcell.get_adjacent_cell(player.facing) == creep.cell:
+            # TODO: I sometimes get an error like:  
+            #UnboundLocalError: local variable 'creep' referenced before assignment
+            # see http://bobobobo.wordpress.com/2009/03/21/unboundlocalerror-local-variable-referenced-before-assignment/ 
+            print(pname + ' ATTACKED ' + tname)
+        
+            
+            
+
+
 
     ######################### commands parsing ##############################
 

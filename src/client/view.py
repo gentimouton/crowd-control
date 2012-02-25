@@ -2,9 +2,9 @@ from client.config import config_get_screenres, config_get_loadingscreen_bgcolor
     config_get_fontsize, config_get_walkable_color, config_get_nonwalkable_color, \
     config_get_entrance_color, config_get_lair_color, config_get_avdefault_bgcolor, \
     config_get_myav_bgcolor, config_get_creep_bgcolor
-from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvent, \
+from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvt, \
     CharactorRemoveEvent, OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, \
-    LocalAvatarMoveEvent, RemoteCharactorMoveEvent, NwRecGreetEvt, CreepPlaceEvent, \
+    SendMoveEvt, RemoteCharactorMoveEvent, NwRecGreetEvt, CreepPlaceEvent, \
     MyNameChangedEvent
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
@@ -52,7 +52,7 @@ class MasterView:
         
         # local = my avatar
         self._em.reg_cb(LocalAvatarPlaceEvent, self.on_localavplace)
-        self._em.reg_cb(LocalAvatarMoveEvent, self.on_localavmove)
+        self._em.reg_cb(SendMoveEvt, self.on_localavmove)
         
         # remote = creeps + other avatars
         # different creation, but same movement and removal
@@ -90,7 +90,7 @@ class MasterView:
         # -- meh_btn at bottom right
         rect = pygame.Rect((self.win_w * 6 / 8, self.win_h * 11 / 12),
                             (self.win_w / 8 - 1, self.win_h / 12 - 1)) 
-        msgEvent = SendChatEvent('meh...') #ask to send 'meh' to the server
+        msgEvent = SendChatEvt('meh...') #ask to send 'meh' to the server
         meh_btn = ButtonWidget(evManager, "Meh.", rect=rect,
                                    onUpClickEvent=msgEvent)
         
