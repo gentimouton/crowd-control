@@ -111,7 +111,7 @@ class ClAtkMsg(SerializableMsg):
     attrs = ['targetname'] 
 class SrvAtkMsg(SerializableMsg):
     """ broadcast of an attack msg by the server """        
-    attrs = ['pname', 'coords', 'facing'] 
+    attrs = ['atker', 'defer', 'dmg'] 
 
 
 

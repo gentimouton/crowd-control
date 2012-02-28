@@ -87,11 +87,22 @@ class NwRecCreepMoveEvt():
         self.facing = facing
 
 
+
+######################## ATTACK ##################################
+
 class SendAtkEvt():
     """ Model to network. Local avatar attacks a cell. """
     def __init__(self, target):
         self.target = target
-    
+
+class NwRecAtkEvt():
+    """ Network received an attack message """
+    def __init__(self, attacker, defender ,damage):
+        self.atker = attacker
+        self.defer = defender
+        self.dmg = damage
+
+
 
 ######################### ADMIN ######################################
 

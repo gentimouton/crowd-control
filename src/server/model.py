@@ -6,7 +6,7 @@ from server.events_server import SModelBuiltWorldEvent, SSendGreetEvent, \
     SBroadcastNameChangeEvent, SBroadcastChatEvent, SBroadcastMoveEvent, \
     SPlayerArrivedEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
     SReceivedChatEvent, SReceivedMoveEvent, SBroadcastArrivedEvent, \
-    SBroadcastLeftEvent, NwBcAdminEvt, SReceivedAtkEvent
+    SBroadcastLeftEvent, NwBcAdminEvt, SReceivedAtkEvent, SBcAtkEvent
 import logging
 
 
@@ -209,19 +209,22 @@ class SGame():
         """
         pname, tname = event.pname, event.tname
         player = self.players[pname]
+        
         try:
             creep = self.aidir.creeps[tname]
-        except KeyError:
-            self.log.warning('creep ' + tname 
-                             + ' attacked by ' + pname + ' but not found.')
-            
-        # check that player is facing the creep, and creep is in adjacent cell
-        pcell = self.world.get_cell(player.coords)
-        if pcell.get_adjacent_cell(player.facing) == creep.cell:
-            # TODO: I sometimes get an error like:  
-            #UnboundLocalError: local variable 'creep' referenced before assignment
-            # see http://bobobobo.wordpress.com/2009/03/21/unboundlocalerror-local-variable-referenced-before-assignment/ 
-            print(pname + ' ATTACKED ' + tname)
+            pcell = self.world.get_cell(player.coords)
+            # check that player is facing the creep, and creep is in adjacent cell
+            if pcell.get_adjacent_cell(player.facing) == creep.cell: 
+                #self.log.debug(pname + ' attacked ' + tname)
+                dmg = player.atk # TODO: should also take creep.def into account
+                creep.hp -= dmg
+                event = SBcAtkEvent(pname, tname, dmg)
+                
+                
+        except KeyError: # most likely, a client sent an incorrect creep id
+            self.log.warning('Target ' + tname + ' was attacked by ' + pname  
+                             + ' but target was not found.')
+ 
         
             
             

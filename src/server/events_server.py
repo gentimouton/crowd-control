@@ -106,11 +106,11 @@ class SReceivedAtkEvent():
         self.pname = pname
         self.tname = tname
         
-class SBroadcastAtkEvent():
-    def __init__(self, pname, coords, facing):
-        self.pname = pname
-        self.coords = coords
-        self.facing = facing
+class SBcAtkEvent():
+    def __init__(self, attacker, defender, damage):
+        self.atker = attacker
+        self.defer = defender
+        self.dmg = damage
     
 
 ####################### CREEPS ##########################################

@@ -71,7 +71,7 @@ class World():
                     walkable = 1
                 else:
                     walkable = int(cellvalue) # 0 or 1
-                cell = Cell(self, coords, walkable, self._em)
+                cell = Cell(self.log, self, coords, walkable, self._em)
                 tmprow.append(cell)
 
             self.__cellgrid.append(tmprow)
@@ -152,7 +152,8 @@ class World():
         
 class Cell():
     
-    def __init__(self, world, pos, walkable, evManager):
+    def __init__(self, log, world, pos, walkable, evManager):
+        self.log = log
         self._em = evManager
         #self._em.register_listener( self )
         self.left, self.top = self.coords = pos
@@ -232,8 +233,8 @@ class Cell():
         try:
             del self._occupants[occ]
         except KeyError: # TODO: should log.warning instead!
-            print('Failed to remove ' + str(occ) 
-                  + ' from cell ' + str(self.coords))
+            self.log.error('Failed to remove ' + str(occ) 
+                           + ' from cell ' + str(self.coords))
     
     def occ_chngname(self, oldname, newname):
         """ An occupant changed name/id. """

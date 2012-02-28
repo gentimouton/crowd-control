@@ -4,7 +4,7 @@ from client.events_client import InputMoveRequest, ModelBuiltMapEvent, \
     LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, SendMoveEvt, \
     RemoteCharactorMoveEvent, NwRecGameAdminEvt, NwRecCreepJoinEvt, CreepPlaceEvent, \
     NwRecCreepMoveEvt, MyNameChangedEvent, MdAddPlayerEvt, InputAtkRequest, \
-    SendAtkEvt
+    SendAtkEvt, NwRecAtkEvt
 from collections import deque
 from common.world import World
 import logging
@@ -77,7 +77,8 @@ class Game:
         self._em.reg_cb(NwRecAvatarMoveEvt, self.on_remoteavmove)
         self._em.reg_cb(InputMoveRequest, self.on_localavmove)
         self._em.reg_cb(InputAtkRequest, self.on_localatk)
-        
+        self._em.reg_cb(NwRecAtkEvt, self.on_remoteatk)
+
         # -- RUNNING GAME and CREEPS
         self._em.reg_cb(NwRecGameAdminEvt, self.on_gameadmin)
         self._em.reg_cb(NwRecCreepJoinEvt, self.on_creepjoin)
@@ -164,7 +165,15 @@ class Game:
         """ When user pressed atk button, make him atk. """
         mychar = self.players[self.myname].avatar
         mychar.atk_local()
-
+    
+    def on_remoteatk(self, event):
+        """ A charactor attacked a creep. """
+        print(str(event.atker, event.defer, event.dmg))
+        # TODO: HERE: update the local model; should model be updated on local atks, or only on remote atks?
+    
+    
+    
+    
     
     ###################### RUNNING GAME + CREEPS ############################
     
@@ -287,6 +296,7 @@ class Charactor():
         
     def rmv(self):
         """ tell the view to remove this charactor's spr """ 
+        self.cell.rm_occ(self.cname) # TODO: should be a weakref instead?
         ev = CharactorRemoveEvent(self)
         self._em.post(ev)
 
@@ -339,16 +349,12 @@ class Avatar(Charactor):
         """
         target_cell = self.cell.get_adjacent_cell(self.facing)
         if target_cell: #only attack walkable cells
-            occupant = target_cell.get_occ() # occupant picked randomly
-            
+            occupant = target_cell.get_occ() # pick occupant randomly
             if occupant: # there's creep or avatar to attack
                 ev = SendAtkEvt(occupant)
                 self._em.post(ev)
-            else:
-                # dont attack if the cell has no occupant
-                pass
-                
-                    
+            else:# dont attack if the cell has no occupant
+                pass # TODO: show a 'miss' animation
         
 
 class Creep(Charactor):

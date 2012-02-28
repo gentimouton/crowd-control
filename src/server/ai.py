@@ -5,7 +5,6 @@ from server.events_server import SBroadcastCreepArrivedEvent, \
     SBcCreepMoveEvent
 from uuid import uuid4
 import logging
-import random
         
 class AiDirector():
 

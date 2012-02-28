@@ -4,13 +4,13 @@ from common.events import TickEvent
 from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, ClChatMsg, SrvChatMsg, GreetMsg, NameChangeNotifMsg, \
     ClMoveMsg, SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg, \
-    unpack_msg, ClAtkMsg
+    unpack_msg, ClAtkMsg, SrvAtkMsg
 from server.config import config_get_hostport
 from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
     SPlayerLeftEvent, SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, \
     SReceivedChatEvent, SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent, \
     SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, NwBcAdminEvt, \
-    SBroadcastCreepArrivedEvent, SBcCreepMoveEvent, SReceivedAtkEvent
+    SBroadcastCreepArrivedEvent, SBcCreepMoveEvent, SReceivedAtkEvent, SBcAtkEvent
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 import logging
@@ -75,14 +75,16 @@ class NetworkController(Server):
         self._em.reg_cb(TickEvent, self.on_tick)
         self._em.reg_cb(SModelBuiltWorldEvent, self.on_worldbuilt)
         self._em.reg_cb(SSendGreetEvent, self.on_greet)
-        self._em.reg_cb(SBroadcastArrivedEvent, self.on_broadcastarrived)
-        self._em.reg_cb(SBroadcastLeftEvent, self.on_broadcastleft)
+        self._em.reg_cb(SBroadcastArrivedEvent, self.on_bcarrived)
+        self._em.reg_cb(SBroadcastLeftEvent, self.on_bcleft)
         self._em.reg_cb(SBroadcastNameChangeEvent, self.broadcast_name_change)
-        self._em.reg_cb(SBroadcastChatEvent, self.broadcast_chat)
+        self._em.reg_cb(SBroadcastChatEvent, self.on_bcchat)
         self._em.reg_cb(SBroadcastMoveEvent, self.on_bcmove)
-        self._em.reg_cb(NwBcAdminEvt, self.broadcast_gameadmin)
+        self._em.reg_cb(NwBcAdminEvt, self.on_bcgameadmin)
         self._em.reg_cb(SBroadcastCreepArrivedEvent, self.on_bccreepjoin)
-        self._em.reg_cb(SBcCreepMoveEvent, self.broadcast_creepmoved)
+        self._em.reg_cb(SBcCreepMoveEvent, self.on_bccreepmoved)
+        self._em.reg_cb(SBcAtkEvent, self.on_bcatk)
+        
         
         self.accept_connections = False # start accepting when model is ready
         
@@ -156,7 +158,7 @@ class NetworkController(Server):
         
 
 
-    def on_broadcastarrived(self, event):
+    def on_bcarrived(self, event):
         """ User arrived: notify everyone connected but him """
         dic = {'pname':event.pname,
                'coords':event.coords,
@@ -169,7 +171,7 @@ class NetworkController(Server):
                 self.send(chan, data)
      
      
-    def on_broadcastleft(self, event):
+    def on_bcleft(self, event):
         """ Notify everyone connected. """
         dic = {'pname':event.pname}
         bcmsg = PlayerLeftNotifMsg(dic)
@@ -241,7 +243,7 @@ class NetworkController(Server):
         self._em.post(event)
         
         
-    def broadcast_chat(self, event):
+    def on_bcchat(self, event):
         
         dic = {'pname':event.pname, 'txt':event.txt}
         cmsg = SrvChatMsg(dic)
@@ -271,7 +273,7 @@ class NetworkController(Server):
  
  
  
-    ###################### movement  #####################################
+    ###################### attack  #####################################
     
     def received_atk(self, channel, tname):
         pname = self.chan_to_name[channel]
@@ -281,11 +283,11 @@ class NetworkController(Server):
         
         
     def on_bcatk(self, event):
-        dic = {"pname":event.pname,
-               "coords":event.coords,
-               'facing': event.facing}
-        mmsg = SrvMoveMsg(dic)
-        data = {"action": "move", "msg": mmsg.d}
+        dic = {'atker':event.atker,
+               'defer':event.defer,
+               'dmg': event.dmg}
+        amsg = SrvAtkMsg(dic)
+        data = {"action": "atk", "msg": amsg.d}
         for chan in self.chan_to_name:
             self.send(chan, data) 
  
@@ -294,7 +296,7 @@ class NetworkController(Server):
  
     ###################### GAME #############################################
     
-    def broadcast_gameadmin(self, event):
+    def on_bcgameadmin(self, event):
         pname, cmd = event.pname, event.cmd
         mmsg = SrvGameAdminMsg({"pname":pname, 'cmd':cmd})
         data = {"action": "gameadmin", "msg": mmsg.d}
@@ -312,7 +314,7 @@ class NetworkController(Server):
         for chan in self.chan_to_name:
             self.send(chan, data) 
         
-    def broadcast_creepmoved(self, event):
+    def on_bccreepmoved(self, event):
         dic = {'act':'move',
                "cname":event.cname,
                'coords':event.coords,

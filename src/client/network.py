@@ -1,12 +1,13 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client.events_client import SendChatEvt, NwRecChatEvt, NwRecGreetEvt, \
     NwRecNameChangeEvt, NwRecPlayerJoinEvt, NwRecPlayerLeft, NwRecAvatarMoveEvt, \
-    SendMoveEvt, NwRecGameAdminEvt, NwRecCreepJoinEvt, NwRecCreepMoveEvt, SendAtkEvt
+    SendMoveEvt, NwRecGameAdminEvt, NwRecCreepJoinEvt, NwRecCreepMoveEvt, SendAtkEvt, \
+    NwRecAtkEvt
 from common.events import TickEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
     SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg, unpack_msg, \
-    ClAtkMsg
+    ClAtkMsg, SrvAtkMsg
 import logging
 
 class NetworkController(ConnectionListener):
@@ -44,7 +45,7 @@ class NetworkController(ConnectionListener):
     def Network(self, data):
         """ triggered for any Network_* callback """
         #self.log.debug("Network received: " + str(data))
-
+        
 
     ################## DEFAULT ADMIN ##########
   
@@ -110,8 +111,10 @@ class NetworkController(ConnectionListener):
         amsg = ClAtkMsg(dic)
         self.send({'action':'atk', 'msg':amsg.d})
         
-        
-        
+    def Network_atk(self, data):
+        atker, defer, dmg = unpack_msg(data['msg'], SrvAtkMsg)
+        ev = NwRecAtkEvt(atker, defer, dmg)
+        self._em.post(ev)
 
     
     ################### GAME ##################
