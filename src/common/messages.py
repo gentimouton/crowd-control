@@ -131,7 +131,9 @@ class SrvCreepMovedMsg(SerializableMsg):
 class SrvCreepJoinedMsg(SerializableMsg):
     """ broadcast creep creation """
     attrs = ['act', 'cname', 'coords', 'facing']
-    
+class SrvCreepDiedMsg(SerializableMsg):
+    """ broadcast creep death """
+    attrs = ['act', 'cname']
     
     
     

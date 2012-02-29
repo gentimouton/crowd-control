@@ -86,6 +86,10 @@ class NwRecCreepMoveEvt():
         self.coords = coords
         self.facing = facing
 
+class NwRecCreepDieEvt():
+    """ from nw to model to notify of creep death """
+    def __init__(self, cname):
+        self.cname = cname
 
 
 ######################## ATTACK ##################################
@@ -97,7 +101,7 @@ class SendAtkEvt():
 
 class NwRecAtkEvt():
     """ Network received an attack message """
-    def __init__(self, attacker, defender ,damage):
+    def __init__(self, attacker, defender , damage):
         self.atker = attacker
         self.defer = defender
         self.dmg = damage

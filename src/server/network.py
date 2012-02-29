@@ -4,13 +4,14 @@ from common.events import TickEvent
 from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, ClChatMsg, SrvChatMsg, GreetMsg, NameChangeNotifMsg, \
     ClMoveMsg, SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg, \
-    unpack_msg, ClAtkMsg, SrvAtkMsg
+    unpack_msg, ClAtkMsg, SrvAtkMsg, SrvCreepDiedMsg
 from server.config import config_get_hostport
 from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
     SPlayerLeftEvent, SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, \
     SReceivedChatEvent, SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent, \
     SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, NwBcAdminEvt, \
-    SBroadcastCreepArrivedEvent, SBcCreepMoveEvent, SReceivedAtkEvent, SBcAtkEvent
+    SBroadcastCreepArrivedEvent, SBcCreepMoveEvent, SReceivedAtkEvent, SBcAtkEvent, \
+    SBcCreepDiedEvent
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
 import logging
@@ -84,6 +85,7 @@ class NetworkController(Server):
         self._em.reg_cb(SBroadcastCreepArrivedEvent, self.on_bccreepjoin)
         self._em.reg_cb(SBcCreepMoveEvent, self.on_bccreepmoved)
         self._em.reg_cb(SBcAtkEvent, self.on_bcatk)
+        self._em.reg_cb(SBcCreepDiedEvent, self.on_bccreepdied)
         
         
         self.accept_connections = False # start accepting when model is ready
@@ -305,6 +307,7 @@ class NetworkController(Server):
         
         
     def on_bccreepjoin(self, event):
+        """ broadcast creep creation """
         dic = {'act':'join',
                "cname":event.cname,
                'coords':event.coords,
@@ -315,6 +318,7 @@ class NetworkController(Server):
             self.send(chan, data) 
         
     def on_bccreepmoved(self, event):
+        """ broadcast creep movement """
         dic = {'act':'move',
                "cname":event.cname,
                'coords':event.coords,
@@ -323,3 +327,14 @@ class NetworkController(Server):
         data = {"action": "creep", "msg": mmsg.d}
         for chan in self.chan_to_name:
             self.send(chan, data) 
+
+
+    def on_bccreepdied(self, event):
+        """ broadcast creep death """
+        dic = {'act':'die',
+               'cname':event.cname}
+        dmsg = SrvCreepDiedMsg(dic)
+        data = {"action": "creep", "msg": dmsg.d}
+        for chan in self.chan_to_name:
+            self.send(chan, data) 
+

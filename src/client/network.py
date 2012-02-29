@@ -2,12 +2,12 @@ from PodSixNet.Connection import connection, ConnectionListener
 from client.events_client import SendChatEvt, NwRecChatEvt, NwRecGreetEvt, \
     NwRecNameChangeEvt, NwRecPlayerJoinEvt, NwRecPlayerLeft, NwRecAvatarMoveEvt, \
     SendMoveEvt, NwRecGameAdminEvt, NwRecCreepJoinEvt, NwRecCreepMoveEvt, SendAtkEvt, \
-    NwRecAtkEvt
+    NwRecAtkEvt, NwRecCreepDieEvt
 from common.events import TickEvent
 from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
     SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg, unpack_msg, \
-    ClAtkMsg, SrvAtkMsg
+    ClAtkMsg, SrvAtkMsg, SrvCreepDiedMsg
 import logging
 
 class NetworkController(ConnectionListener):
@@ -139,6 +139,12 @@ class NetworkController(ConnectionListener):
             act, cname, coords, facing = unpack_msg(data['msg'], SrvCreepMovedMsg)
             ev = NwRecCreepMoveEvt(cname, coords, facing)
             self._em.post(ev)
+            
+        elif act == 'die': # creep death
+            act, cname = unpack_msg(data['msg'], SrvCreepDiedMsg)
+            ev = NwRecCreepDieEvt(cname)
+            self._em.post(ev)
+            
 
     
     ################## (DIS)CONNECTION + NAME CHANGE CALLBACKS ################    

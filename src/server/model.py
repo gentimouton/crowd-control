@@ -211,16 +211,16 @@ class SGame():
         player = self.players[pname]
         
         try:
-            creep = self.aidir.creeps[tname]
-            pcell = self.world.get_cell(player.coords)
             # check that player is facing the creep, and creep is in adjacent cell
-            if pcell.get_adjacent_cell(player.facing) == creep.cell: 
-                #self.log.debug(pname + ' attacked ' + tname)
-                dmg = player.atk # TODO: should also take creep.def into account
-                creep.hp -= dmg
-                event = SBcAtkEvent(pname, tname, dmg)
-                
-                
+            creep = self.aidir.creeps[tname]
+            playercell = self.world.get_cell(player.coords)
+            targetcell = playercell.get_adjacent_cell(player.facing)
+            if targetcell == creep.cell: 
+                self.log.debug(pname + ' attacked ' + tname)
+                dmg = creep.rcv_atk(player.atk)# takes the creep's stats into account
+                ev = SBcAtkEvent(pname, tname, dmg)
+                self._em.post(ev)
+                  
         except KeyError: # most likely, a client sent an incorrect creep id
             self.log.warning('Target ' + tname + ' was attacked by ' + pname  
                              + ' but target was not found.')

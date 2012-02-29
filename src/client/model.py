@@ -4,7 +4,7 @@ from client.events_client import InputMoveRequest, ModelBuiltMapEvent, \
     LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, SendMoveEvt, \
     RemoteCharactorMoveEvent, NwRecGameAdminEvt, NwRecCreepJoinEvt, CreepPlaceEvent, \
     NwRecCreepMoveEvt, MyNameChangedEvent, MdAddPlayerEvt, InputAtkRequest, \
-    SendAtkEvt, NwRecAtkEvt
+    SendAtkEvt, NwRecAtkEvt, NwRecCreepDieEvt
 from collections import deque
 from common.world import World
 import logging
@@ -83,6 +83,7 @@ class Game:
         self._em.reg_cb(NwRecGameAdminEvt, self.on_gameadmin)
         self._em.reg_cb(NwRecCreepJoinEvt, self.on_creepjoin)
         self._em.reg_cb(NwRecCreepMoveEvt, self.on_creepmove)
+        self._em.reg_cb(NwRecCreepDieEvt, self.on_creepdie)
         
         
 
@@ -168,8 +169,11 @@ class Game:
     
     def on_remoteatk(self, event):
         """ A charactor attacked a creep. """
-        print(str(event.atker, event.defer, event.dmg))
-        # TODO: HERE: update the local model; should model be updated on local atks, or only on remote atks?
+        atker, defer = event.atker, event.defer
+        dmg = event.dmg
+        self.log.debug(str(atker) + ' attacked ' + str(defer) 
+                       + ' for ' + str(dmg) + ' dmg.' )
+        # TODO: should model be updated only on remote atks, or also on local atks? 
     
     
     
@@ -194,14 +198,24 @@ class Game:
         cname, coords, facing = event.cname, event.coords, event.facing
         self.add_creep(cname, coords, facing)
         
-        
     def on_creepmove(self, event):
         """ Move a creep. """
         cname, coords = event.cname, event.coords
         creep = self.creeps[cname]
         creep.move_absolute(self.world.get_cell(coords))
         
-    
+    def on_creepdie(self, event):
+        """ A creep died """
+        self.remove_creep(event.cname)
+        
+        
+        
+    def add_creep(self, cname, coords, facing):
+        """ Add a new creep to the existing creeps. """
+        cell = self.world.get_cell(coords)
+        creep = Creep(self._em, cname, cell, facing)       
+        self.creeps[cname] = creep
+
     def remove_creep(self, cname):
         """ remove a creep """
         try:
@@ -211,12 +225,6 @@ class Game:
             self.log.warning('Creep ' + str(cname) + ' had already been removed') 
         
         
-    def add_creep(self, cname, coords, facing):
-        """ Add a new creep to the existing creeps. """
-        cell = self.world.get_cell(coords)
-        creep = Creep(self._em, cname, cell, facing)       
-        self.creeps[cname] = creep
-
 
 
         

@@ -127,6 +127,10 @@ class SBcCreepMoveEvent():
         self.coords = coords
         self.facing = facing
 
+class SBcCreepDiedEvent():
+    def __init__(self, cname):
+        self.cname = cname
+        
         
 ######################### GAME #############################################
 
