@@ -4,6 +4,7 @@
 
 #eclipse prefs
 .settings
+.pydevproject
 
 #logs
 *.log

@@ -26,7 +26,7 @@ class AiDirector():
         
         
         
-    def buildpath(self):  
+    def buildpath(self):  # TODO: WTF is this doing here?
         """ starting from entrance (d=0) assign d+1 recursively to neighbor cells as the cell's distance to entrance """
         def recursive_dist_fill(cell, d):
             assert(cell.is_walkable()) #if cell is not walkable, it should not be reached by the algorithm
