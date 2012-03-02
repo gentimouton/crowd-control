@@ -1,11 +1,3 @@
-Setup for Ubuntu should happen in this order:
-
-1. python
-1. git
-1. eclipse
-1. pydev
-
-
 
 Python3.2
 ======
@@ -13,7 +5,7 @@ Python3.2
 Either from the Ubuntu software center package named `python3.2`, or manual install 
 (cf http://www.giantflyingsaucer.com/blog/?p=2858):
 
-````bash
+```bash
 sudo apt-get install build-essential
 sudo apt-get install libreadline5-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
 wget http://python.org/ftp/python/3.2/Python-3.2.tgz
@@ -21,7 +13,10 @@ tar -xvf Python-3.2.tgz && cd Python-3.2/
 ./configure
 make
 sudo make altinstall
-```` 
+```
+
+
+
 
 Git
 ====
@@ -30,18 +25,27 @@ Setting up git to checkout from and push to github: http://help.github.com/linux
 
 SSH Issues: http://help.github.com/ssh-issues/
 
-To add coloring in terminal, cf http://en.newinstance.it/2010/05/23/git-autocompletion-and-enhanced-bash-prompt/
-:
+To add coloring in terminal, the following command adds a few lines to `~/.gitconfig`:
 
-````bash
-git config --global color.status auto
-````
+```bash
+git config --global color.ui auto
+```
 
 To see changes in current branch:
 
-````bash
+```bash
+git status
 git diff --stat
-````
+```
+
+More git tricks:
+
+- http://book.git-scm.com/5_customizing_git.html
+- http://cheat.errtheblog.com/s/git
+- http://en.newinstance.it/2010/05/23/git-autocompletion-and-enhanced-bash-prompt/
+
+
+
 
 
 Eclipse
@@ -54,16 +58,16 @@ PyDev is an Eclipse plug-in for Python development. Get it from within Eclipse: 
 Unity may hide the scrolling bars of Eclipse's code editor and console. To re-add them, see http://askubuntu.com/questions/36448/is-there-a-way-to-blacklist-an-individual-application-from-using-overlay-scrollb
 :
 
-````bash
+```bash
 vim /usr/bin/eclipse
-````
+```
 
 Then add below the line `GDK_NATIVE_WINDOWS=true`:
 
-````text
+```text
 export UBUNTU_MENUPROXY=0
 export LIBOVERLAY_SCROLLBAR=0
-````
+```
 
 
 Pygame
@@ -71,23 +75,23 @@ Pygame
 
 Installation: (apt-get or package manager if you don't have hg). See http://www.pygame.org/wiki/CompileUbuntu?parent=Compilation
 
-````bash
+```bash
 sudo apt-get install python3.2-dev libsdl-image1.2-dev libsdl-mixer1.2-dev libsdl-ttf2.0-dev libsdl1.2-dev libsmpeg-dev python-numpy subversion libportmidi-dev ffmpeg libswscale-dev libavformat-dev libavcodec-dev
 hg clone https://bitbucket.org/pygame/pygame
 cd pygame
-````
+```
 
 Then open `setup.py` and modify line 123 if needed: `raw_input(...)` should instead be `input(...)`
 
 ```bash
 python3.2 setup.py build
 sudo python3.2 setup.py install
-````
+```
 
 Now, you should not have any error running:
-````
+```bash
 python3.2 examples/chimp.py
-````
+```
 
 
 Final steps
