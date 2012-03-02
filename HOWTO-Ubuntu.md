@@ -30,19 +30,24 @@ Setting up git to checkout from and push to github: http://help.github.com/linux
 
 SSH Issues: http://help.github.com/ssh-issues/
 
-To add coloring in terminal, cf http://en.newinstance.it/2010/05/23/git-autocompletion-and-enhanced-bash-prompt/
-:
+To add coloring in terminal, the following command adds a few lines to `~/.gitconfig`:
 
 ````bash
-git config --global color.status auto
+git config --global color.ui auto
 ````
 
 To see changes in current branch:
 
 ````bash
+git status
 git diff --stat
 ````
 
+More git tricks:
+
+- http://book.git-scm.com/5_customizing_git.html
+- http://cheat.errtheblog.com/s/git
+- http://en.newinstance.it/2010/05/23/git-autocompletion-and-enhanced-bash-prompt/
 
 Eclipse
 =========
