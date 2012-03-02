@@ -11,7 +11,7 @@ import logging
 
 
 class SPlayer():
-    # TODO: SPlayer needs to have an SAvatar attribute
+    # TODO: SPlayer needs to have an SAvatar attribute?
     
     def __init__(self, pname, coords, facing):
         self.pname = pname

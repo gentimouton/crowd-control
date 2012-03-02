@@ -232,9 +232,9 @@ class Cell():
         """ remove occupant """
         try:
             del self._occupants[occ]
-        except KeyError: # TODO: should log.warning instead!
-            self.log.error('Failed to remove ' + str(occ) 
-                           + ' from cell ' + str(self.coords))
+        except KeyError: 
+            self.log.warning('Failed to remove ' + str(occ) 
+                             + ' from cell ' + str(self.coords))
     
     def occ_chngname(self, oldname, newname):
         """ An occupant changed name/id. """

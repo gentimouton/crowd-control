@@ -181,7 +181,8 @@ class Creep():
     def update(self):
         """ Handle creep's state machine and comm with AI director. """
         if self.state == 'idle': 
-            # Dummy: Always move to a random neighbor cell. TODO: Could also attack.
+            # Dummy: Always move to a random neighbor cell. 
+            # TODO: Could also attack. Make an AI config for each creep behavior.
             #cell = random.choice(self.cell.get_neighbors())
             cell = self.cell.get_nextcell_inpath()
             self.move(cell)
