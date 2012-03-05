@@ -69,12 +69,12 @@ class SBroadcastNameChangeEvent():
 ####################################### CHAT ##############################
 
 
-class SReceivedChatEvent():
+class SNwRcvChatEvent():
     def __init__(self, author, txt):
         self.txt = txt
         self.pname = author
 
-class SBroadcastChatEvent():
+class SBcChatEvent():
     def __init__(self, author, txt):
         self.txt = txt
         self.pname = author
@@ -85,7 +85,7 @@ class SBroadcastChatEvent():
 ######################### MOVEMENT ########################################
 
 
-class SReceivedMoveEvent():
+class SNwRcvMoveEvent():
     def __init__(self, pname, coords, facing):
         self.pname = pname
         self.coords = coords
@@ -98,13 +98,13 @@ class SBroadcastMoveEvent():
         self.facing = facing
         
 
-######################### ATTACK ########################################
+######################### PLAYER ATTACKS ####################################
 
 
-class SReceivedAtkEvent():
-    def __init__(self, pname, tname):
-        self.pname = pname
-        self.tname = tname
+class SNwRcvAtkEvent():
+    def __init__(self, atker, defer):
+        self.atker = atker # attacker
+        self.defer = defer # defender
         
 class SBcAtkEvent():
     def __init__(self, attacker, defender, damage):
@@ -115,22 +115,27 @@ class SBcAtkEvent():
 
 ####################### CREEPS ##########################################
  
-class SBroadcastCreepArrivedEvent():
+class SBcCreepArrivedEvent():
     def __init__(self, cname, coords, facing):
-        self.cname = cname
+        self.name = cname
         self.coords = coords
         self.facing = facing
 
-class SBcCreepMoveEvent():
+class SBcCreepMovedEvent():
     def __init__(self, cname, coords, facing):
-        self.cname = cname
+        self.name = cname
         self.coords = coords
         self.facing = facing
 
 class SBcCreepDiedEvent():
     def __init__(self, cname):
-        self.cname = cname
-        
+        self.name = cname
+
+class SCreepAtkEvent():
+    def __init__(self, attacker, defender ,damage):
+        self.atker = attacker
+        self.defer = defender
+        self.dmg = damage
         
 ######################### GAME #############################################
 

@@ -2,5 +2,5 @@
 
 export PYTHONPATH=$PYTHONPATH:`pwd`
 cd client
-python3.2 cc-cli.py
+python3.2 cc_cli.py
 

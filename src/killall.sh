@@ -5,7 +5,7 @@
 
 # TODO: accept 'bot', 'cli', 'srv', and 'all' arguments 
 
-pkill -f "cc-srv.py"
-pkill -f "cc-cli.py"
-pkill -f "cc-bot.py"
+pkill -f "cc_srv.py"
+pkill -f "cc_cli.py"
+pkill -f "cc_bot.py"
 

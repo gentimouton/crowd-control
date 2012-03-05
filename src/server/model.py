@@ -1,28 +1,21 @@
 from common.constants import DIRECTION_UP
 from common.world import World
 from server.ai import AiDirector
+from server.charactor import SCharactor
 from server.config import config_get_mapname
 from server.events_server import SModelBuiltWorldEvent, SSendGreetEvent, \
-    SBroadcastNameChangeEvent, SBroadcastChatEvent, SBroadcastMoveEvent, \
+    SBroadcastNameChangeEvent, SBcChatEvent, SBroadcastMoveEvent, \
     SPlayerArrivedEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
-    SReceivedChatEvent, SReceivedMoveEvent, SBroadcastArrivedEvent, \
-    SBroadcastLeftEvent, NwBcAdminEvt, SReceivedAtkEvent, SBcAtkEvent
+    SNwRcvChatEvent, SNwRcvMoveEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, \
+    NwBcAdminEvt, SNwRcvAtkEvent, SCreepAtkEvent, SBcAtkEvent
 import logging
 
 
-class SPlayer():
-    # TODO: SPlayer needs to have an SAvatar attribute?
-    
-    def __init__(self, pname, coords, facing):
-        self.pname = pname
-        self.coords = coords
-        self.facing = facing #direction the player is facing
         
-        self.atk = 6 #how much dmg inflicted per attack
 
-    
-    def __str__(self):
-        return '<SPlayer %s named %s>' % (id(self), self.pname)
+###############################################################################
+
+
 
 
 class SGame():
@@ -36,9 +29,10 @@ class SGame():
         self._em.reg_cb(SPlayerArrivedEvent, self.on_playerjoined)
         self._em.reg_cb(SPlayerLeftEvent, self.player_left)
         self._em.reg_cb(SPlayerNameChangeRequestEvent, self.on_playerchangedname)
-        self._em.reg_cb(SReceivedChatEvent, self.received_chat)
-        self._em.reg_cb(SReceivedMoveEvent, self.on_playermoved)
-        self._em.reg_cb(SReceivedAtkEvent, self.on_playerattacked)
+        self._em.reg_cb(SNwRcvChatEvent, self.received_chat)
+        self._em.reg_cb(SNwRcvMoveEvent, self.on_playermoved)
+        self._em.reg_cb(SNwRcvAtkEvent, self.on_charattacked)
+        self._em.reg_cb(SCreepAtkEvent, self.on_charattacked)
         
         # Players are here; creeps are in the AI director. 
         self.players = dict()
@@ -53,6 +47,14 @@ class SGame():
         self.aidir = AiDirector(self._em, self.world)
 
       
+    def get_charactor(self, name):
+        """ Return a SCharactor (SCreep or SAvatar) from its name """
+        if name in self.players:
+            return self.players[name]
+        else: 
+            return self.aidir.get_creep(name) # None if not found
+        
+        
     ############### (dis)connection and name changes ##########################
         
     # notifying for pausing/resuming the game could also fit in there
@@ -91,7 +93,7 @@ class SGame():
             # Build list of connected players with their coords and facing direction.
             onlineppl = dict()
             for (otherpname, otherplayer) in self.players.items():
-                onlineppl[otherpname] = otherplayer.coords, otherplayer.facing
+                onlineppl[otherpname] = otherplayer.cell.coords, otherplayer.facing
             
             # Build list of creeps with their coords.
             creeps = dict()
@@ -99,19 +101,19 @@ class SGame():
                 creeps[cid] = creep.cell.coords, creep.facing
             
             # build the new player on the entrance cell and facing upwards
-            coords = self.world.entrance_coords
+            cell = self.world.get_entrance()
             facing = DIRECTION_UP
-            player = SPlayer(pname, coords, facing)
+            player = SAvatar(self._em, pname, cell, facing)
             self.players[pname] = player
-            cell = self.world.get_cell(coords)
             cell.add_occ(pname)
             
             # greet the new player 
-            event = SSendGreetEvent(self.mapname, pname, coords, facing, onlineppl, creeps)
+            args = self.mapname, pname, cell.coords, facing, onlineppl, creeps
+            event = SSendGreetEvent(*args)
             self._em.post(event) 
             
             # notify the connected players of this arrival
-            event = SBroadcastArrivedEvent(pname, coords, facing)
+            event = SBroadcastArrivedEvent(pname, cell.coords, facing)
             self._em.post(event)
             
         else: 
@@ -132,12 +134,10 @@ class SGame():
         
         if newname not in self.players:
             self.log.info(oldname + ' changed name into ' + newname)
-            
             player = self.players[oldname]
-            player.pname = newname
+            player.change_name(newname)
             # notify the cell the player is currently on
-            cell = self.world.get_cell(player.coords)
-            cell.occ_chngname(oldname, newname)
+            player.cell.occ_chngname(oldname, newname)
             self.players[newname] = player
             del self.players[oldname]
                         
@@ -167,7 +167,7 @@ class SGame():
             self.exec_cmd(pname, args[0][1:], args[1:])
             
         else:
-            event = SBroadcastChatEvent(pname, txt)
+            event = SBcChatEvent(pname, txt)
             self._em.post(event)
 
 
@@ -182,15 +182,14 @@ class SGame():
             player = self.players[pname]
 
             # remove player from old cell and add player to new cell
-            oldcell = self.world.get_cell(player.coords)
-            oldcell.rm_occ(player.pname)
+            oldcell = player.cell
             newcell = self.world.get_cell(coords)
-            newcell.add_occ(player.pname)
+            oldcell.rm_occ(pname)
+            newcell.add_occ(pname)
+            player.move(newcell, facing)
             
-            player.coords = coords
-            player.facing = facing
-            #self.log.debug(pname + ' moved to ' + str(coords))
-            event = SBroadcastMoveEvent(pname, coords, facing)
+            #self.log.debug(name + ' moved to ' + str(newcell.coords))
+            event = SBroadcastMoveEvent(pname, newcell.coords, facing)
             self._em.post(event)
 
         else:
@@ -203,31 +202,22 @@ class SGame():
 
     ##########################################################################
     
-    def on_playerattacked(self, event):
-        """ when a player attacks, he can only inflict dmg 
-        to creeps in adjacent cells. No friendly fire.
+    def on_charattacked(self, event):
+        """ when a creep or player attacks, it can only inflict dmg 
+        to creeps or players in adjacent cells.
+        Note: this allows for creep infighting and player friendly fire.
         """
-        pname, tname = event.pname, event.tname
-        player = self.players[pname]
+        atker = self.get_charactor(event.atker)
+        defer = self.get_charactor(event.defer)        
         
-        try:
-            # check that player is facing the creep, and creep is in adjacent cell
-            creep = self.aidir.creeps[tname]
-            playercell = self.world.get_cell(player.coords)
-            targetcell = playercell.get_adjacent_cell(player.facing)
-            if targetcell == creep.cell: 
-                self.log.debug(pname + ' attacked ' + tname)
-                dmg = creep.rcv_atk(player.atk)# takes the creep's stats into account
-                ev = SBcAtkEvent(pname, tname, dmg)
-                self._em.post(ev)
-                  
-        except KeyError: # most likely, a client sent an incorrect creep id
-            self.log.warning('Target ' + tname + ' was attacked by ' + pname  
-                             + ' but target was not found.')
- 
+        # check that atker is facing the defer 
+        # and that atker is in adjacent cell of defer
+        atkercell = atker.cell
+        targetcell = atkercell.get_adjacent_cell(atker.facing)
+        if targetcell == defer.cell: 
+            self.log.debug(event.atker + ' attacked ' + event.defer)
+            defer.rcv_atk(atker) # take defense into account
         
-            
-            
 
 
 
@@ -262,4 +252,48 @@ class SGame():
             except IndexError: # new nick only contained spaces
                 pass 
             
+
+
+
+
+#############################################################################
+    
+class SAvatar(SCharactor):
+    """ represents a player in the game world """
+    
+    log = logging.getLogger('server')
+
+
+    def __init__(self, em, pname, cell, facing):
+        SCharactor.__init__(self, pname, cell, facing, 10, 6)
+        self._em = em
+        
+        
+    def __str__(self):
+        args = self.name, str(self.cell.coord), self.hp, id(self)
+        return '<SAvatar %s at %s, hp=%d, id=%s>' % args
+
+    def move(self, cell, facing):
+        self.cell = cell
+        self.facing = facing
+        # TODO: should ask for movement broadcast
+        
+    def attack(self, defer):
+        pass # TODO:
+    
+    def rcv_atk(self, atker):
+        dmg = atker.atk
+        self.hp -= dmg
+        self.log.debug('Player %s received %d dmg' % (self.name, dmg))
+        
+        ev = SBcAtkEvent(atker.name, self.name, dmg)
+        self._em.post(ev)
+        
+        # less than 0 HP => death
+        if self.hp <= 0:
+            self.die()
+            
+    def die(self):
+        self.log.info('Player %s should die' % self.name)
+        self.hp = 10 # TODO: should really die instead
 

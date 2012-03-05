@@ -244,6 +244,6 @@ class Cell():
     def get_occ(self):
         """ TODO: return the weakest cell occupant """
         if self._occupants:
-            return list(self._occupants.keys())[0] # ugly!
+            return list(self._occupants.keys())[0] # TODO: ugly!
         else:
             return None

@@ -1,11 +1,15 @@
 from collections import defaultdict
 from common.constants import DIRECTION_LEFT
 from common.events import TickEvent
-from server.events_server import SBroadcastCreepArrivedEvent, SBcCreepMoveEvent, \
-    SBcCreepDiedEvent
+from server.charactor import SCharactor
+from server.config import config_get_aifreq
+from server.events_server import SBcCreepArrivedEvent, SBcCreepMovedEvent, \
+    SBcCreepDiedEvent, SBcAtkEvent, SCreepAtkEvent
 from uuid import uuid4
 import logging
-        
+
+
+
 class AiDirector():
 
     log = logging.getLogger('server')
@@ -21,7 +25,7 @@ class AiDirector():
         self.creeps = dict()
         
         # action frames and delays
-        self.timestep = 100 #in milliseconds; means that AI logic runs at 10Hz
+        self.timestep = config_get_aifreq() # in milliseconds
         self.isrunning = False
         
         
@@ -54,9 +58,10 @@ class AiDirector():
         self.distantactions = defaultdict(list) 
         
         # create dummy creeps
+        cell = self.world.get_lair()
         for x in range(1):
             cname = str(uuid4())
-            creep = Creep(self._em, self, cname, DIRECTION_LEFT) #face right
+            creep = SCreep(self._em, self, cname, cell, DIRECTION_LEFT) #face left
             self.creeps[cname] = creep
             
         self.isrunning = True
@@ -137,16 +142,25 @@ class AiDirector():
             self.frameoverflow -= self.timestep
             
             
-            
+    
+    def get_creep(self, cname):
+        """ return the creep with that name. 
+        Return None if not found. 
+        """
+        try: 
+            return self.creeps[cname]
+        except KeyError: # creep not found
+            self.log.error("Creep %s not found" % cname)
+            return None
+        
+         
     def rmv_creep(self, creep):
         """ Remove a creep who died. """
-        cname = creep.cname
+        cname = creep.name
         
         try:
             self.unschedule_actor(cname)
             del self.creeps[cname]
-            ev = SBcCreepDiedEvent(cname)
-            self._em.post(ev)
         except KeyError:
             self.log.warning('Tried to remove creep %s but failed.' % (cname))
         
@@ -155,29 +169,72 @@ class AiDirector():
 #############################################################################
 
 
-class Creep():
-        
-    def __init__(self, evManager, aidir, cname, facing):
-        """ Default state is idle. Move in 500ms. """
+class SCreep(SCharactor):
+    
+    log = logging.getLogger('server')
+
+    
+    def __init__(self, evManager, aidir, cname, cell, facing):
+        """ Starting state is idle. """
+        SCharactor.__init__(self, cname, cell, facing, 10, 6) # 10 HP, 6 atk
         self._em = evManager
         self.aidir = aidir
         
-        self.cname = cname
-        self.cell = self.aidir.world.get_lair()
-        self.facing = facing # direction the creep is facing when created
-
         self.state = 'idle'
-        self.hp = 10 # TODO: hardcoded
                 
-        self.aidir.schedule_action(500, self.cname, self.update) # trigger a move in 500 ms
-        ev = SBroadcastCreepArrivedEvent(self.cname, self.cell.coords, self.facing)
+        self.aidir.schedule_action(500, self.name, self.update) # trigger a move in 500 ms
+        ev = SBcCreepArrivedEvent(self.name, self.cell.coords, self.facing)
         self._em.post(ev)
 
 
     def __str__(self):
-        return '<Creep %s %s>' % (self.cname, id(self))
+        args = self.name, str(self.cell.coord), self.hp, id(self)
+        return '<SCreep %s at %s, hp=%d, id=%s>' % args
+
+    
+    #################### OVERRIDES FROM CHARACTOR ############################
+     
+    
+    def move(self, cell, facing=DIRECTION_LEFT):
+        """ move the creep to the given cell. """
+        self.cell = cell
+        ev = SBcCreepMovedEvent(self.name, self.cell.coords, facing)
+        self._em.post(ev)
+        
+        
+    def rcv_atk(self, atker):
+        """ when a player attacks, take damage. """
+        dmg = atker.atk # TODO: should be reduced by self.def or self.armor
+        self.hp -= dmg
+        self.log.debug('Creep %s received %d dmg' %(self.name, dmg))
+        
+        ev = SBcAtkEvent(atker.name, self.name, dmg)
+        self._em.post(ev)
+        
+        # less than 0 HP => death
+        if self.hp <= 0:
+            self.die()
+            
+    
+    def die(self):
+        """ Notify all players when a creep dies. """
+        self.aidir.rmv_creep(self)
+        ev = SBcCreepDiedEvent(self.name)
+        self._em.post(ev)
+        
+    
+    def attack(self, defer):
+        """ Notify model of creep attack. """
+        # TODO: why is creep death direct network broadcast, 
+        # but creep atk goes through model?
+        ev = SCreepAtkEvent(self.name, defer, self.atk)
+        self._em.post(ev)
 
 
+
+
+    ##################### STATE MACHINE ###############################
+    
     def update(self):
         """ Handle creep's state machine and comm with AI director. """
         if self.state == 'idle': 
@@ -185,35 +242,29 @@ class Creep():
             # TODO: Could also attack. Make an AI config for each creep behavior.
             #cell = random.choice(self.cell.get_neighbors())
             cell = self.cell.get_nextcell_inpath()
-            self.move(cell)
-            self.state = 'moving'
-            mvtduration = 100 
-            self.aidir.schedule_action(mvtduration, self.cname, self.update) 
+            occupant = cell.get_occ()
+            if occupant: # TOOD: this attacks other creeps. 
+                # TODO: should check for players in that cell instead.
+                self.attack(occupant)
+                self.state = 'atking'
+                atkduration = 100
+                self.aidir.schedule_action(atkduration, self.name, self.update) 
+            else: # move if no one in next cell
+                self.move(cell)
+                self.state = 'moving'
+                mvtduration = 100 
+                self.aidir.schedule_action(mvtduration, self.name, self.update) 
         
         elif self.state == 'moving': # Dummy: after-move-delay
             self.state = 'idle'
             #duration = random.randint(2, 12) * 100# pretend to 'think' for 200-1200 ms
             duration = 2000 # think for 2 secs
-            self.aidir.schedule_action(duration, self.cname, self.update) 
+            self.aidir.schedule_action(duration, self.name, self.update) 
+
+        elif self.state == 'atking': # Dummy: after-atk-delay
+            self.state = 'idle'
+            duration = 2000 # acd of 2 secs
+            self.aidir.schedule_action(duration, self.name, self.update) 
 
         
-    def move(self, cell):
-        """ move the creep to the given cell. """
-        self.cell = cell
-        ev = SBcCreepMoveEvent(self.cname, self.cell.coords, self.facing)
-        self._em.post(ev)
-        
-        
-    def rcv_atk(self, atk):
-        """ when a player attacks, take damage. """
-        self.hp -= atk 
-        
-        # TODO: should atk be reduced by def in 1) percentage or 2) absolute value?
-        if self.hp <= 0:
-            self.die()
-        return atk
     
-    
-    def die(self):
-        """ when a creep dies. """
-        self.aidir.rmv_creep(self)

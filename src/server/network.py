@@ -8,9 +8,9 @@ from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
 from server.config import config_get_hostport
 from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
     SPlayerLeftEvent, SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, \
-    SReceivedChatEvent, SBroadcastChatEvent, SReceivedMoveEvent, SBroadcastMoveEvent, \
+    SNwRcvChatEvent, SBcChatEvent, SNwRcvMoveEvent, SBroadcastMoveEvent, \
     SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, NwBcAdminEvt, \
-    SBroadcastCreepArrivedEvent, SBcCreepMoveEvent, SReceivedAtkEvent, SBcAtkEvent, \
+    SBcCreepArrivedEvent, SBcCreepMovedEvent, SNwRcvAtkEvent, SBcAtkEvent, \
     SBcCreepDiedEvent
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
@@ -79,11 +79,11 @@ class NetworkController(Server):
         self._em.reg_cb(SBroadcastArrivedEvent, self.on_bcarrived)
         self._em.reg_cb(SBroadcastLeftEvent, self.on_bcleft)
         self._em.reg_cb(SBroadcastNameChangeEvent, self.broadcast_name_change)
-        self._em.reg_cb(SBroadcastChatEvent, self.on_bcchat)
+        self._em.reg_cb(SBcChatEvent, self.on_bcchat)
         self._em.reg_cb(SBroadcastMoveEvent, self.on_bcmove)
         self._em.reg_cb(NwBcAdminEvt, self.on_bcgameadmin)
-        self._em.reg_cb(SBroadcastCreepArrivedEvent, self.on_bccreepjoin)
-        self._em.reg_cb(SBcCreepMoveEvent, self.on_bccreepmoved)
+        self._em.reg_cb(SBcCreepArrivedEvent, self.on_bccreepjoin)
+        self._em.reg_cb(SBcCreepMovedEvent, self.on_bccreepmoved)
         self._em.reg_cb(SBcAtkEvent, self.on_bcatk)
         self._em.reg_cb(SBcCreepDiedEvent, self.on_bccreepdied)
         
@@ -241,7 +241,7 @@ class NetworkController(Server):
         
         author = self.chan_to_name[channel]
         
-        event = SReceivedChatEvent(author, cmsg.d['txt'])
+        event = SNwRcvChatEvent(author, cmsg.d['txt'])
         self._em.post(event)
         
         
@@ -260,7 +260,7 @@ class NetworkController(Server):
     def received_move(self, channel, coords, facing):
         pname = self.chan_to_name[channel]
         
-        event = SReceivedMoveEvent(pname, coords, facing)
+        event = SNwRcvMoveEvent(pname, coords, facing)
         self._em.post(event)
         
         
@@ -280,7 +280,7 @@ class NetworkController(Server):
     def received_atk(self, channel, tname):
         pname = self.chan_to_name[channel]
         
-        event = SReceivedAtkEvent(pname, tname)
+        event = SNwRcvAtkEvent(pname, tname)
         self._em.post(event)
         
         
@@ -309,7 +309,7 @@ class NetworkController(Server):
     def on_bccreepjoin(self, event):
         """ broadcast creep creation """
         dic = {'act':'join',
-               "cname":event.cname,
+               "cname":event.name,
                'coords':event.coords,
                'facing':event.facing}
         mmsg = SrvCreepJoinedMsg(dic)
@@ -320,7 +320,7 @@ class NetworkController(Server):
     def on_bccreepmoved(self, event):
         """ broadcast creep movement """
         dic = {'act':'move',
-               "cname":event.cname,
+               "cname":event.name,
                'coords':event.coords,
                'facing':event.facing}
         mmsg = SrvCreepMovedMsg(dic)
@@ -332,7 +332,7 @@ class NetworkController(Server):
     def on_bccreepdied(self, event):
         """ broadcast creep death """
         dic = {'act':'die',
-               'cname':event.cname}
+               'cname':event.name}
         dmsg = SrvCreepDiedMsg(dic)
         data = {"action": "creep", "msg": dmsg.d}
         for chan in self.chan_to_name:

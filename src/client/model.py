@@ -213,7 +213,7 @@ class Game:
     def add_creep(self, cname, coords, facing):
         """ Add a new creep to the existing creeps. """
         cell = self.world.get_cell(coords)
-        creep = Creep(self._em, cname, cell, facing)       
+        creep = SCreep(self._em, cname, cell, facing)       
         self.creeps[cname] = creep
 
     def remove_creep(self, cname):
@@ -222,7 +222,7 @@ class Game:
             self.creeps[cname].rmv()
             del self.creeps[cname]
         except KeyError:
-            self.log.warning('Creep ' + str(cname) + ' had already been removed') 
+            self.log.warning('SCreep ' + str(cname) + ' had already been removed') 
         
         
 
@@ -365,7 +365,7 @@ class Avatar(Charactor):
                 pass # TODO: show a 'miss' animation
         
 
-class Creep(Charactor):
+class SCreep(Charactor):
     """ Representation of a remote enemy monster. """
         
     def __init__(self, evManager, cname, cell, facing):
@@ -377,7 +377,7 @@ class Creep(Charactor):
         
     
     def __str__(self):
-        return '<Creep %s named %s>' % (id(self), self.cname)
+        return '<SCreep %s named %s>' % (id(self), self.cname)
 
 
         

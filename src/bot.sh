@@ -17,7 +17,7 @@ else
     # create args[1] bots
     for b in `seq 1 $1`; do
         echo "make bot #$b" 
-        python3.2 cc-bot.py &
+        python3.2 cc_bot.py &
         sleep $INTERBOT;
     done
 
