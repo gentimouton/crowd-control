@@ -7,9 +7,9 @@ from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
     unpack_msg, ClAtkMsg, SrvAtkMsg, SrvCreepDiedMsg
 from server.config import config_get_hostport
 from server.events_server import SPlayerArrivedEvent, SSendGreetEvent, \
-    SPlayerLeftEvent, SPlayerNameChangeRequestEvent, SBroadcastNameChangeEvent, \
+    SPlayerLeftEvent, SPlayerNameChangeRequestEvent, SBcNameChangeEvent, \
     SNwRcvChatEvent, SBcChatEvent, SNwRcvMoveEvent, SBroadcastMoveEvent, \
-    SModelBuiltWorldEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, NwBcAdminEvt, \
+    SModelBuiltWorldEvent, SBcArrivedEvent, SBcLeftEvent, NwBcAdminEvt, \
     SBcCreepArrivedEvent, SBcCreepMovedEvent, SNwRcvAtkEvent, SBcAtkEvent, \
     SBcCreepDiedEvent
 from uuid import uuid4
@@ -76,9 +76,9 @@ class NetworkController(Server):
         self._em.reg_cb(TickEvent, self.on_tick)
         self._em.reg_cb(SModelBuiltWorldEvent, self.on_worldbuilt)
         self._em.reg_cb(SSendGreetEvent, self.on_greet)
-        self._em.reg_cb(SBroadcastArrivedEvent, self.on_bcarrived)
-        self._em.reg_cb(SBroadcastLeftEvent, self.on_bcleft)
-        self._em.reg_cb(SBroadcastNameChangeEvent, self.broadcast_name_change)
+        self._em.reg_cb(SBcArrivedEvent, self.on_bcarrived)
+        self._em.reg_cb(SBcLeftEvent, self.on_bcleft)
+        self._em.reg_cb(SBcNameChangeEvent, self.broadcast_name_change)
         self._em.reg_cb(SBcChatEvent, self.on_bcchat)
         self._em.reg_cb(SBroadcastMoveEvent, self.on_bcmove)
         self._em.reg_cb(NwBcAdminEvt, self.on_bcgameadmin)

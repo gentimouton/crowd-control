@@ -97,18 +97,19 @@ class World():
         a cell's distance to the entrance is d+1
         if the shortest distance of its neighbor cells to the entrance is d.
         """
-        def recursive_dist_fill(cell, d):
+        def recursive_dist_fill(cell, dist):
             try:
                 assert self.iswalkable(cell.coords)
             except AssertionError:
                 self.log.warning('Cell ' + str(cell) + ' should not be reachable')
                 return
             
-            if cell.entrance_dist is not None and cell.entrance_dist <= d:
+            if cell.entrance_dist is not None and cell.entrance_dist <= dist:
                 return
             else:
-                cell.entrance_dist = d
-                [recursive_dist_fill(c, d + 1) for c in cell.get_neighbors()]            
+                cell.entrance_dist = dist
+                neighbors = cell.get_neighbors()
+                [recursive_dist_fill(c, dist + 1) for direc, c in neighbors]            
         
         recursive_dist_fill(self.get_entrance(), 0)
         
@@ -172,16 +173,14 @@ class Cell():
     
     
     def get_neighbors(self):
-        """ Return the neighbor cells. """
+        """ Return a dict {direction: cell} of the neighbor cells. """
         directions = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT]
-        adjs = []
-        for  d in directions:
-            c = self.get_adjacent_cell(d)
-            if c:
-                adjs.append(c)
-        return adjs
-        # could be done in 1 line, but would require 2 calls to each non-None cell:
-        # return [c for c in self.get_adjacent_cell(d) if self.get_adjacent_cell(d)]
+        adjcells = []
+        for direc in directions:
+            cell = self.get_adjacent_cell(direc)
+            if cell:
+                adjcells.append((direc, cell)) # append a tuple
+        return adjcells
         
         
          
@@ -207,13 +206,16 @@ class Cell():
         
         
     def get_nextcell_inpath(self):
-        """ Return a cell that is on the path towards the map entrance. """
+        """ Return the direction to the cell on the path towards the map entrance
+        and the cell itself.
+        In other words, return a tuple (direction, cell)
+        """
         neighbors = self.get_neighbors()
         random.shuffle(neighbors) #shuffle for randomness
         if not neighbors:#no adjacent cell is walkable
             return None 
-        else: # return the neighbor closest to entrance
-            return min(neighbors, key=lambda c: c.entrance_dist)
+        else: # return the cell closest to entrance + the direction to that cell
+            return min(neighbors, key=lambda tup: tup[1].entrance_dist)
             
             
     def set_entrance(self, value):

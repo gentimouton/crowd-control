@@ -18,8 +18,13 @@ def load_srv_config():
 # main config
 def config_get_fps():
     return int(_dict['fps'])
-def config_get_aifreq():
+def config_get_logperiod():
+    return int(_dict['logperiod'])
+def config_get_aifps():
     return int(_dict['aifps'])
+def config_get_ailatentframes():
+    return int(_dict['ailatentframes'])
+
 def config_get_mapname():
     return _dict['mapname']
 

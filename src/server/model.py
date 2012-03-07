@@ -4,9 +4,9 @@ from server.ai import AiDirector
 from server.charactor import SCharactor
 from server.config import config_get_mapname
 from server.events_server import SModelBuiltWorldEvent, SSendGreetEvent, \
-    SBroadcastNameChangeEvent, SBcChatEvent, SBroadcastMoveEvent, \
+    SBcNameChangeEvent, SBcChatEvent, SBroadcastMoveEvent, \
     SPlayerArrivedEvent, SPlayerLeftEvent, SPlayerNameChangeRequestEvent, \
-    SNwRcvChatEvent, SNwRcvMoveEvent, SBroadcastArrivedEvent, SBroadcastLeftEvent, \
+    SNwRcvChatEvent, SNwRcvMoveEvent, SBcArrivedEvent, SBcLeftEvent, \
     NwBcAdminEvt, SNwRcvAtkEvent, SCreepAtkEvent, SBcAtkEvent
 import logging
 
@@ -39,8 +39,8 @@ class SGame():
         
         # build world
         self.world = World(evManager, self.log)
-        self.mapname = config_get_mapname()
-        self.world.build_world(self.mapname, SModelBuiltWorldEvent)
+        mapname = config_get_mapname()
+        self.world.build_world(mapname, SModelBuiltWorldEvent)
         self.world.buildpath()
 
         # AI dir is activated when a player sends '/start'
@@ -58,23 +58,6 @@ class SGame():
     ############### (dis)connection and name changes ##########################
         
     # notifying for pausing/resuming the game could also fit in there
-        
-    def player_left(self, event):
-        """ remove player's avatar from game state and notify everyone """
-        
-        pname = event.pname
-        
-        try:
-            del self.players[pname]
-            self.log.info(pname + ' left.')
-        except KeyError:
-            self.log.error('Tried to remove player ' + pname + 
-                  ', but it was not found in player list')
-        
-        event = SBroadcastLeftEvent(pname)
-        self._em.post(event)
-        
-        
                     
             
             
@@ -94,26 +77,29 @@ class SGame():
             onlineppl = dict()
             for (otherpname, otherplayer) in self.players.items():
                 onlineppl[otherpname] = otherplayer.cell.coords, otherplayer.facing
+                # TODO: should be player.get_serializable_pos(), returning (coords, facing)
             
             # Build list of creeps with their coords.
             creeps = dict()
-            for (cid, creep) in self.aidir.creeps.items():
-                creeps[cid] = creep.cell.coords, creep.facing
+            for creep in self.aidir.get_creeps():
+                creeps[creep.name] = creep.cell.coords, creep.facing
+                # TODO: should come from the creep itself
             
             # build the new player on the entrance cell and facing upwards
             cell = self.world.get_entrance()
             facing = DIRECTION_UP
             player = SAvatar(self._em, pname, cell, facing)
             self.players[pname] = player
-            cell.add_occ(pname)
+            cell.add_occ(pname) # TODO: cell.add_player should be called in Avatar, World, or Cell?
+            # TODO: should add_player(Charactor), not just player name
             
             # greet the new player 
-            args = self.mapname, pname, cell.coords, facing, onlineppl, creeps
+            args = self.world.mapname, pname, cell.coords, facing, onlineppl, creeps
             event = SSendGreetEvent(*args)
-            self._em.post(event) 
+            self._em.post(event)
             
             # notify the connected players of this arrival
-            event = SBroadcastArrivedEvent(pname, cell.coords, facing)
+            event = SBcArrivedEvent(pname, cell.coords, facing)
             self._em.post(event)
             
         else: 
@@ -123,7 +109,23 @@ class SGame():
                              + 'self.player_positions[pname] may have been corrupted?')
     
     
-
+    def player_left(self, event):
+        """ remove player's avatar from game state and notify everyone """
+        
+        pname = event.pname
+        
+        try:
+            del self.players[pname]
+            # TODO: should call Avatar.logout() to have avatar.cell.rm_occ()
+            self.log.info(pname + ' left.')
+        except KeyError:
+            self.log.error('Tried to remove player ' + pname + 
+                  ', but it was not found in player list')
+        
+        event = SBcLeftEvent(pname)
+        self._em.post(event)
+        
+        
 
     #########################################################################
             
@@ -141,7 +143,7 @@ class SGame():
             self.players[newname] = player
             del self.players[oldname]
                         
-            event = SBroadcastNameChangeEvent(oldname, newname)
+            event = SBcNameChangeEvent(oldname, newname)
             self._em.post(event)
         
         else: 

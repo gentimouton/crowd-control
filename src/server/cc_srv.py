@@ -2,7 +2,7 @@
 
 from server.clock import SClockController
 from server.config import load_srv_config
-from server.events_server import SrvEventManager
+from server.events_server import SrvEventManager, SQuitEvent
 from server.model import SGame
 from server.network import NetworkController
 import logging.config
@@ -31,7 +31,4 @@ def main():
     
         
 if __name__ == '__main__': 
-    try:
-        main()
-    except KeyboardInterrupt:
-        print('Closed server.')
+    main()

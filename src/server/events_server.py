@@ -2,11 +2,6 @@ from common.events import EventManager
 import logging
 
 
-  
-class SQuitEvent():
-    pass
-  
-
 
 
 #################### model events #########################################
@@ -40,13 +35,13 @@ class SSendGreetEvent():
         self.onlineppl = onlineppl
         self.creeps = creeps
         
-class SBroadcastArrivedEvent():
+class SBcArrivedEvent():
     def __init__(self, pname, coords, facing):
         self.pname = pname
         self.coords = coords
         self.facing = facing
         
-class SBroadcastLeftEvent():
+class SBcLeftEvent():
     def __init__(self, pname):
         self.pname = pname
 
@@ -61,7 +56,7 @@ class SPlayerNameChangeRequestEvent():
         self.oldname = oldname
         self.newname = newname
 
-class SBroadcastNameChangeEvent():
+class SBcNameChangeEvent():
     def __init__(self, oldname, newname):
         self.oldname = oldname
         self.newname = newname
