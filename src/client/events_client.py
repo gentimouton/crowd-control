@@ -96,8 +96,8 @@ class NwRecCreepDieEvt():
 
 class SendAtkEvt():
     """ Model to network. Local avatar attacks a cell. """
-    def __init__(self, target):
-        self.target = target
+    def __init__(self, targetname):
+        self.tname = targetname
 
 class NwRecAtkEvt():
     """ Network received an attack message """

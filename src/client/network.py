@@ -107,7 +107,7 @@ class NetworkController(ConnectionListener):
     #################### ATTACKS ###############
     
     def on_sendatk(self, event):
-        dic = {'targetname': event.target}
+        dic = {'targetname': event.tname}
         amsg = ClAtkMsg(dic)
         self.send({'action':'atk', 'msg':amsg.d})
         

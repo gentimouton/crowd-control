@@ -244,7 +244,7 @@ class Player():
 
 
     def __str__(self):
-        return '<Player %s %s>' % (self.cname, id(self))
+        return '%s' % (self.cname)
 
     def changename(self, name):
         self.cname = name
@@ -275,13 +275,13 @@ class Charactor():
         self.cname = name
         
         self.cell = cell
-        self.cell.add_occ(name)
+        self.cell.add_occ(self)
         
                 
 
     def changename(self, newname):
         """ update my cname, and notify my cell """
-        self.cell.occ_chngname(self.cname, newname)
+        #self.cell.occ_chngname(self.cname, newname)
         self.cname = newname
         
         
@@ -290,9 +290,9 @@ class Charactor():
         During a split second, the charactor is in no cell. 
         """ 
         if destcell:
-            self.cell.rm_occ(self.cname)
+            self.cell.rm_occ(self)
             self.cell = destcell
-            self.cell.add_occ(self.cname)
+            self.cell.add_occ(self)
             ev = RemoteCharactorMoveEvent(self, destcell.coords)
             self._em.post(ev)
             
@@ -304,7 +304,7 @@ class Charactor():
         
     def rmv(self):
         """ tell the view to remove this charactor's spr """ 
-        self.cell.rm_occ(self.cname) # TODO: should be a weakref instead?
+        self.cell.rm_occ(self) # TODO: should be a weakref instead?
         ev = CharactorRemoveEvent(self)
         self._em.post(ev)
 
@@ -331,7 +331,7 @@ class Avatar(Charactor):
         
     
     def __str__(self):
-        return '<Avatar %s from player %s>' % (id(self), self.player.cname)
+        return '%s' % (self.player.cname)
 
 
     def move_relative(self, direction):
@@ -339,9 +339,9 @@ class Avatar(Charactor):
 
         dest_cell = self.cell.get_adjacent_cell(direction)
         if dest_cell:
-            self.cell.rm_occ(self.cname)
+            self.cell.rm_occ(self)
             self.cell = dest_cell
-            self.cell.add_occ(self.cname)
+            self.cell.add_occ(self)
             self.facing = direction
             # send to view and server that I moved
             ev = SendMoveEvt(self, dest_cell.coords, direction)
@@ -359,7 +359,7 @@ class Avatar(Charactor):
         if target_cell: #only attack walkable cells
             occupant = target_cell.get_occ() # pick occupant randomly
             if occupant: # there's creep or avatar to attack
-                ev = SendAtkEvt(occupant)
+                ev = SendAtkEvt(occupant.cname) # TODO: this assumes player can attack creeps only
                 self._em.post(ev)
             else:# dont attack if the cell has no occupant
                 pass # TODO: show a 'miss' animation
@@ -377,7 +377,7 @@ class SCreep(Charactor):
         
     
     def __str__(self):
-        return '<SCreep %s named %s>' % (id(self), self.cname)
+        return '%s' % (self.cname)
 
 
         

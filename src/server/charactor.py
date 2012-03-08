@@ -1,6 +1,5 @@
 
 
-
 class SCharactor():
     """ Abstract class representing game charactors, 
     like player avatars or creeps. 
@@ -8,15 +7,22 @@ class SCharactor():
     def __init__(self, name, cell, facing, hp, atk):
         self.name = name
         self.cell = cell
+        self.cell.add_occ(self)
         self.facing = facing #direction the player is facing
         self.hp = hp
         self.atk = atk
         
+    
+    def __str__(self):
+        return '%s at %s, hp=%d' % (self.name, self.cell.coords, self.hp)
         
     def change_name(self, newname):
         """ change charactor name, and notify the cell """ 
         self.name = newname
-        
+    
+    def get_serializablepos(self):
+        """ Return coords and facing for this charactor. """
+        return self.cell.coords, self.facing
     
     ################ ABSTRACT METHODS TO BE OVERRIDEN ########################
 
@@ -27,7 +33,7 @@ class SCharactor():
         raise NotImplementedError
     
     def attack(self, defer):
-        """ should be overriden by Creep or Avatar. Return nothing. """
+        """ should be overriden by Creep or Avatar. Return amount of dmg. """
         self.log.error('Charactor %s does not have a method to attack' % self.name)
         raise NotImplementedError
     
@@ -42,5 +48,4 @@ class SCharactor():
         raise NotImplementedError
     
     
-    
-    
+

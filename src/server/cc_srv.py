@@ -2,7 +2,7 @@
 
 from server.clock import SClockController
 from server.config import load_srv_config
-from server.events_server import SrvEventManager, SQuitEvent
+from server.events_server import SrvEventManager
 from server.model import SGame
 from server.network import NetworkController
 import logging.config
@@ -23,7 +23,8 @@ def main():
     sclock = SClockController(evManager) #the loop is in there
     
     n = NetworkController(evManager)
-    g = SGame(evManager)
+    g = SGame(evManager, n) # will tie itself to the nw controller
+   
     try:
         sclock.start()
     except KeyboardInterrupt:

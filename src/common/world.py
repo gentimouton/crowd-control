@@ -14,15 +14,16 @@ class World():
 
         self.log = log
         self._em = evManager
-        #self._em.register_listener(self)
+
         
     def __str__(self):
-        return '<World %s, %s x %s>' % (id(self), self.width, self.height) \
+        return '%s, %d x %d' % (self.mapname, self.width, self.height) \
                 + '\n' + self.worldrepr
     
     
-    def build_world(self, mapname, buildevent):
-        """ build the world from a map name, and notify when done """
+    def build_world(self, mapname, notifevt=None, callbacks=[]):
+        """ build the world from a map name, and notify by event
+        or by callbacks when done """
         
         self.mapname = mapname
         
@@ -87,9 +88,12 @@ class World():
             cell = self.get_cell(l_coords)
             cell.set_lair(True)
           
-        
-        ev = buildevent(self)
-        self._em.post(ev)
+        if notifevt: # client-side
+            ev = notifevt(self)
+            self._em.post(ev)
+        elif callbacks: # server-side
+            for cb in callbacks:
+                cb()
         
         
     def buildpath(self):
@@ -136,7 +140,7 @@ class World():
                     return self.__cellgrid[top][left]
             else: #top was not specified
                 left, top = lefttop
-                if left < 0 or top < 0:
+                if left < 0 or top < 0:# outside of the map
                     return None
                 else:
                     return self.__cellgrid[top][left]
@@ -169,7 +173,7 @@ class Cell():
 
 
     def __str__(self):
-        return '<Cell %s %s>' % (self.coords, id(self))
+        return '%s, %d occupants' % (self.coords, len(self._occupants))
     
     
     def get_neighbors(self):
@@ -227,7 +231,7 @@ class Cell():
     #### OCCUPANTS
     
     def add_occ(self, occ):
-        """ add occupant """
+        """ Add occupant; occ should be a Charactor. """
         self._occupants[occ] = 1
         
     def rm_occ(self, occ):
@@ -235,16 +239,14 @@ class Cell():
         try:
             del self._occupants[occ]
         except KeyError: 
-            self.log.warning('Failed to remove ' + str(occ) 
-                             + ' from cell ' + str(self.coords))
+            self.log.warning('Failed to remove %s from cell %s' 
+                             % (occ.name, self.coords))
     
-    def occ_chngname(self, oldname, newname):
-        """ An occupant changed name/id. """
-        del self._occupants[oldname]
-        self._occupants[newname] = 1 
         
     def get_occ(self):
-        """ TODO: return the weakest cell occupant """
+        """ Return a Charactor in the cell. 
+        TODO: should return all the occupants.
+         """
         if self._occupants:
             return list(self._occupants.keys())[0] # TODO: ugly!
         else:

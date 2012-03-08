@@ -1,7 +1,6 @@
 from common.clock import Clock
 from common.events import TickEvent
 from server.config import config_get_fps, config_get_logperiod
-from server.events_server import SQuitEvent
 import logging
 
 
