@@ -5,7 +5,7 @@ from client.config import config_get_screenres, config_get_loadingscreen_bgcolor
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvt, \
     CharactorRemoveEvent, OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, SendMoveEvt, \
     RemoteCharactorMoveEvent, NwRcvGreetEvt, CreepPlaceEvent, MyNameChangedEvent, \
-    CharactorRcvDmgEvt, CharactorAtksEvt
+    CharactorRcvDmgEvt, CharactorAtksEvt, LocalAvRezEvt
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
 from common.events import TickEvent
@@ -53,6 +53,7 @@ class MasterView:
         # local = my avatar
         self._em.reg_cb(LocalAvatarPlaceEvent, self.on_localavplace)
         self._em.reg_cb(SendMoveEvt, self.on_localavmove)
+        self._em.reg_cb(LocalAvRezEvt, self.on_localavrez)
         
         # remote = creeps + other avatars
         # different creation, but same movement and removal
@@ -244,8 +245,20 @@ class MasterView:
         self.center_screen_on_coords(cleft, ctop) #must be done before display_char
         self.display_charactor(charspr, cleft, ctop)
 
+
     def on_localavmove(self, event):
         """ move my avatar: scroll the background """
+        myav = event.avatar
+        cleft, ctop = myav.cell.coords
+        self.center_screen_on_coords(cleft, ctop)
+        # redisplay the other charactors 
+        for charspr in self.charactor_sprites:
+            cleft, ctop = charspr.char.cell.coords
+            self.display_charactor(charspr, cleft, ctop)
+            
+            
+    def on_localavrez(self, event):
+        """ rez my avatar: center screen where my av is """
         myav = event.avatar
         cleft, ctop = myav.cell.coords
         self.center_screen_on_coords(cleft, ctop)

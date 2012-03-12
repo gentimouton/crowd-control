@@ -172,13 +172,18 @@ class CharactorRemoveEvent():
         self.charactor = ch
 
         
-################# WARPS ###############################################
+################# resurrect ###############################################
 
-class NwRcvWarpEvt():
+class NwRcvRezEvt():
     def __init__(self, name, info):
         self.name = name
         self.info = info
             
+class LocalAvRezEvt():
+    """ The local avatar is resurrected. Sent from model.char to view """
+    def __init__(self, av):
+        self.avatar = av
+         
 ################# CHAT ###################################################
 
 

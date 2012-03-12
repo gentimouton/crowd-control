@@ -1,5 +1,5 @@
 from client.events_client import RemoteCharactorMoveEvent, CharactorRcvDmgEvt, \
-    CharactorRemoveEvent
+    CharactorRemoveEvent, LocalAvRezEvt
 import logging
 
 class Charactor():
@@ -63,4 +63,8 @@ class Charactor():
         ev = CharactorRemoveEvent(self)
         self._em.post(ev)
 
+ 
+        
+        
+        
         

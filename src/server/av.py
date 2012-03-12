@@ -96,30 +96,21 @@ class SAvatar(Charactor):
         """
         self.log.info('Player %s should die' % self.name)
         self._nw.bc_death(self.name)
-        
-        # av is sent back to entrance with full hp
-        self.hp = 10 
-        self.warp(self._mdl.world.get_entrance()) # same facing as when died
+        self.resurrect() # TODO: should resurrect in 2 seconds instead -> scheduler
 
-    
-    def warp(self, newcell, facing=None):
-        """ Teleport to given cell with given facing. """
-        if newcell: # walkable cell
-            # remove from old cell and add to new cell
-            oldcell = self.cell
-            oldcell.rm_occ(self)
-            newcell.add_occ(self)
-            self.cell = newcell
-            
-            if facing: #update facing only if provided
-                self.facing = facing
-            # broadcast
-            avinfo = self.serialize()
-            self._nw.bc_warp(self.name, avinfo)
-        
-        else: # cell is not walkable or outside of the map
-            self.log.warn('Cell %s can not be warped to by avatar %s'
-                          % (self.cell.coords, self.name))
-        
+
+    def resurrect(self):
+        """ Return avatar to entrance with full HP """
+        self.hp = 10
+        # remove from old cell and add to new cell
+        newcell = self._mdl.world.get_entrance()
+        oldcell = self.cell
+        oldcell.rm_occ(self)
+        newcell.add_occ(self)
+        self.cell = newcell
+        # broadcast
+        avinfo = self.serialize()
+        self._nw.bc_resurrect(self.name, avinfo)
+
         
         

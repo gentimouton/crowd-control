@@ -1,6 +1,6 @@
 from client.charactor import Charactor
 from client.events_client import LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, \
-    SendMoveEvt, SendAtkEvt
+    SendMoveEvt, SendAtkEvt, RemoteCharactorMoveEvent, LocalAvRezEvt
 from random import randint
 
 
@@ -61,4 +61,28 @@ class Avatar(Charactor):
                 self._em.post(ev)
             else:# dont attack if the cell has no occupant
                 pass # TODO: FT show a 'miss' animation
+        
+
+       
+    def resurrect(self, newcell, facing, hp, atk):
+        """ resurrect charactor: update it from the given char info. """
+        # move to new cell if possible
+        if newcell:
+            self.cell.rm_occ(self)
+            self.cell = newcell
+            self.cell.add_occ(self)
+            ev = RemoteCharactorMoveEvent(self, newcell.coords)
+            self._em.post(ev)
+            if self.islocal: # notify the view
+                ev = LocalAvRezEvt(self)
+                self._em.post(ev)
+        else: # cell non walkable or out of map  
+            self.log.warn('%s should have resurrected, but cell not found.'
+                          % self.name)
+        
+        # update other attributes
+        self.facing = facing
+        self.hp = hp
+        self.atk = atk
+
         

@@ -2,12 +2,12 @@ from PodSixNet.Connection import connection, ConnectionListener
 from client.events_client import SendChatEvt, NwRcvChatEvt, NwRcvGreetEvt, \
     NwRcvNameChangeEvt, NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvCharMoveEvt, \
     SendMoveEvt, NwRcvGameAdminEvt, NwRecCreepJoinEvt, SendAtkEvt, NwRcvAtkEvt, \
-    NwRcvDeathEvt, NwRcvWarpEvt, NwRcvNameChangeFailEvt
+    NwRcvDeathEvt, NwRcvRezEvt, NwRcvNameChangeFailEvt
 from common.events import TickEvent
 from common.messages import SrvGreetMsg, SrvPlyrJoinMsg, SrvPlyrLeftMsg, \
     ClNameChangeMsg, SrvNameChangeMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, SrvMoveMsg, \
     SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
-    SrvWarpMsg, SrvNameChangeFailMsg
+    SrvRezMsg, SrvNameChangeFailMsg
 import logging
 
 
@@ -223,12 +223,12 @@ class NetworkController(ConnectionListener):
 
 
 
-    ############ warp ###############
+    ############ resurrect ###############
     
-    def Network_warp(self, data):
-        """ A charactor teleported. """
-        name, info = unpack_msg(data['msg'], SrvWarpMsg) 
-        ev = NwRcvWarpEvt(name, info)
+    def Network_resurrect(self, data):
+        """ A charactor was revived. """
+        name, info = unpack_msg(data['msg'], SrvRezMsg) 
+        ev = NwRcvRezEvt(name, info)
         self._em.post(ev)
         
         

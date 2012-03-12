@@ -4,7 +4,7 @@ from common.events import TickEvent
 from common.messages import SrvPlyrJoinMsg, SrvPlyrLeftMsg, ClNameChangeMsg, \
     ClChatMsg, SrvChatMsg, SrvGreetMsg, SrvNameChangeMsg, ClMoveMsg, SrvMoveMsg, \
     SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
-    SrvWarpMsg, SrvNameChangeFailMsg
+    SrvRezMsg, SrvNameChangeFailMsg
 from server.config import config_get_hostport
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
@@ -337,11 +337,11 @@ class NetworkController(Server):
 
     ################ warp ################
     
-    def bc_warp(self, name, info):
-        """ Notify everyone of a teleportation; send the charactor info. """
+    def bc_resurrect(self, name, info):
+        """ Notify everyone of a resurrection; send the charactor info. """
         dic = {"name":name,
                "info":info}
-        wmsg = SrvWarpMsg(dic)
-        data = {"action": "warp", "msg": wmsg.d}
+        wmsg = SrvRezMsg(dic)
+        data = {"action": "resurrect", "msg": wmsg.d}
         self.broadcast(data)
         

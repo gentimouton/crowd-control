@@ -3,7 +3,7 @@ from client.events_client import InputMoveRequest, ModelBuiltMapEvent, \
     NwRcvGreetEvt, NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvNameChangeEvt, \
     InputAtkRequest, NwRcvCharMoveEvt, NwRcvAtkEvt, NwRcvGameAdminEvt, \
     NwRecCreepJoinEvt, NwRcvDeathEvt, MdAddPlayerEvt, MyNameChangedEvent, \
-    NwRcvChatEvt, ChatlogUpdatedEvent, CharactorRemoveEvent, NwRcvWarpEvt
+    NwRcvChatEvt, ChatlogUpdatedEvent, CharactorRemoveEvent, NwRcvRezEvt
 from client.npc import Creep
 from collections import deque
 from common.world import World
@@ -85,7 +85,7 @@ class Game:
         # -- REMOTE events (attacks, moves, spawns, and deaths)
         self._em.reg_cb(NwRcvCharMoveEvt, self.on_remotemove)
         self._em.reg_cb(NwRcvAtkEvt, self.on_remoteatk)
-        self._em.reg_cb(NwRcvWarpEvt, self.on_remotewarp)
+        self._em.reg_cb(NwRcvRezEvt, self.on_remoterez)
 
         # -- RUNNING GAME and CREEPS
         self._em.reg_cb(NwRcvGameAdminEvt, self.on_gameadmin)
@@ -221,16 +221,21 @@ class Game:
             defer.rcv_dmg(dmg)
         
     
-    def on_remotewarp(self, event):
-        """ A charactor teleported. """
+    def on_remoterez(self, event):
+        """ A charactor was resurrected. """
         name, info = event.name, event.info
-        coords = info['coords']
+        coords, facing = info['coords'], info['facing']
+        hp, atk = info['hp'], info['atk']
+        cell = self.world.get_cell(coords)
+        
+        # rez the char (update the view if local avatar)
+        char = self.get_charactor(name)
+        char.resurrect(cell, facing, hp, atk)
+        
+        # restart accepting input
         if name == self.myname:
-            # TODO: notify view to resurrect my sprite at the entrance
-            self.log.info('I should be warped to %s' % str(coords))
-        elif name in self.avs:
-            # TODO: notify view to resurrect that player's sprite at entrance
-            self.log.info('%s should be warped to %s' % (name, str(coords)))
+            self.acceptinput = True
+
         
     
     ###################### RUNNING GAME + CREEPS ############################

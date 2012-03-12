@@ -117,11 +117,16 @@ class SrvPlyrLeftMsg(SerializableMsg):
     attrs = ['pname'] 
 
 
-# warp
-class SrvWarpMsg(SerializableMsg):
-    """ sent from server to players when a charactor teleported. """
+# resurrect
+class SrvRezMsg(SerializableMsg):
+    """ sent from server to players when a charactor was revived. """
     attrs = ['name', 'info']
     
+    
+    
+    
+    
+
 ###################### deserialization #####################################
 
 def unpack_msg(msgobj, msgClass):
