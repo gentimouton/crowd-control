@@ -4,13 +4,7 @@ from server.av import SAvatar
 from server.config import config_get_mapname
 from server.npc import SCreep
 from server.sched import Scheduler
-from uuid import uuid4
 import logging
-
-
-        
-
-###############################################################################
 
 
 
@@ -86,17 +80,15 @@ class SGame():
             self.log.error('Player %s already was connected.' % pname)
             return
                 
-        self.log.info(pname + ' joined')
-
         # Build list of connected players with their coords and facing direction.
         onlineppl = dict()
         for (otherpname, otherplayer) in self.players.items():
-            onlineppl[otherpname] = otherplayer.get_serializablepos()
+            onlineppl[otherpname] = otherplayer.serialize()
         
         # Build list of creeps with their coords.
         creeps = dict()
         for cname, creep in self.creeps.items():
-            creeps[cname] = creep.get_serializablepos()
+            creeps[cname] = creep.serialize()
         
         # build the new player on the entrance cell and facing upwards
         cell = self.world.get_entrance()
@@ -104,12 +96,13 @@ class SGame():
         player = SAvatar(self, self._nw, pname, cell, facing)
         self.players[pname] = player
         
-        # send_greet the new player 
-        self._nw.greet(self.world.mapname, pname, cell.coords, facing,
+        # greet the new player
+        myinfo = player.serialize() 
+        self._nw.greet(self.world.mapname, pname, myinfo,
                          onlineppl, creeps)
         
         # notify the connected players of this arrival
-        self._nw.bc_playerjoined(pname, cell.coords, facing)
+        self._nw.bc_playerjoined(pname, myinfo)
             
     
     
@@ -120,13 +113,10 @@ class SGame():
             av = self.players[pname]
             av.on_logout() # remove avatar from the world
             del self.players[pname]
-            self.log.info(pname + ' left.')
         except KeyError:
             self.log.error('Tried to remove player ' + pname + 
                   ', but it was not found in player list')
-        
-        self._nw.bc_left(pname)
-        
+                
         
 
     #########################################################################
@@ -134,26 +124,26 @@ class SGame():
     def on_playerchangedname(self, oldname, newname):
         """ Change player's name only if the new name is not taken already. """
                 
-        if newname not in self.players:
-            self.log.info(oldname + ' changed name into ' + newname)
+        if newname in self.players: # newname is already taken
+            reason = 'Name already taken.'
+            self._nw.send_namechangefail(oldname, newname, reason)
             
+        else: # name not taken already
             player = self.players[oldname]
-            player.change_name(newname)
-            
-            self.players[newname] = player
-            del self.players[oldname]
-            
-            self._nw.bc_namechange(oldname, newname)
+            canchange, reason = player.change_name(newname)
+            if canchange: # new name is not too long
+                self.log.debug(oldname + ' changed name into ' + newname)
+                self.players[newname] = player
+                del self.players[oldname]
+                self._nw.bc_namechange(oldname, newname)
+            else: # could not change name (e.g. too long or too short)
+                self._nw.send_namechangefail(oldname, newname, reason)
         
-        else: 
-            # TODO: send personal notif to the client who failed to change name
-            self.log.debug(oldname + ' asked to change name into ' + newname 
-                           + ' but someone was already using that name.')
 
     
     ##########################################################################
             
-    def received_chat(self, pname, txt):
+    def rcv_chat(self, pname, txt):
         """ When a chat message is received, 
         parse eventual commands,
         or broadcast the text to all connected users.
@@ -172,24 +162,12 @@ class SGame():
     ##########################################################################
     
     def on_playermoved(self, pname, coords, facing):
-        """ when a player moves, notify all of them """
-        
-        if self.world.iswalkable(coords):
-            player = self.players[pname]
-
-            # remove player from old cell and add player to new cell
-            oldcell = player.cell
-            newcell = self.world.get_cell(coords)
-            oldcell.rm_occ(player)
-            newcell.add_occ(player)
-            player.move(newcell, facing)
-            
-            #self.log.debug(name + ' moved to ' + str(newcell.coords))
-            self._nw.bc_move(pname, newcell.coords, facing)
-
-        else:
-            self.log.warn('Possible cheat: ' + pname 
-                          + ' walks in non-walkable cell' + str(coords))
+        """ Make a player move. 
+        The player object will check for cheats itself. 
+        """
+        player = self.players[pname]
+        newcell = self.world.get_cell(coords) #None means non-walkable or out
+        player.move(newcell, facing)
             
 
 
@@ -197,7 +175,7 @@ class SGame():
 
     ##########################################################################
     
-    def on_charattacked(self, atkername, defername):
+    def on_charattacked(self, atkername, defername, atk):
         """ Trigger the attacking charactor's attack(defer)
         This function is called by the network controller only.
         """
@@ -207,10 +185,10 @@ class SGame():
         defer = self.get_charactor(defername)
         
         if atker and defer: # both are still alive
-            atker.attack(defer)
-            #dmg = atker.attack(defer)
-            # TODO: check that dmg == the player's nw msg says he inflicted        
-
+            dmg = atker.attack(defer)
+            if dmg != atk:
+                self.log.warn('%s says it attacked %s for %d, but server computed'
+                              + ' %d instead' % (atkername, defername, atk, dmg))
 
 
 
@@ -249,7 +227,7 @@ class SGame():
         numcreeps = 1
         cell = self.world.get_lair()
         for x in range(numcreeps):
-            cname = str(uuid4()) # TODO: shorter creep names
+            cname = 'crp%d' % x
             creep = SCreep(self, self._sched, self._nw, cname, cell, DIRECTION_LEFT) #face left
             self.creeps[cname] = creep
             

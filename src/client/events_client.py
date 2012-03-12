@@ -62,50 +62,53 @@ class ModelBuiltMapEvent():
     def __init__(self, worldmap):
         self.worldmap = worldmap
 
-class NwRecGameAdminEvt():
+class NwRcvGameAdminEvt():
     def __init__(self, pname, cmd):
         self.pname = pname
         self.cmd = cmd
 
 class NwRecCreepJoinEvt():
     """ Sent from nw ctrler to model to notify of creep join """
-    def __init__(self, cname, coords, facing):
+    def __init__(self, cname, cinfo):
         self.cname = cname
-        self.coords = coords
-        self.facing = facing
-        
+        self.cinfo = cinfo
+
 class CreepPlaceEvent():
     """ Sent from model to view to notify of creep appearance """
     def __init__(self, creep):
         self.creep = creep
-        
-class NwRecCreepMoveEvt():
-    """ Sent from network to model """
-    def __init__(self, cname, coords, facing):
-        self.cname = cname
-        self.coords = coords
-        self.facing = facing
 
-class NwRecCreepDieEvt():
+class NwRcvDeathEvt():
     """ from nw to model to notify of creep death """
-    def __init__(self, cname):
-        self.cname = cname
+    def __init__(self, name):
+        self.name = name
 
 
 ######################## ATTACK ##################################
 
 class SendAtkEvt():
     """ Model to network. Local avatar attacks a cell. """
-    def __init__(self, targetname):
+    def __init__(self, targetname, dmg):
         self.tname = targetname
+        self.dmg = dmg
 
-class NwRecAtkEvt():
+class NwRcvAtkEvt():
     """ Network received an attack message """
     def __init__(self, attacker, defender , damage):
         self.atker = attacker
         self.defer = defender
         self.dmg = damage
 
+class CharactorRcvDmgEvt():
+    """ Sent from model to view when a charactor received damage. """
+    def __init__(self, defer, dmg):
+        self.defer = defer
+        self.dmg = dmg
+
+class CharactorAtksEvt():
+    """ Sent from model to view when a charactor attacks. """
+    def __init__(self, atker):
+        self.atker = atker
 
 
 ######################### ADMIN ######################################
@@ -147,11 +150,11 @@ class SendMoveEvt():
         self.coords = coords
         self.facing = facing
 
-class NwRecAvatarMoveEvt():
+class NwRcvCharMoveEvt():
     """ The network component was notified that a remote player moved his avatar. """
-    def __init__(self, pname, dest, facing):
-        self.pname = pname
-        self.dest = dest
+    def __init__(self, name, coords, facing):
+        self.name = name
+        self.coords = coords
         self.facing = facing
 
 
@@ -168,9 +171,14 @@ class CharactorRemoveEvent():
     def __init__(self, ch):
         self.charactor = ch
 
+        
+################# WARPS ###############################################
 
-        
-        
+class NwRcvWarpEvt():
+    def __init__(self, name, info):
+        self.name = name
+        self.info = info
+            
 ################# CHAT ###################################################
 
 
@@ -178,7 +186,7 @@ class SendChatEvt():
     def __init__(self, txt):
         self.txt = txt
 
-class NwRecChatEvt():
+class NwRcvChatEvt():
     def __init__(self, pname, txt):
         self.pname = pname
         self.txt = txt
@@ -194,27 +202,29 @@ class ChatlogUpdatedEvent():
 
 
 
-class NwRecGreetEvt():
-    def __init__(self, mapname, newname, newpos, facing, onlineppl, creeps):
+class NwRcvGreetEvt():
+    def __init__(self, mapname, newname, myinfo, onlineppl, creeps):
         self.mapname = mapname
         self.newname = newname
-        self.newpos = newpos
-        self.facing = facing
+        self.myinfo = myinfo
         self.onlineppl = onlineppl
         self.creeps = creeps
 
-class NwRecNameChangeEvt():
+class NwRcvNameChangeEvt():
     def __init__(self, oldname, newname):
         self.oldname = oldname
         self.newname = newname
+class NwRcvNameChangeFailEvt():
+    def __init__(self, failname, reason):
+        self.failname = failname
+        self.reason = reason
     
-class NwRecPlayerJoinEvt():
-    def __init__(self, pname, pos, facing):
+class NwRcvPlayerJoinEvt():
+    def __init__(self, pname, pinfo):
         self.pname = pname
-        self.pos = pos
-        self.facing = facing
-        
-class NwRecPlayerLeft():
+        self.pinfo = pinfo
+
+class NwRcvPlayerLeftEvt():
     def __init__(self, pname):
         self.pname = pname
 

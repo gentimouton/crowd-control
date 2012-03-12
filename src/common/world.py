@@ -173,7 +173,7 @@ class Cell():
 
 
     def __str__(self):
-        return '%s, %d occupants' % (self.coords, len(self._occupants))
+        return '%s, occs: %s' % (self.coords, str(self._occupants.keys()))
     
     
     def get_neighbors(self):
@@ -235,11 +235,11 @@ class Cell():
         self._occupants[occ] = 1
         
     def rm_occ(self, occ):
-        """ remove occupant """
+        """ remove occupant; occ should be a Charactor. """
         try:
             del self._occupants[occ]
         except KeyError: 
-            self.log.warning('Failed to remove %s from cell %s' 
+            self.log.warning('Failed to remove Charactor %s from cell %s' 
                              % (occ.name, self.coords))
     
         
@@ -248,6 +248,14 @@ class Cell():
         TODO: should return all the occupants.
          """
         if self._occupants:
-            return list(self._occupants.keys())[0] # TODO: ugly!
+            return list(self._occupants.keys())[0] # TODO: ugly! if not needed anymore, replace _occ=dict by set
+        else:
+            return None
+
+
+    def get_occs(self):
+        """ Return all the Charactors in the cell. """
+        if self._occupants:
+            return list(self._occupants.keys())
         else:
             return None

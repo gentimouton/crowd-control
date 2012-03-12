@@ -32,111 +32,95 @@ class SerializableMsg():
             except KeyError:
                 logging.error('Key ' + str(k) + 'was missing from d_src')
                 
-                         
-
-  
-    
-        
-################# ADMIN #####################################################
 
 
 
-class AdminSerializableMsg(SerializableMsg):
-    """ Abstract class representing admin messages:
-    connection, disconnection, name change, and greeting.
-    """
-    mtype = 'not set' #should be overriden in subclasses
-    
-    def __init__(self, d_src=None):
-        # opts can be empty or contain d_src
-        # SOLUTION: have all the message constructors specify the keys and pass **opts all the time
-        SerializableMsg.__init__(self, d_src)
-        self.d['mtype'] = self.mtype
-        
-        
-        
-class GreetMsg(AdminSerializableMsg):
-    """ sent from the server to a player when he just arrived """
-    mtype = 'greet'
-    attrs = ['mapname', 'pname', 'coords', 'facing', 'onlineppl', 'creeps']
-    
-    
-class PlayerArrivedNotifMsg(AdminSerializableMsg):
-    """ sent from the server to all players when a player arrived """        
-    mtype = 'arrived'
-    attrs = ['pname', 'coords', 'facing'] 
-class PlayerLeftNotifMsg(AdminSerializableMsg):
-    """ sent from the server to all players when a player left """        
-    mtype = 'left'
-    attrs = ['pname'] 
-
-
-class NameChangeRequestMsg(AdminSerializableMsg):
-    """ sent from a client to the server when he wants to change name """        
-    mtype = 'namechange'
-    attrs = ['pname'] 
-class NameChangeNotifMsg(AdminSerializableMsg):
-    """ broadcasted by the server to notify all the clients of a name change """        
-    mtype = 'namechange'
-    attrs = ['oldname', 'newname'] 
+# attack
+class ClAtkMsg(SerializableMsg):
+    """ Attack msg sent from a client to the server """        
+    attrs = ['targetname', 'dmg'] 
+class SrvAtkMsg(SerializableMsg):
+    """ broadcast of an attack msg by the server """        
+    attrs = ['atker', 'defer', 'dmg'] 
 
     
     
-    
-################# CHAT #####################################################
-
+# chat
 class ClChatMsg(SerializableMsg):
     """ chat msg sent from a client to the server """        
     attrs = ['txt'] 
 class SrvChatMsg(SerializableMsg):
     """ brodcast of a chat msg by the server """        
-    attrs = ['pname', 'txt'] 
+    attrs = ['author', 'txt'] 
     
     
-################# MOVEMENT #####################################################
 
-class ClMoveMsg(SerializableMsg):
-    """ mvt msg sent from a client to the server """        
-    attrs = ['coords', 'facing'] 
-class SrvMoveMsg(SerializableMsg):
-    """ broadcast of a mvt msg by the server """        
-    attrs = ['pname', 'coords', 'facing'] 
+# creepjoin
+class SrvCreepJoinedMsg(SerializableMsg):
+    """ broadcast creep creation """
+    attrs = ['cname', 'cinfo']
 
 
 
-################# CREEP #####################################################
-
-class ClAtkMsg(SerializableMsg):
-    """ Attack msg sent from a client to the server """        
-    attrs = ['targetname'] 
-class SrvAtkMsg(SerializableMsg):
-    """ broadcast of an attack msg by the server """        
-    attrs = ['atker', 'defer', 'dmg'] 
+# death
+class SrvDeathMsg(SerializableMsg):
+    """ broadcast charactor death """
+    attrs = ['name']
 
 
 
-
-
-################# GAME #####################################################
-
- 
+# gameadmin
 class SrvGameAdminMsg(SerializableMsg):
     """ broadcast that someone started or stopped the game """        
     attrs = ['pname', 'cmd'] 
 
 
-class SrvCreepMovedMsg(SerializableMsg):
-    """ broadcast creep movement """
-    attrs = [ 'act', 'cname', 'coords', 'facing']
-class SrvCreepJoinedMsg(SerializableMsg):
-    """ broadcast creep creation """
-    attrs = ['act', 'cname', 'coords', 'facing']
-class SrvCreepDiedMsg(SerializableMsg):
-    """ broadcast creep death """
-    attrs = ['act', 'cname']
+
+# greet        
+class SrvGreetMsg(SerializableMsg):
+    """ sent from the server to a player when he just arrived """
+    attrs = ['mapname', 'pname', 'myinfo', 'onlineppl', 'creeps']
+
+
+# movement
+class ClMoveMsg(SerializableMsg):
+    """ mvt msg sent from a client to the server """        
+    attrs = ['coords', 'facing'] 
+class SrvMoveMsg(SerializableMsg):
+    """ broadcast of a mvt msg by the server """        
+    attrs = ['name', 'coords', 'facing'] 
+
+
+
+# namechange
+class ClNameChangeMsg(SerializableMsg):
+    """ sent from a client to the server when he wants to change name """        
+    attrs = ['pname'] 
+class SrvNameChangeMsg(SerializableMsg):
+    """ broadcasted by the server to notify all the clients of a name change """        
+    attrs = ['oldname', 'newname'] 
+class SrvNameChangeFailMsg(SerializableMsg):
+    """ Notification to player who failed to change name """
+    attrs = ['failname', 'reason']
     
     
+      
+# playerjoin
+class SrvPlyrJoinMsg(SerializableMsg):
+    """ sent from the server to all players when a player arrived """        
+    attrs = ['pname', 'pinfo']
     
+    
+# playerleft 
+class SrvPlyrLeftMsg(SerializableMsg):
+    """ sent from the server to all players when a player left """        
+    attrs = ['pname'] 
+
+
+# warp
+class SrvWarpMsg(SerializableMsg):
+    """ sent from server to players when a charactor teleported. """
+    attrs = ['name', 'info']
     
 ###################### deserialization #####################################
 
@@ -149,7 +133,7 @@ def unpack_msg(msgobj, msgClass):
     because SrvMoveMsg has for attrs pname, coords, and facing. 
     """
     cmsg = msgClass(msgobj) #unserialize
-    # TODO: how much more expensive is it to build the lambda 
+    # TODO: PERF how much more expensive is it to build the lambda 
     # each time unpack_msg is called compared to calling a predefined function?
     get_msgvals = lambda attr: cmsg.d[attr]
     msg_attrs = msgClass.attrs

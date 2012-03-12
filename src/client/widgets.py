@@ -7,8 +7,8 @@ from client.config import config_get_fontsize, config_get_unfocusedbtn_bgcolor, 
     config_get_chatlog_bgcolor
 from client.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
     UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvt, ChatlogUpdatedEvent, \
-    NwRecGameAdminEvt, NwRecGreetEvt, NwRecPlayerJoinEvt, NwRecNameChangeEvt, \
-    NwRecPlayerLeft, MdAddPlayerEvt, MyNameChangedEvent
+    MdAddPlayerEvt, NwRcvNameChangeEvt, NwRcvPlayerLeftEvt, NwRcvGameAdminEvt, \
+    NwRcvNameChangeFailEvt
 from collections import deque
 from pygame.font import Font
 from pygame.locals import K_BACKSPACE, K_RETURN
@@ -354,14 +354,14 @@ class PlayerListWidget(Widget):
         # addevents_attrs maps event classes to the text attr of events 
         # that add text to display.
         self.addevents_attrs = {MdAddPlayerEvt:'pname',
-                                NwRecNameChangeEvt:'newname'}
+                                NwRcvNameChangeEvt:'newname'}
         for evtClass in self.addevents_attrs:
             self._em.reg_cb(evtClass, self.on_addtextevent)
         
         # rmevents_attrs maps event classes to the text attributes of events 
         # that remove text to display.
-        self.rmevents_attrs = {NwRecPlayerLeft: 'pname',
-                               NwRecNameChangeEvt:'oldname'}
+        self.rmevents_attrs = {NwRcvPlayerLeftEvt: 'pname',
+                               NwRcvNameChangeEvt:'oldname'}
         for evtClass in self.rmevents_attrs:
             self._em.reg_cb(evtClass, self.on_rmtextevent)
         
@@ -457,7 +457,9 @@ class ChatLogWidget(Widget):
         Widget.__init__(self, evManager)
 
         self._em.reg_cb(ChatlogUpdatedEvent, self.on_chatmsg)
-        self._em.reg_cb(NwRecGameAdminEvt, self.on_gameadmin)
+        self._em.reg_cb(NwRcvGameAdminEvt, self.on_gameadmin)
+        self._em.reg_cb(NwRcvNameChangeFailEvt, self.on_namechangefail)
+        self._em.reg_cb(NwRcvNameChangeEvt, self.on_namechangesuccess)
 
         self.font = Font(None, config_get_fontsize())
         if rect:
@@ -490,7 +492,25 @@ class ChatLogWidget(Widget):
         self.log.debug('Chatlog widget printed game line: ' + linetxt)
         self.addline(linetxt)
         
+    
+    def on_namechangefail(self, event):
+        """ The name the player wanted to change to was not accepted.
+        Explain why. 
+        """
+        failname, reason = event.failname, event.reason
+        linetxt = 'Can\'t change to ' + failname + ' : ' + reason 
+        self.log.debug('Chatlog widget printed namechange line: ' + linetxt)
+        self.addline(linetxt)
         
+        
+    def on_namechangesuccess(self, event):
+        """ Notify that the player changed name. """
+        newname = event.newname
+        linetxt = 'New name: ' + newname
+        self.log.debug('Chatlog widget printed namechange line: ' + linetxt)
+        self.addline(linetxt)
+        
+            
     def addline(self, linetxt):
         """ If there's room, add a line on top, and then shift all widget texts upwards.
         If there's no room, only shift the texts upwards (don't add new widgets). 

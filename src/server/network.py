@@ -1,10 +1,10 @@
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
 from common.events import TickEvent
-from common.messages import PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
-    NameChangeRequestMsg, ClChatMsg, SrvChatMsg, GreetMsg, NameChangeNotifMsg, \
-    ClMoveMsg, SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg, \
-    unpack_msg, ClAtkMsg, SrvAtkMsg, SrvCreepDiedMsg
+from common.messages import SrvPlyrJoinMsg, SrvPlyrLeftMsg, ClNameChangeMsg, \
+    ClChatMsg, SrvChatMsg, SrvGreetMsg, SrvNameChangeMsg, ClMoveMsg, SrvMoveMsg, \
+    SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
+    SrvWarpMsg, SrvNameChangeFailMsg
 from server.config import config_get_hostport
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
@@ -15,7 +15,10 @@ import logging
 class ClientChannel(Channel):
 
     log = logging.getLogger('server')
-  
+
+    def __str__(self):
+        return str(self.addr) 
+      
     def Close(self):
         """ built-in called by Channel.handle_close """
         self._server.channel_closed(self)
@@ -29,27 +32,30 @@ class ClientChannel(Channel):
         
     
 
-    def Network_admin(self, data):
+    def Network_namechange(self, data):
         """ change name messages """
-        # all SerializableMsg have an mtype
-        if data['msg']['mtype'] == 'namechange':
-            nmsg = NameChangeRequestMsg(d_src=data['msg']) 
-            self._server.received_name_change(self, nmsg.d['pname'])
+        # all SerializableMsg have an mtype        
+        nmsg = ClNameChangeMsg(d_src=data['msg']) 
+        self._server.rcv_namechange(self, nmsg.d['pname'])
 
     def Network_chat(self, data):
         """ when chat messages are received """ 
         txt, = unpack_msg(data['msg'], ClChatMsg) 
-        self._server.received_chat(self, txt)
+        self._server.rcv_chat(self, txt)
         
     def Network_move(self, data):
         """ movement messages """
         coords, facing = unpack_msg(data['msg'], ClMoveMsg) 
-        self._server.received_move(self, coords, facing)
+        self._server.rcv_move(self, coords, facing)
 
-    def Network_atk(self, data):
+    def Network_attack(self, data):
         """ attack messages """
-        tname, = unpack_msg(data['msg'], ClAtkMsg)
-        self._server.received_atk(self, tname)
+        tname, dmg = unpack_msg(data['msg'], ClAtkMsg)
+        self._server.rcv_attack(self, tname, dmg)
+
+    def Network_death(self, data):
+        """ A player died. """
+        self._server.rcv_death(self)
         
 
 
@@ -83,30 +89,11 @@ class NetworkController(Server):
         self.log.debug('Server Network up')
 
 
-
-    def on_tick(self, event):
-        """ Pump the sockets every tick """
-        self.Pump()
-        
-        
-    def on_worldbuilt(self):
-        """ Accept connections only after the model has been built. """
-        self.accept_connections = True
-        
-        
-    def send(self, chan, data):
-        """ send data to a channel """
-        #self.log.debug('Send to ' + str(chan.addr) + ' : ' + str(data))
-        chan.Send(data)
-        
-        
-    ####### (dis)connection and name changes 
-
+    
     def Connected(self, channel, addr):
-        """ Called by Server.handle_accept() whenever a new client connects. 
+        """ Inherited from PodSixNet.
+        Called by Server.handle_accept() whenever a new client connects. 
         assign a temporary name to a client, a la IRC. 
-        The client should change user's name automatically if it's not taken
-        already, and clients can use a command to change their name
         """
         
         self.log.debug('Connection try from ' + str(addr))
@@ -115,17 +102,18 @@ class NetworkController(Server):
         if not self.accept_connections: 
             return
         
-        name = str(uuid4())[:8] #random 32-hexadigit = 128-bit uuid 
-        # Truncated to 8 hexits = 16^8 = 4 billion possibilities.
+        name = 'anon' + str(uuid4())[:4] #random 32-hexadigit = 128-bit uuid 
+        # Truncated to 4 hexa digits = 16^4 = 65k possibilities.
         # If by chance someone has this uuid name already, 
         # repick until unique.
         while name in self.chan_to_name.keys(): 
-            name = str(uuid4())[:8]
+            name = 'anon' + str(uuid4())[:4]
         self.chan_to_name[channel] = name
         self.name_to_chan[name] = channel
         
         self.log.debug(name + ' joined ' + str(channel.addr))
         self.model.on_playerjoined(name)
+        
         
         
     def channel_closed(self, channel):
@@ -139,57 +127,150 @@ class NetworkController(Server):
 
         del self.name_to_chan[name]
         del self.chan_to_name[channel]
-        
-        
 
 
-    def bc_playerjoined(self, pname, coords, facing):
-        """ User arrived: notify everyone connected but him """
-        dic = {'pname':pname,
-               'coords':coords,
-               'facing':facing}
-        bcmsg = PlayerArrivedNotifMsg(dic)
-        data = {"action": 'admin', "msg": bcmsg.d}
+    
+    
+    def on_tick(self, event):
+        """ Pump the sockets every tick """
+        self.Pump()
         
+        
+    def on_worldbuilt(self):
+        """ Accept connections only after the model has been built. """
+        self.accept_connections = True
+        
+        
+    def send(self, chan, data):
+        """ send data to a channel """
+        chan.Send(data)
+        
+    def broadcast(self, data):
+        """ Send data to all channels """
         for chan in self.chan_to_name:
-            if self.chan_to_name[chan] != bcmsg.d['pname']:
-                self.send(chan, data)
-     
-     
-    def bc_left(self, pname):
-        """ Notify everyone connected. """
-        dic = {'pname':pname}
-        bcmsg = PlayerLeftNotifMsg(dic)
-        data = {"action": 'admin', "msg": bcmsg.d}
-             
-        for chan in self.chan_to_name: 
-            # The concerned player has been deleted, so he won't be notified
             self.send(chan, data) 
-                
 
-    def greet(self, mapname, pname, coords, facing, onlineppl, creeps):
+
+
+    ################################ attack ##################################
+    
+    def rcv_attack(self, channel, tname, atk):
+        """ A player attacked. """
+        pname = self.chan_to_name[channel]
+        self.model.on_charattacked(pname, tname, atk)
+        
+    def bc_attack(self, atkername, defername, dmg):
+        """ Broadcast to everyone the attack of defername by atkername. """
+        dic = {'atker':atkername,
+               'defer':defername,
+               'dmg': dmg}
+        amsg = SrvAtkMsg(dic)
+        data = {"action": "attack", "msg": amsg.d}
+        self.broadcast(data)
+        
+        
+        
+    ##################  chat   ########################################
+        
+    def rcv_chat(self, channel, txt):
+        """ A client sent a chat msg """
+        pname = self.chan_to_name[channel]
+        self.model.rcv_chat(pname, txt)
+                        
+    def bc_chat(self, pname, txt):
+        """ send a chat msg to all connected clients """
+        dic = {'author':pname, 'txt':txt}
+        cmsg = SrvChatMsg(dic)
+        data = {"action": "chat", "msg": cmsg.d}
+        self.broadcast(data)
+        
+
+
+
+    #################### creepjoin ############
+     
+    def bc_creepjoin(self, name, cinfo):
+        """ broadcast creep creation to clients.
+        cinfo contains some information about the creep (max HP, pos) """
+        dic = {"cname":name,
+               'cinfo':cinfo}
+        mmsg = SrvCreepJoinedMsg(dic)
+        data = {"action": "creepjoin", "msg": mmsg.d}
+        for chan in self.chan_to_name:
+            self.send(chan, data) 
+    
+        
+
+
+    ########################## death #################
+
+    def bc_death(self, name):
+        """ broadcast creep or avatar death """
+        dic = {'name':name}
+        dmsg = SrvDeathMsg(dic)
+        data = {"action": "death", "msg": dmsg.d}
+        self.broadcast(data)
+    
+    
+    
+    
+    #############################  gameadmin  ###################    
+ 
+    def bc_gameadmin(self, pname, cmd):
+        mmsg = SrvGameAdminMsg({"pname":pname, 'cmd':cmd})
+        data = {"action": "gameadmin", "msg": mmsg.d}
+        self.broadcast(data) 
+    
+    
+    
+        
+        
+    ##########################  greet  ###################
+    def greet(self, mapname, pname, myinfo, onlineppl, creeps):
         """ send greeting data to a player """
         
         dic = {'mapname':mapname,
                'pname':pname,
-               'coords':coords,
-               'facing':facing,
+               'myinfo':myinfo, #contains player coords, facing, atk, and hp
                'onlineppl':onlineppl,
                'creeps':creeps}
-        greetmsg = GreetMsg(dic)
+        greetmsg = SrvGreetMsg(dic)
             
         name = greetmsg.d['pname']
         chan = self.name_to_chan[name]
         try:
-            data = {"action": 'admin', "msg": greetmsg.d}
+            data = {"action": 'greet', "msg": greetmsg.d}
             self.send(chan, data)
         except KeyError:
             self.log.error('Could not find greet message data for ' + str(chan.addr))
         
 
-    def received_name_change(self, channel, newname):
-        """ notify that a player wants to change name """
+
+
+    ###################### movement  #####################################
+    
+    def rcv_move(self, channel, coords, facing):
+        """ Receive a movement message from a player """
+        pname = self.chan_to_name[channel]
+        self.model.on_playermoved(pname, coords, facing)
         
+        
+    def bc_move(self, name, coords, facing):
+        """ Broadcast the movement of a charactor to all players. """
+        dic = {"name":name,
+               "coords":coords,
+               'facing':facing}
+        mmsg = SrvMoveMsg(dic)
+        data = {"action": "move", "msg": mmsg.d}
+        self.broadcast(data)
+        
+
+
+
+            
+    #############  namechange  #################
+    def rcv_namechange(self, channel, newname):
+        """ Tell the model tat a player wants to change her name. """
         oldname = self.chan_to_name[channel]
         self.model.on_playerchangedname(oldname, newname)
                
@@ -198,7 +279,7 @@ class NetworkController(Server):
         """ update name<->channel mappings and notify all players """
 
         dic = {'oldname':oldname, 'newname':newname} 
-        bcmsg = NameChangeNotifMsg(dic)
+        bcmsg = SrvNameChangeMsg(dic)
         
         # update my chan<->name mappings
         channel = self.name_to_chan[oldname]
@@ -207,107 +288,60 @@ class NetworkController(Server):
         del self.name_to_chan[oldname]
         
         # notify everyone
-        data = {'action':'admin', 'msg':bcmsg.d}
-        for chan in self.chan_to_name:
-            self.send(chan, data) 
+        data = {'action':'namechange', 'msg':bcmsg.d}
+        self.broadcast(data)
 
-        
-        
-        
-    ##################  chat   ########################################
-        
-    def received_chat(self, channel, txt):
-        """ send a chat msg to all connected clients """
-        
-        pname = self.chan_to_name[channel]
-        self.model.received_chat(pname, txt)
-                
-        
-    def bc_chat(self, pname, txt):
-        
-        dic = {'pname':pname, 'txt':txt}
-        cmsg = SrvChatMsg(dic)
-        
-        data = {"action": "chat", "msg": cmsg.d}
-        for chan in self.chan_to_name:
-            self.send(chan, data)
 
+    def send_namechangefail(self, pname, failname, reason):
+        """ Notify a player that his name could not be changed. 
+        Reason is a string. 
+        """
+        dic = {'failname':failname,
+               'reason':reason}
+        fmsg = SrvNameChangeFailMsg(dic)
+            
+        chan = self.name_to_chan[pname]
+        data = {"action": 'namechangefail', "msg": fmsg.d}
+        self.send(chan, data)
+        
+        
+        
+
+    ############# playerjoin ############
+
+    def bc_playerjoined(self, pname, pinfo):
+        """ User arrived: notify everyone connected but him """
+        dic = {'pname':pname,
+               'pinfo': pinfo}
+        bcmsg = SrvPlyrJoinMsg(dic)
+        data = {"action": 'playerjoin', "msg": bcmsg.d}
+        # broadcast to everyone BUT the player who just arrived
+        for chan in self.chan_to_name:
+            if self.chan_to_name[chan] != bcmsg.d['pname']:
+                self.send(chan, data)
+     
+     
+         
+    ############### playerleft #############
+     
+    def bc_playerleft(self, pname):
+        """ Notify everyone that a player disconnected. """
+        dic = {'pname':pname}
+        bcmsg = SrvPlyrLeftMsg(dic)
+        data = {"action": 'playerleft', "msg": bcmsg.d}
+        # The player who left has been deleted, so he won't be notified.
+        self.broadcast(data)
+
+
+
+
+    ################ warp ################
     
-    ###################### movement  #####################################
-    
-    def received_move(self, channel, coords, facing):
-        pname = self.chan_to_name[channel]
-        self.model.on_playermoved(pname, coords, facing)
+    def bc_warp(self, name, info):
+        """ Notify everyone of a teleportation; send the charactor info. """
+        dic = {"name":name,
+               "info":info}
+        wmsg = SrvWarpMsg(dic)
+        data = {"action": "warp", "msg": wmsg.d}
+        self.broadcast(data)
         
-        
-        
-    def bc_move(self, pname, coords, facing):
-        dic = {"pname":pname,
-               "coords":coords,
-               'facing':facing}
-        mmsg = SrvMoveMsg(dic)
-        data = {"action": "move", "msg": mmsg.d}
-        for chan in self.chan_to_name:
-            self.send(chan, data) 
- 
- 
- 
-    ###################### attack  #####################################
-    
-    def received_atk(self, channel, tname):
-        pname = self.chan_to_name[channel]
-        self.model.on_charattacked(pname, tname)
-        
-    def bc_atk(self, atkername, defername, dmg):
-        dic = {'atker':atkername,
-               'defer':defername,
-               'dmg': dmg}
-        amsg = SrvAtkMsg(dic)
-        data = {"action": "atk", "msg": amsg.d}
-        for chan in self.chan_to_name:
-            self.send(chan, data) 
- 
- 
- 
- 
-    ###################### GAME #############################################
-    
-    def bc_gameadmin(self, pname, cmd):
-        mmsg = SrvGameAdminMsg({"pname":pname, 'cmd':cmd})
-        data = {"action": "gameadmin", "msg": mmsg.d}
-        for chan in self.chan_to_name:
-            self.send(chan, data) 
-        
-        
-    def bc_creepjoin(self, name, coords, facing):
-        """ broadcast creep creation """
-        dic = {'act':'join',
-               "cname":name,
-               'coords':coords,
-               'facing':facing}
-        mmsg = SrvCreepJoinedMsg(dic)
-        data = {"action": "creep", "msg": mmsg.d}
-        for chan in self.chan_to_name:
-            self.send(chan, data) 
-        
-    def bc_creepmoved(self, name, coords, facing):
-        """ broadcast creep movement """
-        dic = {'act':'move',
-               "cname":name,
-               'coords':coords,
-               'facing':facing}
-        mmsg = SrvCreepMovedMsg(dic)
-        data = {"action": "creep", "msg": mmsg.d}
-        for chan in self.chan_to_name:
-            self.send(chan, data) 
-
-
-    def bc_creepdied(self, name):
-        """ broadcast creep death """
-        dic = {'act':'die',
-               'cname':name}
-        dmsg = SrvCreepDiedMsg(dic)
-        data = {"action": "creep", "msg": dmsg.d}
-        for chan in self.chan_to_name:
-            self.send(chan, data) 
-

@@ -3,9 +3,9 @@ from client.config import config_get_screenres, config_get_loadingscreen_bgcolor
     config_get_entrance_color, config_get_lair_color, config_get_avdefault_bgcolor, \
     config_get_myav_bgcolor, config_get_creep_bgcolor
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvt, \
-    CharactorRemoveEvent, OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, \
-    SendMoveEvt, RemoteCharactorMoveEvent, NwRecGreetEvt, CreepPlaceEvent, \
-    MyNameChangedEvent
+    CharactorRemoveEvent, OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, SendMoveEvt, \
+    RemoteCharactorMoveEvent, NwRcvGreetEvt, CreepPlaceEvent, MyNameChangedEvent, \
+    CharactorRcvDmgEvt, CharactorAtksEvt
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
 from common.events import TickEvent
@@ -60,7 +60,8 @@ class MasterView:
         self._em.reg_cb(CreepPlaceEvent, self.add_creep)
         self._em.reg_cb(RemoteCharactorMoveEvent, self.on_remotecharmove)
         self._em.reg_cb(CharactorRemoveEvent, self.on_remotecharremove)
-        
+        self._em.reg_cb(CharactorRcvDmgEvt, self.on_charrcvdmg)
+        self._em.reg_cb(CharactorAtksEvt, self.on_charatks)
         # misc
         self._em.reg_cb(ModelBuiltMapEvent, self.show_map)
         self._em.reg_cb(TickEvent, self.render_dirty_sprites)
@@ -99,7 +100,7 @@ class MasterView:
         # -- name label at top-right of the screen
         rect = pygame.Rect((self.win_w * 3 / 4, 0),
                            (self.win_w / 4 - 1, line_h - 1))
-        evt_txt_dict = {MyNameChangedEvent: 'newname', NwRecGreetEvt: 'newname'}
+        evt_txt_dict = {MyNameChangedEvent: 'newname', NwRcvGreetEvt: 'newname'}
         namebox = TextLabelWidget(evManager, '', events_attrs=evt_txt_dict, rect=rect)
                 
         # -- list of connected players at right of the screen
@@ -296,6 +297,21 @@ class MasterView:
             
 
 
+    ###################### ATTACKS ###########################
+    
+    def on_charrcvdmg(self, event):
+        """ Display text with damage over charactor's sprite. """
+        # TODO: FT display text with damage over charactor's sprite.
+        defer = self.charactor_sprites.get_spr(event.defer)
+        dmg = event.dmg
+        
+    
+    def on_charatks(self, event):
+        """ Display the charactor attacking. """
+        # TODO: FT display the charactor attacking
+        atker = self.charactor_sprites.get_spr(event.atker)
+        
+        
         
     ###################### RENDERING OF SPRITES and BG ######################
     

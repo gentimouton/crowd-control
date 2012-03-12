@@ -1,13 +1,14 @@
+from client.av import Avatar
 from client.events_client import InputMoveRequest, ModelBuiltMapEvent, \
-    NwRecChatEvt, ChatlogUpdatedEvent, NwRecGreetEvt, NwRecPlayerLeft, \
-    CharactorRemoveEvent, NwRecAvatarMoveEvt, NwRecPlayerJoinEvt, NwRecNameChangeEvt, \
-    LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, SendMoveEvt, \
-    RemoteCharactorMoveEvent, NwRecGameAdminEvt, NwRecCreepJoinEvt, CreepPlaceEvent, \
-    NwRecCreepMoveEvt, MyNameChangedEvent, MdAddPlayerEvt, InputAtkRequest, \
-    SendAtkEvt, NwRecAtkEvt, NwRecCreepDieEvt
+    NwRcvGreetEvt, NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvNameChangeEvt, \
+    InputAtkRequest, NwRcvCharMoveEvt, NwRcvAtkEvt, NwRcvGameAdminEvt, \
+    NwRecCreepJoinEvt, NwRcvDeathEvt, MdAddPlayerEvt, MyNameChangedEvent, \
+    NwRcvChatEvt, ChatlogUpdatedEvent, CharactorRemoveEvent, NwRcvWarpEvt
+from client.npc import Creep
 from collections import deque
 from common.world import World
 import logging
+
 
 
 
@@ -20,11 +21,13 @@ class Game:
     
     def __init__(self, evManager):
         self._em = evManager
-        self._em.reg_cb(NwRecGreetEvt, self.on_greeted)
+        self._em.reg_cb(NwRcvGreetEvt, self.on_greeted)
         # all other callbacks are registered AFTER having been greeted
         
-        self.players = dict() #unlike WeakValueDict, I need to remove players manually
+        self.avs = dict() # currently connected avatars from players
         self.creeps = dict() #need to remove creeps manually when they die
+        
+        self.acceptinput = False # start accepting player input after greeted by server
         
         self.world = World(evManager, self.log)
         self.chatlog = ChatLog(evManager)
@@ -41,69 +44,89 @@ class Game:
     
     
     def on_greeted(self, event):
-        """ When the server greets me, set my cname,
+        """ When the server greets me, set my name,
         start world building process, and add other connected players and creeps.
         Start also listening to player inputs, and other network messages.
         """
         
         mapname, newname = event.mapname, event.newname
-        newpos, facing = event.newpos, event.facing
+        myinfo = event.myinfo
         onlineppl, creeps = event.onlineppl, event.creeps
-            
-        self.myname = newname
-        
+
         self.build_map(mapname)
         
-        # creeps
-        for cname, coords_facing in creeps.items():
-            coords, facing = coords_facing
-            self.add_creep(cname, coords, facing)
-            
         # myself, local player
-        self.add_player(newname, newpos, facing)
-        # others, remote players
-        for name, pos_facing in onlineppl.items():
-            pos, facing = pos_facing
-            self.add_player(name, pos, facing)
+        # The map has to be built before positioning the player's avatar.
+        self.myname = newname
+        self.log.info('My name is %s' % newname)
+        self.add_player(newname, myinfo) 
+        
+        # creeps
+        for cname, creepinfo in creeps.items():
+            self.add_creep(cname, creepinfo)
+            
+        # remote players
+        for pname, pinfo in onlineppl.items():
+            self.add_player(pname, pinfo)
            
         # start listening to game events coming from the network
         
         # -- PLAYERS
-        self._em.reg_cb(NwRecPlayerJoinEvt, self.on_playerjoin)
-        self._em.reg_cb(NwRecPlayerLeft, self.on_playerleft)
-        self._em.reg_cb(NwRecNameChangeEvt, self.on_namechange)
+        self._em.reg_cb(NwRcvPlayerJoinEvt, self.on_playerjoin)
+        self._em.reg_cb(NwRcvPlayerLeftEvt, self.on_playerleft)
+        self._em.reg_cb(NwRcvNameChangeEvt, self.on_namechange)
         
-        # -- AVATARS (remote and local)
-        self._em.reg_cb(NwRecAvatarMoveEvt, self.on_remoteavmove)
+        # -- LOCAL events (attacks, moves, and removals)
         self._em.reg_cb(InputMoveRequest, self.on_localavmove)
         self._em.reg_cb(InputAtkRequest, self.on_localatk)
-        self._em.reg_cb(NwRecAtkEvt, self.on_remoteatk)
+        self._em.reg_cb(CharactorRemoveEvent, self.on_localremoval)
+        self.acceptinput = True
+        
+        # -- REMOTE events (attacks, moves, spawns, and deaths)
+        self._em.reg_cb(NwRcvCharMoveEvt, self.on_remotemove)
+        self._em.reg_cb(NwRcvAtkEvt, self.on_remoteatk)
+        self._em.reg_cb(NwRcvWarpEvt, self.on_remotewarp)
 
         # -- RUNNING GAME and CREEPS
-        self._em.reg_cb(NwRecGameAdminEvt, self.on_gameadmin)
+        self._em.reg_cb(NwRcvGameAdminEvt, self.on_gameadmin)
         self._em.reg_cb(NwRecCreepJoinEvt, self.on_creepjoin)
-        self._em.reg_cb(NwRecCreepMoveEvt, self.on_creepmove)
-        self._em.reg_cb(NwRecCreepDieEvt, self.on_creepdie)
+        self._em.reg_cb(NwRcvDeathEvt, self.on_death)
         
         
+
+
+    def get_charactor(self, name):
+        """ Return a SCharactor (SCreep or SAvatar) from its name """
+        if name in self.avs:
+            return self.avs[name]
+        else: 
+            try: 
+                return self.creeps[name]
+            except KeyError: # creep not found
+                self.log.error("Creep %s not found" % name)
+                return None
 
 
     ##################  PLAYERS  #####################################
     
     def on_playerjoin(self, event):
         """ When a new player arrives, add him to the connected players. """
-        self.add_player(event.pname, event.pos, event.facing)
+        self.add_player(event.pname, event.pinfo)
         
         
-    def add_player(self, pname, pos, facing):
-        """ add a new player to the list of connected players """
-        cell = self.world.get_cell(pos)
-        
+    def add_player(self, pname, pinfo):
+        """ add a new player to the list of connected players.
+        pinfo contains a dic made by the server-side SAvatar object. 
+        """
+        coords, facing = pinfo['coords'], pinfo['facing']
+        atk, hp = pinfo['atk'], pinfo['hp']
+        cell = self.world.get_cell(coords)
+
         # whether that Player is the local client or a remote client
         islocal = hasattr(self, 'myname') and pname == self.myname 
         
-        newplayer = Player(pname, cell, facing, islocal, self._em)       
-        self.players[pname] = newplayer
+        newplayer = Avatar(pname, cell, facing, atk, hp, islocal, self._em)       
+        self.avs[pname] = newplayer
         
         # notify the view 
         ev = MdAddPlayerEvt(pname)
@@ -114,9 +137,9 @@ class Game:
         """ remove a player """
         pname = event.pname
         try:
-            self.players[pname].remov()
+            self.avs[pname].rmv()
             #don't forget to clean the player data from the dict
-            del self.players[pname]
+            del self.avs[pname]
         except KeyError:
             self.log.warning('Player ' + pname + ' had already been removed') 
         
@@ -126,58 +149,89 @@ class Game:
         
         oldname, newname = event.oldname, event.newname
          
-        if newname in self.players:
-            self.log.warning(oldname + ' changed cname to ' + newname 
-                             + ' which was already in use')
+        if newname in self.avs:
+            self.log.warning('%s changed name to %s, which was already in use'
+                             % (oldname, newname))
         
         if self.myname == oldname:
             self.myname = newname
             # notify the widget in charge of holding my cname
+            self.log.info('Changed name to %s' % newname)
             ev = MyNameChangedEvent(oldname, newname)
             self._em.post(ev)
             
-        player = self.players[oldname]
-        player.changename(newname)
-        self.players[newname] = player
-        del self.players[oldname] #only del the mapping, not the player itself
+        av = self.avs[oldname]
+        av.changename(newname)
+        self.avs[newname] = av
+        del self.avs[oldname] #only del the mapping, not the player itself
 
 
-    
-    ###############################  AVATARS  ############################
-        
-    
-    def on_remoteavmove(self, event):
-        """ Move the avatar of the player which cname is pname. """
-        pname, dest = event.pname, event.dest
-        
-        if pname != self.myname:
-            avatar = self.players[pname].avatar
-            destcell = self.world.get_cell(dest)
-            avatar.move_absolute(destcell)
-
+    ########### LOCAL 
 
     def on_localavmove(self, event):
-        """ When the user pressed up,down,right,or left, move his avatar. """
-        mychar = self.players[self.myname].avatar
-        mychar.move_relative(event.direction)
+        """ Unless dead, when the user pressed up, down, right, or left,
+        move his avatar.
+        """
+        if self.acceptinput:
+            mychar = self.avs[self.myname]
+            mychar.move_relative(event.direction)
 
 
     def on_localatk(self, event):
-        """ When user pressed atk button, make him atk. """
-        mychar = self.players[self.myname].avatar
-        mychar.atk_local()
+        """ Unless dead, when user pressed atk button, make him atk. """
+        if self.acceptinput:
+            mychar = self.avs[self.myname]
+            mychar.atk_local()
     
+    
+    def on_localremoval(self, event):
+        """ A charactor (Creep or avatar) is dead locally. 
+        If this charactor is me, stop forwarding input events to the avatar.
+        Start re-accepting inputs when the server acknowledges my death 
+        and resurrect me.
+        """
+        ch = event.charactor
+        if ch.name == self.myname:
+            self.acceptinput = False
+        
+    
+    ########## REMOTE
+        
+    
+    def on_remotemove(self, event):
+        """ Move the avatar of the player which cname is pname. """
+        name, coords = event.name, event.coords
+        
+        if name != self.myname: # client is in charge of making its local av move
+            char = self.get_charactor(name)
+            destcell = self.world.get_cell(coords)
+            char.move_absolute(destcell)
+
+
     def on_remoteatk(self, event):
-        """ A charactor attacked a creep. """
-        atker, defer = event.atker, event.defer
-        dmg = event.dmg
-        self.log.debug(str(atker) + ' attacked ' + str(defer) 
-                       + ' for ' + str(dmg) + ' dmg.' )
-        # TODO: should model be updated only on remote atks, or also on local atks? 
+        """ Only execute attacks from other charactors than myself.
+        My attacks are executed by the model right when inputed by the player. 
+        """
+        atker = self.get_charactor(event.atker)
+        defer = self.get_charactor(event.defer)
+        if atker.name != self.myname:
+            dmg = event.dmg
+            self.log.info('Remote: %s attacked %s for %d dmg' 
+                          % (event.atker, event.defer, dmg))
+            defer.rcv_dmg(dmg)
+        
     
-    
-    
-    
+    def on_remotewarp(self, event):
+        """ A charactor teleported. """
+        name, info = event.name, event.info
+        coords = info['coords']
+        if name == self.myname:
+            # TODO: notify view to resurrect my sprite at the entrance
+            self.log.info('I should be warped to %s' % str(coords))
+        elif name in self.avs:
+            # TODO: notify view to resurrect that player's sprite at entrance
+            self.log.info('%s should be warped to %s' % (name, str(coords)))
+        
     
     ###################### RUNNING GAME + CREEPS ############################
     
@@ -195,26 +249,31 @@ class Game:
     
     def on_creepjoin(self, event):
         """ Create a creep. """
-        cname, coords, facing = event.cname, event.coords, event.facing
-        self.add_creep(cname, coords, facing)
-        
-    def on_creepmove(self, event):
-        """ Move a creep. """
-        cname, coords = event.cname, event.coords
-        creep = self.creeps[cname]
-        creep.move_absolute(self.world.get_cell(coords))
-        
-    def on_creepdie(self, event):
-        """ A creep died """
-        self.remove_creep(event.cname)
+        cname, cinfo = event.cname, event.cinfo
+        self.add_creep(cname, cinfo)
         
         
+    def on_death(self, event):
+        """ A creep or avatar died. """
+        name = event.name
+        if name in self.creeps: # a creep died
+            self.remove_creep(event.name)
+        elif name == self.myname: # my avatar died
+            self.log.info('I should die')
+        elif name in self.avs: # another avatar died
+            self.log.info('player %s should die' % (name))
         
-    def add_creep(self, cname, coords, facing):
-        """ Add a new creep to the existing creeps. """
-        cell = self.world.get_cell(coords)
-        creep = SCreep(self._em, cname, cell, facing)       
+        
+        
+    def add_creep(self, cname, creepinfo):
+        """ Add a new creep to the existing creeps.
+        Info is a dic made on the server side by SCreep. """
+        cell, facing = self.world.get_cell(creepinfo['coords']), creepinfo['facing']
+        atk, hp = creepinfo['atk'], creepinfo['hp']
+        
+        creep = Creep(self._em, cname, cell, facing, atk, hp)       
         self.creeps[cname] = creep
+
 
     def remove_creep(self, cname):
         """ remove a creep """
@@ -222,162 +281,13 @@ class Game:
             self.creeps[cname].rmv()
             del self.creeps[cname]
         except KeyError:
-            self.log.warning('SCreep ' + str(cname) + ' had already been removed') 
+            self.log.warning('Creep ' + str(cname) + ' had already been removed') 
         
         
 
 
-        
-##############################################################################
 
 
-
-class Player():
-    """ the model structure for a person playing the game 
-    It has cname, score, etc. 
-    """
-    def __init__(self, name, cell, facing, islocal, evManager):
-        self._em = evManager
-
-        self.cname = name
-        self.avatar = Avatar(self, cell, facing, islocal, evManager) 
-
-
-    def __str__(self):
-        return '%s' % (self.cname)
-
-    def changename(self, name):
-        self.cname = name
-        self.avatar.changename(name)
-        
-
-    def remov(self):
-        """ tell the view to remove that player's avatar """
-        self.avatar.rmv()
-
-
-
-
-##############################################################################
-
-
-class Charactor():
-    """ A local or remote entity representing players or creeps. 
-    It is located on a cell, and can move to another cell.
-    """
-    
-    log = logging.getLogger('client')
-
-    def __init__(self, cell, facing, name, evManager):
-        self._em = evManager
-        
-        self.facing = facing # which direction the charactor is facing
-        self.cname = name
-        
-        self.cell = cell
-        self.cell.add_occ(self)
-        
-                
-
-    def changename(self, newname):
-        """ update my cname, and notify my cell """
-        #self.cell.occ_chngname(self.cname, newname)
-        self.cname = newname
-        
-        
-    def move_absolute(self, destcell):
-        """ move to the specified destination.
-        During a split second, the charactor is in no cell. 
-        """ 
-        if destcell:
-            self.cell.rm_occ(self)
-            self.cell = destcell
-            self.cell.add_occ(self)
-            ev = RemoteCharactorMoveEvent(self, destcell.coords)
-            self._em.post(ev)
-            
-        else: #illegal move
-            self.log.warning('Illegal move from ' + self.cname)
-            #TODO: should report to server of potential cheat/hack
-            pass
-        
-        
-    def rmv(self):
-        """ tell the view to remove this charactor's spr """ 
-        self.cell.rm_occ(self) # TODO: should be a weakref instead?
-        ev = CharactorRemoveEvent(self)
-        self._em.post(ev)
-
-        
-    
-    
-class Avatar(Charactor):
-    """ An entity controlled by a player.
-    Right now, the mapping is 1-to-1: one avatar per player. 
-    """
-    
-    def __init__(self, player, cell, facing, islocal, evManager):
-        
-        self.player = player
-        Charactor.__init__(self, cell, facing, player.cname, evManager)
-        
-        self.islocal = islocal #whether the avatar is controlled by the client
-        
-        if islocal:
-            ev = LocalAvatarPlaceEvent(self, cell)
-        else: #avatar from someone else
-            ev = OtherAvatarPlaceEvent(self, cell)
-        self._em.post(ev)
-        
-    
-    def __str__(self):
-        return '%s' % (self.player.cname)
-
-
-    def move_relative(self, direction):
-        """ If possible, move towards that direction. """
-
-        dest_cell = self.cell.get_adjacent_cell(direction)
-        if dest_cell:
-            self.cell.rm_occ(self)
-            self.cell = dest_cell
-            self.cell.add_occ(self)
-            self.facing = direction
-            # send to view and server that I moved
-            ev = SendMoveEvt(self, dest_cell.coords, direction)
-            self._em.post(ev)
-
-        else: #move is not possible: TODO: give (audio?) feedback 
-            pass 
-
-    
-    def atk_local(self):
-        """ Attack a creep in the vicinity, 
-        and send action + amount of damage to the server. 
-        """
-        target_cell = self.cell.get_adjacent_cell(self.facing)
-        if target_cell: #only attack walkable cells
-            occupant = target_cell.get_occ() # pick occupant randomly
-            if occupant: # there's creep or avatar to attack
-                ev = SendAtkEvt(occupant.cname) # TODO: this assumes player can attack creeps only
-                self._em.post(ev)
-            else:# dont attack if the cell has no occupant
-                pass # TODO: show a 'miss' animation
-        
-
-class SCreep(Charactor):
-    """ Representation of a remote enemy monster. """
-        
-    def __init__(self, evManager, cname, cell, facing):
-        
-        Charactor.__init__(self, cell, facing, cname, evManager)
-        
-        ev = CreepPlaceEvent(self)# ask view to display the new creep
-        self._em.post(ev)
-        
-    
-    def __str__(self):
-        return '%s' % (self.cname)
 
 
         
@@ -390,7 +300,7 @@ class ChatLog():
     
     def __init__(self, evManager):
         self._em = evManager
-        self._em.reg_cb(NwRecChatEvt, self.add_chatmsg)
+        self._em.reg_cb(NwRcvChatEvt, self.add_chatmsg)
         
         #double-ended queue to remember the most recent 30 messages
         self.chatlog = deque(maxlen=30) 

@@ -1,8 +1,7 @@
 
-
-class SCharactor():
+class Charactor():
     """ Abstract class representing game charactors, 
-    like player avatars or creeps. 
+    such as player avatars or creeps. 
     """
     def __init__(self, name, cell, facing, hp, atk):
         self.name = name
@@ -16,28 +15,28 @@ class SCharactor():
     def __str__(self):
         return '%s at %s, hp=%d' % (self.name, self.cell.coords, self.hp)
         
-    def change_name(self, newname):
-        """ change charactor name, and notify the cell """ 
-        self.name = newname
     
-    def get_serializablepos(self):
-        """ Return coords and facing for this charactor. """
-        return self.cell.coords, self.facing
+    def serialize(self):
+        """ Serialize: Return coords, facing, atk, and hp for this charactor. """
+        dic = {'coords':self.cell.coords,
+               'facing':self.facing,
+               'atk':self.atk,
+               'hp':self.hp}
+        return dic
     
     ################ ABSTRACT METHODS TO BE OVERRIDEN ########################
 
-    
-    def move(self, cell):
+    def move(self, newcell, facing):
         """ should be overriden by Creep or Avatar. Return nothing. """
         self.log.error('Charactor %s does not have a method to move' % self.name)
         raise NotImplementedError
-    
+                    
     def attack(self, defer):
         """ should be overriden by Creep or Avatar. Return amount of dmg. """
         self.log.error('Charactor %s does not have a method to attack' % self.name)
         raise NotImplementedError
     
-    def rcv_atk(self, atker):
+    def rcv_dmg(self, atker):
         """ Should be overriden by Creep or Avatar. Return nothing. """
         self.log.error('Charactor %s does not have a method to receive dmg' % self.name)
         raise NotImplementedError

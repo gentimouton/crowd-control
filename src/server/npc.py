@@ -1,18 +1,15 @@
-from common.constants import DIRECTION_LEFT
-from server.charactor import SCharactor
+from server.charactor import Charactor
 import logging
 
 
-class SCreep(SCharactor):
+class SCreep(Charactor):
     
     log = logging.getLogger('server')
 
     
     def __init__(self, mdl, sched, nw, cname, cell, facing):
         """ Starting state is idle. """
-        SCharactor.__init__(self, cname, cell, facing, 10, 6) # 10 HP, 6 atk
-        #self.cell.add_occ(self) # TODO: cell.add_creep, cell.add_player, ...
-        # so that creeps can do cell.get_players and attack one
+        Charactor.__init__(self, cname, cell, facing, 10, 6) # 10 HP, 6 atk
         
         self._mdl = mdl
         self._sched = sched     
@@ -21,29 +18,40 @@ class SCreep(SCharactor):
         
         self.state = 'idle'
         
-        self._nw.bc_creepjoin(self.name, self.cell.coords, self.facing)
+        creepinfo = self.serialize()
+        self._nw.bc_creepjoin(self.name, creepinfo)
 
 
     
     #################### OVERRIDES FROM CHARACTOR ############################
      
     
-    def move(self, cell, facing=DIRECTION_LEFT): # TODO: facing should always be specified, not DIR_LEFT 
+    def move(self, newcell, facing):
         """ move the creep to the given cell. """
-        self.cell = cell
+        # remove from old cell and add to new cell
+        oldcell = self.cell
+        oldcell.rm_occ(self)
+        newcell.add_occ(self)
+        self.cell = newcell
         self.facing = facing
-        self._nw.bc_creepmoved(self.name, self.cell.coords, facing)
+        self._nw.bc_move(self.name, newcell.coords, facing)
         
-        
-    def rcv_atk(self, atker):
-        """ when a player attacks, take damage. 
-        Return the amount of dmg received. 
+
+    def attack(self, defer):
+        """ Attack a target (avatar or creep).
+        No need to check if target is in range: update() did it. 
         """
-        dmg = atker.atk # TODO: should be reduced by self.def or self.armor
-        self.hp -= dmg
-        self.log.debug('Creep %s received %d dmg' % (self.name, dmg))
+        dmg = defer.rcv_dmg(self, self.atk) # takes care of broadcasting on network 
+        return dmg
         
-        self._nw.bc_atk(atker.name, self.name, dmg)
+        
+    def rcv_dmg(self, atker, dmg):
+        """ Receive damage from an attacker. Return amount of dmg received. """
+        self.hp -= dmg
+        self.log.debug('Creep %s received %d dmg from %s' 
+                       % (self.name, dmg, atker.name))
+        
+        self._nw.bc_attack(atker.name, self.name, dmg)
 
         # less than 0 HP => death
         if self.hp <= 0:
@@ -55,19 +63,17 @@ class SCreep(SCharactor):
     
     def die(self):
         """ Notify all players when a creep dies. """
+        # remove all scheduled actions
         self._sched.unschedule_actor(self.name)
-        #if creep explodes, it should do so before having the model remove it
+        
+        #if creep has to do something when it dies, 
+        #it should do it before having the model remove it
         self._mdl.rmv_creep(self.name)
+        
         # broadcast on network
-        self._nw.bc_creepdied(self.name)
+        self._nw.bc_death(self.name)
         
     
-    def attack(self, defer):
-        """ Attack a target.
-        No need to check if target is in range: update() did it. 
-        """
-        return defer.rcv_atk(self)
-        
 
 
 
@@ -81,7 +87,7 @@ class SCreep(SCharactor):
             # move to a neighbor cell closer to the map entrance
             direction, cell = self.cell.get_nextcell_inpath()
             occupant = cell.get_occ()
-            if occupant: # TODO: should only get players in that cell instead.. 
+            if occupant: # TODO: should only get *players* in that cell instead.. 
                 self.attack(occupant)
                 self.state = 'atking'
                 atkduration = 200

@@ -1,14 +1,16 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client.events_client import SendChatEvt, NwRecChatEvt, NwRecGreetEvt, \
-    NwRecNameChangeEvt, NwRecPlayerJoinEvt, NwRecPlayerLeft, NwRecAvatarMoveEvt, \
-    SendMoveEvt, NwRecGameAdminEvt, NwRecCreepJoinEvt, NwRecCreepMoveEvt, SendAtkEvt, \
-    NwRecAtkEvt, NwRecCreepDieEvt
+from client.events_client import SendChatEvt, NwRcvChatEvt, NwRcvGreetEvt, \
+    NwRcvNameChangeEvt, NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvCharMoveEvt, \
+    SendMoveEvt, NwRcvGameAdminEvt, NwRecCreepJoinEvt, SendAtkEvt, NwRcvAtkEvt, \
+    NwRcvDeathEvt, NwRcvWarpEvt, NwRcvNameChangeFailEvt
 from common.events import TickEvent
-from common.messages import GreetMsg, PlayerArrivedNotifMsg, PlayerLeftNotifMsg, \
-    NameChangeRequestMsg, NameChangeNotifMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, \
-    SrvMoveMsg, SrvGameAdminMsg, SrvCreepJoinedMsg, SrvCreepMovedMsg, unpack_msg, \
-    ClAtkMsg, SrvAtkMsg, SrvCreepDiedMsg
+from common.messages import SrvGreetMsg, SrvPlyrJoinMsg, SrvPlyrLeftMsg, \
+    ClNameChangeMsg, SrvNameChangeMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, SrvMoveMsg, \
+    SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
+    SrvWarpMsg, SrvNameChangeFailMsg
 import logging
+
+
 
 class NetworkController(ConnectionListener):
     
@@ -19,35 +21,39 @@ class NetworkController(ConnectionListener):
         """ open connection to the server """
         self._em = evManager
         self._em.reg_cb(TickEvent, self.on_tick)
+        
+        self._em.reg_cb(SendAtkEvt, self.on_sendattack)
         self._em.reg_cb(SendChatEvt, self.on_sendchat)
         self._em.reg_cb(SendMoveEvt, self.on_sendmove)
-        self._em.reg_cb(SendAtkEvt, self.on_sendatk)
         
         self.preferrednick = nick
         host, port = hostport
+
         self.Connect((host, port))
         
-        
-    def push(self): 
-        """ push data to server """
-        connection.Pump()
-    
-    def pull(self):
-        """ pull data from the pipe and trigger the Network_* callbacks"""
-        self.Pump() 
+
+
+    def on_tick(self, event):
+        """ push and pull every game loop """
+        self.Pump() # pull from socket and trigger Network_* callbacks
+        connection.Pump() # push to socket
+
 
     def send(self, data):
-        """ data is a dict """
+        """ Send data to the server.
+        data is a dict.
+        """
         #self.log.debug('Network sends: ' + str(data))
         connection.Send(data)
         
                         
     def Network(self, data):
-        """ triggered for any Network_* callback """
+        """ Receive data from the socket. 
+        Triggered along all Network_* callbacks 
+        """
         #self.log.debug("Network received: " + str(data))
-        
+        pass
 
-    ################## DEFAULT ADMIN ##########
   
     def Network_connected(self, data):
         self.log.info("Client connected to the server " 
@@ -69,143 +75,161 @@ class NetworkController(ConnectionListener):
         connection.Close()
         exit()
     
+
+
+    ####################  attack  ###############
     
-    
-    ################## CHAT ################    
-    
-    def Network_chat(self, data):
-        cmsg = SrvChatMsg(data['msg'])
-        author = cmsg.d['pname']
-        txt = cmsg.d['txt']
-        ev = NwRecChatEvt(author, txt)
+    def on_sendattack(self, event):
+        """ Send an attack msg to the server """
+        dic = {'targetname': event.tname, 'dmg':event.dmg}
+        amsg = ClAtkMsg(dic)
+        self.send({'action':'attack', 'msg':amsg.d})
+        
+    def Network_attack(self, data):
+        """ Receive atk message from server """
+        atker, defer, dmg = unpack_msg(data['msg'], SrvAtkMsg)
+        ev = NwRcvAtkEvt(atker, defer, dmg)
         self._em.post(ev)
-        
-        
+
+    
+    ##################  chat  ################    
+    
     def on_sendchat(self, event):
+        """ Send chat msg to server """
         txt = event.txt
         d = {'txt':txt}
         cmsg = ClChatMsg(d)
         self.send({"action": "chat", "msg": cmsg.d})
         
+    def Network_chat(self, data):
+        """ Receive chat msg from server. """
+        author, txt = unpack_msg(data['msg'], SrvChatMsg)
+        ev = NwRcvChatEvt(author, txt)
+        self._em.post(ev)
+        
+        
+    ####################  creepjoin  ############
+    
+    def Network_creepjoin(self, data):
+        """ A creep arrived in the game. """
+        cname, cinfo = unpack_msg(data['msg'], SrvCreepJoinedMsg)
+        ev = NwRecCreepJoinEvt(cname, cinfo)
+        self._em.post(ev)
     
     
+    ###################  death  ####################
     
-    ################## MOVEMENT ################    
+    def Network_death(self, data):
+        """ A charactor died. """
+        name, = unpack_msg(data['msg'], SrvDeathMsg)
+        ev = NwRcvDeathEvt(name)
+        self._em.post(ev)
+
+
+    ###################  gameadmin  ##################
+
+    def Network_gameadmin(self, data):
+        """ Received a game command from the server. """
+        pname, cmd = unpack_msg(data['msg'], SrvGameAdminMsg)
+        ev = NwRcvGameAdminEvt(pname, cmd)
+        self._em.post(ev)
+
+
+    
+    ################ greet ##############
+
+    """ PROTOCOL for connections, disconnections, and name changes:
+    When the server detects a client connection, 
+    the server sends to the client a greeting containing that client's 
+    temporary name (an hexa string). 
+    
+    When the greet msg is received,
+    the client asks the server to change to its preferred name. 
+    The client knows if the server accepted the name change 
+    by a namechange server broadcast.
+    """    
+
+    def Network_greet(self, data):
+        """ Receive a greeting msg from the server. """
+       
+        #deserialize        
+        tup = unpack_msg(data['msg'], SrvGreetMsg)  
+        mapname, pname, myinfo, onlineppl, creeps = tup
+        
+        # start the client's game
+        ev = NwRcvGreetEvt(mapname, pname, myinfo, onlineppl, creeps)
+        self._em.post(ev)
+
+        # ask for name change
+        preferred_name = self.preferrednick
+        if pname is not preferred_name:
+            self.ask_namechange(preferred_name)
+    
+    
+        
+    ##################  move  ################    
         
     def on_sendmove(self, event):
+        """ Send a movement msg to the server """
         dic = {'coords':event.coords, 'facing':event.facing}
         mmsg = ClMoveMsg(dic)
         self.send({'action':'move', 'msg':mmsg.d})
     
     def Network_move(self, data):
-        pname, coords, facing = unpack_msg(data['msg'], SrvMoveMsg) 
-        ev = NwRecAvatarMoveEvt(pname, coords, facing)
+        """ Receive a movement msg from the server. """
+        name, coords, facing = unpack_msg(data['msg'], SrvMoveMsg) 
+        ev = NwRcvCharMoveEvt(name, coords, facing)
         self._em.post(ev)
 
 
 
-    #################### ATTACKS ###############
+    ############### namechange ############
     
-    def on_sendatk(self, event):
-        dic = {'targetname': event.tname}
-        amsg = ClAtkMsg(dic)
-        self.send({'action':'atk', 'msg':amsg.d})
-        
-    def Network_atk(self, data):
-        atker, defer, dmg = unpack_msg(data['msg'], SrvAtkMsg)
-        ev = NwRecAtkEvt(atker, defer, dmg)
-        self._em.post(ev)
-
-    
-    ################### GAME ##################
-
-    def Network_gameadmin(self, data):
-        pname, cmd = unpack_msg(data['msg'], SrvGameAdminMsg)
-        ev = NwRecGameAdminEvt(pname, cmd)
+    def Network_namechange(self, data):
+        """ Someone changed name. """
+        oldname, newname = unpack_msg(data['msg'], SrvNameChangeMsg)
+        ev = NwRcvNameChangeEvt(oldname, newname)
         self._em.post(ev)
         
-    
-    ################### CREEPS ##################
-
-    def Network_creep(self, data):
-        act = data['msg']['act'] # all creep msg have an act
-
-        if act == 'join': # creep creation
-            act, cname, coords, facing = unpack_msg(data['msg'], SrvCreepJoinedMsg)
-            ev = NwRecCreepJoinEvt(cname, coords, facing)
-            self._em.post(ev)
-            
-        elif act == 'move': # creep movement
-            act, cname, coords, facing = unpack_msg(data['msg'], SrvCreepMovedMsg)
-            ev = NwRecCreepMoveEvt(cname, coords, facing)
-            self._em.post(ev)
-            
-        elif act == 'die': # creep death
-            act, cname = unpack_msg(data['msg'], SrvCreepDiedMsg)
-            ev = NwRecCreepDieEvt(cname)
-            self._em.post(ev)
-            
-
-    
-    ################## (DIS)CONNECTION + NAME CHANGE CALLBACKS ################    
-    
-    """ PROTOCOL for (dis)connections and name changes:
-    When the server detects a client connection, 
-    the server sends to the client a greeting containing that client's 
-    temporary name (an hexa string). When the greet msg is received,
-    the client asks the server to change to its preferred name. 
-    The client knows if the server accepted the
-    name change by a server broadcast which triggers 
-    a NwRecNameChangeEvt(oldname, newname). 
-    TODO: if the name change was rejected, the client should be notified
-    and the user should be told that his preferred name is already in use.
-    """
-        
-    def Network_admin(self, data):
-        """ greeting, left, arrived, and name change messages """
-        actiontype = data['msg']['mtype'] # all admin msg have an mtype
-
-        if actiontype == 'greet':
-            tup = unpack_msg(data['msg'], GreetMsg) #deserialize 
-            mapname, pname, coords, facing, onlineppl, creeps = tup
-            
-            preferred_name = self.preferrednick
-            if pname is not preferred_name:
-                self.ask_for_name_change(preferred_name)
-            ev = NwRecGreetEvt(mapname, pname, coords, facing, onlineppl, creeps)
-            self._em.post(ev)
-
-        elif actiontype == 'namechange':
-            nmsg = NameChangeNotifMsg(data['msg'])
-            oldname = nmsg.d['oldname']
-            newname = nmsg.d['newname']
-            ev = NwRecNameChangeEvt(oldname, newname)
-            self._em.post(ev)
-
-        elif actiontype == 'arrived': # new player connected
-                pname, coords, facing = unpack_msg(data['msg'], PlayerArrivedNotifMsg) 
-                ev = NwRecPlayerJoinEvt(pname, coords, facing)
-                self._em.post(ev)
-    
-        elif actiontype == 'left': # player left
-            lmsg = PlayerLeftNotifMsg(data['msg'])
-            ev = NwRecPlayerLeft(lmsg.d['pname'])
-            self._em.post(ev)
-        
-            
-            
-    def ask_for_name_change(self, newname):
+    def ask_namechange(self, newname):
+        """ Ask the server to change name """
         d = {'pname':newname}
-        nmsg = NameChangeRequestMsg(d)
-        self.send({"action": 'admin', "msg":nmsg.d})
+        nmsg = ClNameChangeMsg(d)
+        self.send({"action": 'namechange', "msg":nmsg.d})
 
-    
-    
-    def on_tick(self, event):
-        """ push and pull every game loop """
-        self.pull()
-        self.push()
-            
-            
+    def Network_namechangefail(self, data):
+        """ Failed to change my name. """
+        failname, reason = unpack_msg(data['msg'], SrvNameChangeFailMsg)
+        ev = NwRcvNameChangeFailEvt(failname, reason)
+        self._em.post(ev)
         
+    
+    
+    ############  playerjoin  ###########
+    
+    def Network_playerjoin(self, data):
+        """ A new player joined the game """
+        pname, pinfo = unpack_msg(data['msg'], SrvPlyrJoinMsg) 
+        ev = NwRcvPlayerJoinEvt(pname, pinfo)
+        self._em.post(ev)
+        
+    #############  playerleft  #########
+    
+    def Network_playerleft(self, data):
+        """ A player left the game. """
+        pname, = unpack_msg(data['msg'], SrvPlyrLeftMsg) 
+        ev = NwRcvPlayerLeftEvt(pname)
+        self._em.post(ev)
 
+
+
+    ############ warp ###############
+    
+    def Network_warp(self, data):
+        """ A charactor teleported. """
+        name, info = unpack_msg(data['msg'], SrvWarpMsg) 
+        ev = NwRcvWarpEvt(name, info)
+        self._em.post(ev)
+        
+        
+        
