@@ -94,7 +94,7 @@ class SAvatar(Charactor):
         """ broadcast the death to all players
         and resurrect at entrance. 
         """
-        self.log.info('Player %s should die' % self.name)
+        self.log.debug('Player %s died' % self.name)
         self._nw.bc_death(self.name)
         self.resurrect() # TODO: should resurrect in 2 seconds instead -> scheduler
 

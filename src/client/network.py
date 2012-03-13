@@ -1,7 +1,7 @@
 from PodSixNet.Connection import connection, ConnectionListener
 from client.events_client import SendChatEvt, NwRcvChatEvt, NwRcvGreetEvt, \
     NwRcvNameChangeEvt, NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvCharMoveEvt, \
-    SendMoveEvt, NwRcvGameAdminEvt, NwRecCreepJoinEvt, SendAtkEvt, NwRcvAtkEvt, \
+    SendMoveEvt, NwRcvGameAdminEvt, NwRcvCreepJoinEvt, SendAtkEvt, NwRcvAtkEvt, \
     NwRcvDeathEvt, NwRcvRezEvt, NwRcvNameChangeFailEvt
 from common.events import TickEvent
 from common.messages import SrvGreetMsg, SrvPlyrJoinMsg, SrvPlyrLeftMsg, \
@@ -113,7 +113,7 @@ class NetworkController(ConnectionListener):
     def Network_creepjoin(self, data):
         """ A creep arrived in the game. """
         cname, cinfo = unpack_msg(data['msg'], SrvCreepJoinedMsg)
-        ev = NwRecCreepJoinEvt(cname, cinfo)
+        ev = NwRcvCreepJoinEvt(cname, cinfo)
         self._em.post(ev)
     
     

@@ -1,6 +1,7 @@
 from client.charactor import Charactor
 from client.events_client import LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, \
-    SendMoveEvt, SendAtkEvt, RemoteCharactorMoveEvent, LocalAvRezEvt
+    SendMoveEvt, SendAtkEvt, LocalAvRezEvt, \
+    CharactorDeathEvt, RemoteCharactorRezEvt
 from random import randint
 
 
@@ -55,23 +56,34 @@ class Avatar(Charactor):
             if occs:
                 # pick an occupant randomly (could be a player or a creep)
                 occ = occs[randint(0, len(occs) - 1)]
-                occ.rcv_dmg(self.atk)
                 self.log.info('Local: I atk %s for %d dmg' % (occ.name, self.atk))
+                # post the atk event before giving the hand to the defender 
                 ev = SendAtkEvt(occ.name, self.atk) 
                 self._em.post(ev)
+                occ.rcv_dmg(self.atk)
             else:# dont attack if the cell has no occupant
                 pass # TODO: FT show a 'miss' animation
         
 
-       
+    def die(self):
+        """ kill an avatar: hide it until the server resurrects it. """
+        self.cell.rm_occ(self) # TODO: FT should be a weakref instead?
+        ev = CharactorDeathEvt(self)
+        self._em.post(ev)
+        # # TODO: this is called twice
+        
     def resurrect(self, newcell, facing, hp, atk):
         """ resurrect charactor: update it from the given char info. """
         # move to new cell if possible
         if newcell:
+            self.facing = facing
+            self.hp = hp
+            self.atk = atk
+            # update location
             self.cell.rm_occ(self)
             self.cell = newcell
             self.cell.add_occ(self)
-            ev = RemoteCharactorMoveEvent(self, newcell.coords)
+            ev = RemoteCharactorRezEvt(self) # self stores the new position
             self._em.post(ev)
             if self.islocal: # notify the view
                 ev = LocalAvRezEvt(self)
@@ -80,9 +92,5 @@ class Avatar(Charactor):
             self.log.warn('%s should have resurrected, but cell not found.'
                           % self.name)
         
-        # update other attributes
-        self.facing = facing
-        self.hp = hp
-        self.atk = atk
 
         

@@ -11,4 +11,6 @@ class Creep(Charactor):
         ev = CreepPlaceEvent(self)# ask view to display the new creep
         self._em.post(ev)
         
-    
+    def die(self):
+        """ kill a creep: just remove it for now. """
+        self.rmv()

@@ -67,7 +67,7 @@ class NwRcvGameAdminEvt():
         self.pname = pname
         self.cmd = cmd
 
-class NwRecCreepJoinEvt():
+class NwRcvCreepJoinEvt():
     """ Sent from nw ctrler to model to notify of creep join """
     def __init__(self, cname, cinfo):
         self.cname = cname
@@ -171,6 +171,13 @@ class CharactorRemoveEvent():
     def __init__(self, ch):
         self.charactor = ch
 
+
+
+class CharactorDeathEvt():
+    """ From Charactor to View. """
+    def __init__(self, ch):
+        self.charactor = ch
+        
         
 ################# resurrect ###############################################
 
@@ -178,12 +185,17 @@ class NwRcvRezEvt():
     def __init__(self, name, info):
         self.name = name
         self.info = info
-            
+ 
+class RemoteCharactorRezEvt():
+    """ Model tells the view a charactor resurrected. """
+    def __init__(self, ch):
+        self.charactor = ch
+        
 class LocalAvRezEvt():
     """ The local avatar is resurrected. Sent from model.char to view """
     def __init__(self, av):
         self.avatar = av
-         
+ 
 ################# CHAT ###################################################
 
 

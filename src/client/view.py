@@ -5,7 +5,8 @@ from client.config import config_get_screenres, config_get_loadingscreen_bgcolor
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvt, \
     CharactorRemoveEvent, OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, SendMoveEvt, \
     RemoteCharactorMoveEvent, NwRcvGreetEvt, CreepPlaceEvent, MyNameChangedEvent, \
-    CharactorRcvDmgEvt, CharactorAtksEvt, LocalAvRezEvt
+    CharactorRcvDmgEvt, CharactorAtksEvt, LocalAvRezEvt, CharactorDeathEvt, \
+    RemoteCharactorRezEvt
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
 from common.events import TickEvent
@@ -19,6 +20,9 @@ class IndexableSprite(Sprite):
     def __init__(self, key=None):
         Sprite.__init__(self)
         self.key = key
+        
+    def __str__(self):
+        return str(self.key)
     
 class RenderUpdatesDict(RenderUpdates):
     """ Group class that extends RenderUpdates to enable associating a spr 
@@ -28,6 +32,9 @@ class RenderUpdatesDict(RenderUpdates):
         RenderUpdates.__init__(self, *sprites)
         self.__dict = dict() 
 
+    def __str__(self):
+        return '%d items' % len(self.__dict)
+        
     def add_internal(self, spr):
         """ add sprite to the group,
         and index it if it's an IndexableSprite """
@@ -36,8 +43,11 @@ class RenderUpdatesDict(RenderUpdates):
             self.__dict[spr.key] = spr
             
     def get_spr(self, key):
-        return self.__dict[key]
-
+        try:
+            return self.__dict[key]
+        except KeyError:
+            # TODO: should log the keyerror
+            return None
         
 ###########################################################################
 
@@ -55,12 +65,15 @@ class MasterView:
         self._em.reg_cb(SendMoveEvt, self.on_localavmove)
         self._em.reg_cb(LocalAvRezEvt, self.on_localavrez)
         
+        
         # remote = creeps + other avatars
         # different creation, but same movement and removal
         self._em.reg_cb(OtherAvatarPlaceEvent, self.on_remoteavplace)
         self._em.reg_cb(CreepPlaceEvent, self.add_creep)
         self._em.reg_cb(RemoteCharactorMoveEvent, self.on_remotecharmove)
-        self._em.reg_cb(CharactorRemoveEvent, self.on_remotecharremove)
+        self._em.reg_cb(CharactorDeathEvt, self.on_chardeath)
+        self._em.reg_cb(RemoteCharactorRezEvt, self.on_remoterez)
+        self._em.reg_cb(CharactorRemoveEvent, self.on_charremove)
         self._em.reg_cb(CharactorRcvDmgEvt, self.on_charrcvdmg)
         self._em.reg_cb(CharactorAtksEvt, self.on_charatks)
         # misc
@@ -260,14 +273,19 @@ class MasterView:
     def on_localavrez(self, event):
         """ rez my avatar: center screen where my av is """
         myav = event.avatar
+
+        sprdims = (self.cspr_size, self.cspr_size)
+        bgcolor = config_get_myav_bgcolor()
+        charspr = CharactorSprite(myav, sprdims, bgcolor, self.charactor_sprites)
         cleft, ctop = myav.cell.coords
-        self.center_screen_on_coords(cleft, ctop)
-        # redisplay the other charactors 
+        self.center_screen_on_coords(cleft, ctop) #must be done before display_char
+
+        # redisplay all the charactors (includes me) 
         for charspr in self.charactor_sprites:
             cleft, ctop = charspr.char.cell.coords
             self.display_charactor(charspr, cleft, ctop)
     
-    
+        
 
     ##################### REMOTE CHARACTORS #################################        
 
@@ -302,11 +320,30 @@ class MasterView:
         self.display_charactor(charspr, cleft, ctop) 
         
 
-    def on_remotecharremove(self, event):
-        """ A Charactor can be an avatar or a creep. """
-        char_spr = self.charactor_sprites.get_spr(event.charactor)
-        char_spr.kill() # remove from all sprite groups
-        del char_spr
+    def on_chardeath(self, event):
+        """ A charactor died: hide it.
+        Show it again when the charactor resurrects.
+        Delete it when the player logs out, or when creep really disappears. """
+        char = event.charactor
+        charspr = self.charactor_sprites.get_spr(char)
+        self.active_charactor_sprites.remove(charspr)
+        cleft, ctop = char.cell.coords
+        self.display_charactor(charspr, cleft, ctop) 
+
+
+    def on_remoterez(self, event):
+        """ Resurrect another charactor (creep or avatar) """
+        charspr = self.charactor_sprites.get_spr(event.charactor)
+        self.active_charactor_sprites.add(charspr)
+
+        
+    def on_charremove(self, event):
+        """ A Charactor can be an avatar or a creep.
+        Can be triggered because of local or remote events.
+        """
+        charspr = self.charactor_sprites.get_spr(event.charactor)
+        charspr.kill() # remove from all sprite groups
+        del charspr
             
 
 

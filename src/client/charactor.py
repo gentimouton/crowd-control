@@ -51,10 +51,11 @@ class Charactor():
     def rcv_dmg(self, dmg):
         """ Receive damage. """
         self.hp -= dmg
+        # send rcv dmg event before dying
         ev = CharactorRcvDmgEvt(self, dmg)
         self._em.post(ev)
         if self.hp <= 0:
-            self.rmv() # send event about my death
+            self.die() # send event about my death # # TODO: this is called twice
         
         
     def rmv(self):

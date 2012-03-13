@@ -2,7 +2,7 @@ from client.av import Avatar
 from client.events_client import InputMoveRequest, ModelBuiltMapEvent, \
     NwRcvGreetEvt, NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvNameChangeEvt, \
     InputAtkRequest, NwRcvCharMoveEvt, NwRcvAtkEvt, NwRcvGameAdminEvt, \
-    NwRecCreepJoinEvt, NwRcvDeathEvt, MdAddPlayerEvt, MyNameChangedEvent, \
+    NwRcvCreepJoinEvt, NwRcvDeathEvt, MdAddPlayerEvt, MyNameChangedEvent, \
     NwRcvChatEvt, ChatlogUpdatedEvent, CharactorRemoveEvent, NwRcvRezEvt
 from client.npc import Creep
 from collections import deque
@@ -71,8 +71,9 @@ class Game:
            
         # start listening to game events coming from the network
         
-        # -- PLAYERS
+        # -- Charactors
         self._em.reg_cb(NwRcvPlayerJoinEvt, self.on_playerjoin)
+        self._em.reg_cb(NwRcvCreepJoinEvt, self.on_creepjoin)
         self._em.reg_cb(NwRcvPlayerLeftEvt, self.on_playerleft)
         self._em.reg_cb(NwRcvNameChangeEvt, self.on_namechange)
         
@@ -86,11 +87,10 @@ class Game:
         self._em.reg_cb(NwRcvCharMoveEvt, self.on_remotemove)
         self._em.reg_cb(NwRcvAtkEvt, self.on_remoteatk)
         self._em.reg_cb(NwRcvRezEvt, self.on_remoterez)
-
-        # -- RUNNING GAME and CREEPS
+        self._em.reg_cb(NwRcvDeathEvt, self.on_remotedeath)
+        
+        # -- RUNNING GAME 
         self._em.reg_cb(NwRcvGameAdminEvt, self.on_gameadmin)
-        self._em.reg_cb(NwRecCreepJoinEvt, self.on_creepjoin)
-        self._em.reg_cb(NwRcvDeathEvt, self.on_death)
         
         
 
@@ -131,6 +131,12 @@ class Game:
         # notify the view 
         ev = MdAddPlayerEvt(pname)
         self._em.post(ev)
+        
+    
+    def on_creepjoin(self, event):
+        """ Create a creep. """
+        cname, cinfo = event.cname, event.cinfo
+        self.add_creep(cname, cinfo)
         
         
     def on_playerleft(self, event):
@@ -238,7 +244,7 @@ class Game:
 
         
     
-    ###################### RUNNING GAME + CREEPS ############################
+    ###################### RUNNING GAME  ############################
     
     def on_gameadmin(self, event):
         """ If game stops, remove creeps. """
@@ -252,21 +258,20 @@ class Game:
         
         
     
-    def on_creepjoin(self, event):
-        """ Create a creep. """
-        cname, cinfo = event.cname, event.cinfo
-        self.add_creep(cname, cinfo)
         
-        
-    def on_death(self, event):
+    def on_remotedeath(self, event):
         """ A creep or avatar died. """
         name = event.name
         if name in self.creeps: # a creep died
             self.remove_creep(event.name)
-        elif name == self.myname: # my avatar died
-            self.log.info('I should die')
         elif name in self.avs: # another avatar died
             self.log.info('player %s should die' % (name))
+            # kill local av if not dead already
+            av = self.get_charactor(name)
+            av.die() # TODO: this is called twice
+        else:
+            self.log.warn('Received death of ' + name
+                          + ', but model does not know that name.')
         
         
         

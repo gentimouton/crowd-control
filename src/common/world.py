@@ -173,7 +173,7 @@ class Cell():
 
 
     def __str__(self):
-        return '%s, occs: %s' % (self.coords, str(self._occupants.keys()))
+        return '%s, %d occs' % (self.coords, len(self._occupants))
     
     
     def get_neighbors(self):
