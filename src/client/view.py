@@ -5,8 +5,8 @@ from client.config import config_get_screenres, config_get_loadingscreen_bgcolor
 from client.events_client import ModelBuiltMapEvent, QuitEvent, SendChatEvt, \
     CharactorRemoveEvent, OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, SendMoveEvt, \
     RemoteCharactorMoveEvent, NwRcvGreetEvt, CreepPlaceEvent, MyNameChangedEvent, \
-    CharactorRcvDmgEvt, CharactorAtksEvt, LocalAvRezEvt, CharactorDeathEvt, \
-    RemoteCharactorRezEvt
+    CharactorRcvDmgEvt, RemoteCharactorAtkEvt, LocalAvRezEvt, CharactorDeathEvt, \
+    RemoteCharactorRezEvt, SendAtkEvt
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
 from common.events import TickEvent
@@ -63,8 +63,8 @@ class MasterView:
         # local = my avatar
         self._em.reg_cb(LocalAvatarPlaceEvent, self.on_localavplace)
         self._em.reg_cb(SendMoveEvt, self.on_localavmove)
+        self._em.reg_cb(SendAtkEvt, self.on_localavatk)
         self._em.reg_cb(LocalAvRezEvt, self.on_localavrez)
-        
         
         # remote = creeps + other avatars
         # different creation, but same movement and removal
@@ -75,7 +75,7 @@ class MasterView:
         self._em.reg_cb(RemoteCharactorRezEvt, self.on_remoterez)
         self._em.reg_cb(CharactorRemoveEvent, self.on_charremove)
         self._em.reg_cb(CharactorRcvDmgEvt, self.on_charrcvdmg)
-        self._em.reg_cb(CharactorAtksEvt, self.on_charatks)
+        self._em.reg_cb(RemoteCharactorAtkEvt, self.on_charatks)
         # misc
         self._em.reg_cb(ModelBuiltMapEvent, self.show_map)
         self._em.reg_cb(TickEvent, self.render_dirty_sprites)
@@ -266,12 +266,26 @@ class MasterView:
         self.center_screen_on_coords(cleft, ctop)
         # redisplay the other charactors 
         for charspr in self.charactor_sprites:
-            cleft, ctop = charspr.char.cell.coords
-            self.display_charactor(charspr, cleft, ctop)
+            cell = charspr.char.cell
+            if cell: # char is still alive
+                cleft, ctop = cell.coords
+                self.display_charactor(charspr, cleft, ctop)
             
+    def on_localavatk(self, event):
+        """ Local avatar attcked: only display dmg, 
+        but dont update defender's life 
+        (the HP update will happen from a server msg)
+        """
+        
+        # TODO: display text with the atk amount
+        atker, defer, dmg = event.atker, event.defer, event.dmg
+        self.log.info('%s localatk %s for %d dmg' 
+                      % (atker.name, defer.name, dmg))
+        
             
     def on_localavrez(self, event):
         """ rez my avatar: center screen where my av is """
+        
         myav = event.avatar
 
         sprdims = (self.cspr_size, self.cspr_size)
@@ -282,8 +296,10 @@ class MasterView:
 
         # redisplay all the charactors (includes me) 
         for charspr in self.charactor_sprites:
-            cleft, ctop = charspr.char.cell.coords
-            self.display_charactor(charspr, cleft, ctop)
+            cell = charspr.char.cell
+            if cell: # char is still alive
+                cleft, ctop = cell.coords
+                self.display_charactor(charspr, cleft, ctop)
     
         
 
@@ -293,6 +309,7 @@ class MasterView:
         """ Make a sprite and center the sprite 
         based on the cell location of the remote avatar.
         """
+        
         avatar = event.avatar
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_avdefault_bgcolor()
@@ -322,26 +339,31 @@ class MasterView:
 
     def on_chardeath(self, event):
         """ A charactor died: hide it.
-        Show it again when the charactor resurrects.
-        Delete it when the player logs out, or when creep really disappears. """
+        Show it again when/if the charactor resurrects.
+        """
+                
         char = event.charactor
         charspr = self.charactor_sprites.get_spr(char)
         self.active_charactor_sprites.remove(charspr)
-        cleft, ctop = char.cell.coords
-        self.display_charactor(charspr, cleft, ctop) 
+        self.log.info('%s died' % char.name)
 
 
     def on_remoterez(self, event):
         """ Resurrect another charactor (creep or avatar) """
-        charspr = self.charactor_sprites.get_spr(event.charactor)
-        self.active_charactor_sprites.add(charspr)
-
+        
+        char = event.charactor
+        charspr = self.charactor_sprites.get_spr(char)
+        cleft, ctop = char.cell.coords
+        self.display_charactor(charspr, cleft, ctop)
+        self.log.info('%s resurrected' % event.charactor.name)
+        
         
     def on_charremove(self, event):
         """ A Charactor can be an avatar or a creep.
         Can be triggered because of local or remote events.
         """
-        charspr = self.charactor_sprites.get_spr(event.charactor)
+        char = event.charactor
+        charspr = self.charactor_sprites.get_spr(char)
         charspr.kill() # remove from all sprite groups
         del charspr
             
@@ -351,16 +373,20 @@ class MasterView:
     
     def on_charrcvdmg(self, event):
         """ Display text with damage over charactor's sprite. """
+        
         # TODO: FT display text with damage over charactor's sprite.
         defer = self.charactor_sprites.get_spr(event.defer)
         dmg = event.dmg
-        
+        self.log.info('%s received %d dmg' % (event.defer.name, dmg))
+    
     
     def on_charatks(self, event):
-        """ Display the charactor attacking. """
+        """ Display the charactor attacking. 
+        The dmg are displayed by a char RECEIVING dmg. """
+    
         # TODO: FT display the charactor attacking
         atker = self.charactor_sprites.get_spr(event.atker)
-        
+        self.log.info('%s attacked' % event.atker.name)
         
         
     ###################### RENDERING OF SPRITES and BG ######################

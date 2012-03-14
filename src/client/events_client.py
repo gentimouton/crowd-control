@@ -88,8 +88,10 @@ class NwRcvDeathEvt():
 
 class SendAtkEvt():
     """ Model to network. Local avatar attacks a cell. """
-    def __init__(self, targetname, dmg):
-        self.tname = targetname
+    def __init__(self, atker, defer, targetname, dmg):
+        self.atker = atker # used by the view only
+        self.defer = defer # used by the view only
+        self.tname = targetname # used by the network only
         self.dmg = dmg
 
 class NwRcvAtkEvt():
@@ -105,7 +107,7 @@ class CharactorRcvDmgEvt():
         self.defer = defer
         self.dmg = dmg
 
-class CharactorAtksEvt():
+class RemoteCharactorAtkEvt():
     """ Sent from model to view when a charactor attacks. """
     def __init__(self, atker):
         self.atker = atker

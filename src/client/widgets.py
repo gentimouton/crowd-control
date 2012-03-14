@@ -414,8 +414,9 @@ class PlayerListWidget(Widget):
         txt = getattr(event, evt_txt_attr)
         try:
             self.texts.remove(txt)
-        except ValueError:
-            self.log.warning('Tried to remove ' + txt + ', but it was not in the widget.')
+        except ValueError: #txt was not present in self.texts
+            self.log.warning('Tried to remove %s, but it was not in the widget.'
+                             % txt)
             return
         # remove the most recently added line widget if there are less texts than line widgets 
         if len(self.texts) < len(self.linewidgets):

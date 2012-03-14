@@ -35,12 +35,17 @@ class SGame():
         # scheduling of game actions
         self._sched = Scheduler(self._em, self.world)
 
+        # TODO: temporary bugfixing help
+        self.startgame('nobody')
       
 
     def __str__(self):
         args = (self.world.mapname, len(self.players), len(self.creeps))
         return '%s, %d players, %d creeps' % args 
     
+
+    ##########  modifiers of self.players and self.creeps  ##############
+
     
     def get_charactor(self, name):
         """ Return a SCharactor (SCreep or SAvatar) from its name """
@@ -53,22 +58,20 @@ class SGame():
                 self.log.error("Creep %s not found" % name)
                 return None
         
-
+    
     def rmv_creep(self, name):
-        """ remove a creep from its name """
+        """ Remove a creep given its name. Called by Creep. """
         try:
             del self.creeps[name]
         except KeyError:
             self.log.warning('Tried to remove creep %s but failed.' % (name))
 
 
-    ############### (dis)connection and name changes ##########################
-        
-    # notifying for pausing/resuming the game could also fit in there
-                    
+
+    ##############  player join, left, and namechange  ######################
+
             
-            
-    def on_playerjoined(self, pname):
+    def on_playerjoin(self, pname):
         """ Create player's avatar, and send him the list of connected ppl.
         Send also the list of creeps in range.
         Do not include him in the list of connected people. 
@@ -77,7 +80,7 @@ class SGame():
         if pname in self.players:
             # player was already connected, 
             # or his pname had not been removed when he disconnected
-            self.log.error('Player %s already was connected.' % pname)
+            self.log.warn('Player %s already was connected.' % pname)
             return
                 
         # Build list of connected players with their coords and facing direction.
@@ -105,7 +108,6 @@ class SGame():
         self._nw.bc_playerjoined(pname, myinfo)
             
     
-    
     def on_playerleft(self, pname):
         """ remove player's avatar from game state and notify everyone """
         
@@ -114,14 +116,11 @@ class SGame():
             av.on_logout() # remove avatar from the world
             del self.players[pname]
         except KeyError:
-            self.log.error('Tried to remove player ' + pname + 
-                  ', but it was not found in player list')
+            self.log.warn('Tried to remove player ' + pname + 
+                          ', but it was not found in player list')
                 
         
-
-    #########################################################################
-            
-    def on_playerchangedname(self, oldname, newname):
+    def on_playernamechange(self, oldname, newname):
         """ Change player's name only if the new name is not taken already. """
                 
         if newname in self.players: # newname is already taken
@@ -141,9 +140,11 @@ class SGame():
         
 
     
-    ##########################################################################
+    
+    ##########################  chat  #################################
+    
             
-    def rcv_chat(self, pname, txt):
+    def on_chat(self, pname, txt):
         """ When a chat message is received, 
         parse eventual commands,
         or broadcast the text to all connected users.
@@ -153,18 +154,21 @@ class SGame():
         
         if txt and txt[0] == '/': # command
             args = txt.split()
-            self.exec_cmd(pname, args[0][1:], args[1:])
+            cmd = args[0][1:] # remove the leading '/'
+            self.exec_cmd(pname, cmd, args[1:])
             
         else: # normal chat msg
             self._nw.bc_chat(pname, txt)
 
 
-    ##########################################################################
+
+    ###########################  move  ##################################
     
-    def on_playermoved(self, pname, coords, facing):
+    def on_move(self, pname, coords, facing):
         """ Make a player move. 
         The player object will check for cheats itself. 
         """
+
         player = self.players[pname]
         newcell = self.world.get_cell(coords) #None means non-walkable or out
         player.move(newcell, facing)
@@ -173,18 +177,18 @@ class SGame():
 
 
 
-    ##########################################################################
+    ######################  attack  #####################################
     
-    def on_charattacked(self, atkername, defername, atk):
-        """ Trigger the attacking charactor's attack(defer)
-        This function is called by the network controller only.
+    def on_attack(self, atkername, defername, atk):
+        """ This function is called by the network controller only.
+        Trigger the attacking charactor's function attack(defer)
         """
         
         # get charactors from names
         atker = self.get_charactor(atkername)
         defer = self.get_charactor(defername)
         
-        if atker and defer: # both are still alive
+        if atker and defer: # both are still present
             dmg = atker.attack(defer)
             if dmg != atk:
                 self.log.warn('%s says it attacked %s for %d, but server computed'
@@ -196,7 +200,7 @@ class SGame():
 
     def exec_cmd(self, pname, cmd, args):
         """ Execute a player command. 
-        args[0] is not the command's name, it's the first cmd argument!! 
+        args[0] is not the command's name, it's the first cmd argument. 
         """
 
         if cmd == 'start':
@@ -209,36 +213,38 @@ class SGame():
                 self.stopgame(pname)
             
         elif cmd == 'nick':
-            try:
+            if args: # check that the user provided a new name
                 newname = args[0]
-                self.on_playerchangedname(pname, newname)
-            except IndexError: # new nick only contained spaces
-                pass 
+                self.on_playernamechange(pname, newname)
             
 
-    ############### game commands #############
+
+    ########################  game commands  ###################
     
     def startgame(self, pname):
         """ start the game: creeps arrive """
+        
         self.gameon = True
         self.log.info('Game started by ' + pname)
         self._nw.bc_gameadmin(pname, 'start')
 
-        numcreeps = 1
+        numcreeps = 10
         cell = self.world.get_lair()
         for x in range(numcreeps):
-            cname = 'crp%d' % x
+            cname = 'creep-%d' % x
             creep = SCreep(self, self._sched, self._nw, cname, cell, DIRECTION_LEFT) #face left
             self.creeps[cname] = creep
             
             
     def stopgame(self, pname):
         """ stop the game: kill all creeps """
+        
         self.gameon = False
         self.log.info('Game stopped by ' + pname)
         self._nw.bc_gameadmin(pname, 'stop')
-
-        for cname in self.creeps.keys():
-            self._sched.unschedule_actor(cname)
-        self.creeps.clear()
-
+        
+        # kill all the creeps
+        creepscopy = self.creeps.copy()
+        for creep in creepscopy.values():
+            creep.die() # this removes the creep from self.creeps
+        

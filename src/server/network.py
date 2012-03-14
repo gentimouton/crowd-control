@@ -102,17 +102,17 @@ class NetworkController(Server):
         if not self.accept_connections: 
             return
         
-        name = 'anon' + str(uuid4())[:4] #random 32-hexadigit = 128-bit uuid 
+        name = 'anon-' + str(uuid4())[:4] #random 32-hexadigit = 128-bit uuid 
         # Truncated to 4 hexa digits = 16^4 = 65k possibilities.
         # If by chance someone has this uuid name already, 
         # repick until unique.
         while name in self.chan_to_name.keys(): 
-            name = 'anon' + str(uuid4())[:4]
+            name = 'anon-' + str(uuid4())[:4]
         self.chan_to_name[channel] = name
         self.name_to_chan[name] = channel
         
         self.log.debug(name + ' joined ' + str(channel.addr))
-        self.model.on_playerjoined(name)
+        self.model.on_playerjoin(name)
         
         
         
@@ -157,7 +157,7 @@ class NetworkController(Server):
     def rcv_attack(self, channel, tname, atk):
         """ A player attacked. """
         pname = self.chan_to_name[channel]
-        self.model.on_charattacked(pname, tname, atk)
+        self.model.on_attack(pname, tname, atk)
         
     def bc_attack(self, atkername, defername, dmg):
         """ Broadcast to everyone the attack of defername by atkername. """
@@ -175,7 +175,7 @@ class NetworkController(Server):
     def rcv_chat(self, channel, txt):
         """ A client sent a chat msg """
         pname = self.chan_to_name[channel]
-        self.model.rcv_chat(pname, txt)
+        self.model.on_chat(pname, txt)
                         
     def bc_chat(self, pname, txt):
         """ send a chat msg to all connected clients """
@@ -247,12 +247,12 @@ class NetworkController(Server):
 
 
 
-    ###################### movement  #####################################
+    ######################  movement  #####################################
     
     def rcv_move(self, channel, coords, facing):
         """ Receive a movement message from a player """
         pname = self.chan_to_name[channel]
-        self.model.on_playermoved(pname, coords, facing)
+        self.model.on_move(pname, coords, facing)
         
         
     def bc_move(self, name, coords, facing):
@@ -272,7 +272,7 @@ class NetworkController(Server):
     def rcv_namechange(self, channel, newname):
         """ Tell the model tat a player wants to change her name. """
         oldname = self.chan_to_name[channel]
-        self.model.on_playerchangedname(oldname, newname)
+        self.model.on_playernamechange(oldname, newname)
                
             
     def bc_namechange(self, oldname, newname):

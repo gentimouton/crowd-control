@@ -1,4 +1,3 @@
-from common.constants import DIRECTION_RIGHT
 from server.charactor import Charactor
 import logging
 
@@ -33,7 +32,10 @@ class SAvatar(Charactor):
     def on_logout(self):
         """ When player leaves, remove avatar from the cell it was on."""
         # pickle/persist the avatar state should happen here
-        self.cell.rm_occ(self)
+        cell = self.cell
+        if cell: # i'm still alive
+            cell.rm_occ(self)
+            cell = None
         self._nw.bc_playerleft(self.name)
 
         
@@ -62,6 +64,7 @@ class SAvatar(Charactor):
         """ When a player attacks, 
         check he's in a cell neighbor of and facing the target. 
         """
+        
         atkercell = self.cell
         targetcell = atkercell.get_adjacent_cell(self.facing)
         
@@ -71,7 +74,7 @@ class SAvatar(Charactor):
                            % (self.name, defer.name, dmg))
             return dmg
         
-        else:
+        else: # target cell is not the defer's cell
             return None
         
     
@@ -91,21 +94,26 @@ class SAvatar(Charactor):
 
 
     def die(self):
-        """ broadcast the death to all players
-        and resurrect at entrance. 
+        """ Remove me from my cell, broadcast my death to all players,
+        and schedule my resurrection at the entrance. 
         """
+        
         self.log.debug('Player %s died' % self.name)
+        self.cell.rm_occ(self)
+        self.cell = None
         self._nw.bc_death(self.name)
         self.resurrect() # TODO: should resurrect in 2 seconds instead -> scheduler
 
 
     def resurrect(self):
-        """ Return avatar to entrance with full HP """
+        """ Return avatar to entrance with full HP,
+        and broadcast the resurrection to everyone. 
+        """
+        
+        self.log.debug('Player %s resurrected' % self.name)
         self.hp = 10
-        # remove from old cell and add to new cell
+        # return  to entrance cell
         newcell = self._mdl.world.get_entrance()
-        oldcell = self.cell
-        oldcell.rm_occ(self)
         newcell.add_occ(self)
         self.cell = newcell
         # broadcast

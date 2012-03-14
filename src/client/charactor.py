@@ -1,5 +1,5 @@
 from client.events_client import RemoteCharactorMoveEvent, CharactorRcvDmgEvt, \
-    CharactorRemoveEvent, LocalAvRezEvt
+    CharactorRemoveEvent
 import logging
 
 class Charactor():
@@ -49,18 +49,17 @@ class Charactor():
         
         
     def rcv_dmg(self, dmg):
-        """ Receive damage. """
+        """ Receive damage: notify the view to update the display. """
         self.hp -= dmg
-        # send rcv dmg event before dying
+        # no need to check if hp < 0: death comes from the server only 
         ev = CharactorRcvDmgEvt(self, dmg)
         self._em.post(ev)
-        if self.hp <= 0:
-            self.die() # send event about my death # # TODO: this is called twice
         
         
     def rmv(self):
         """ tell the view to remove this charactor's spr """ 
-        self.cell.rm_occ(self) # TODO: FT should be a weakref instead?
+        if self.cell:
+            self.cell.rm_occ(self) # TODO: FT should be a weakref instead?
         ev = CharactorRemoveEvent(self)
         self._em.post(ev)
 
