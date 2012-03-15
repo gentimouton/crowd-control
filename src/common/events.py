@@ -1,4 +1,5 @@
 from collections import deque, defaultdict
+import logging
 import weakref
 
 
@@ -44,6 +45,7 @@ class EventManager:
         # add temporarily that new listener to the new callbacks.
         self._new_callbacks = defaultdict(set)
 
+        self.log = logging.getLogger('client')
 
         
     def reg_cb(self, eventClass, callback):
@@ -82,10 +84,11 @@ class EventManager:
                 
         # at each clock tick, notify all listeners of all the events 
         # in the order these events were received
-        if event.__class__.__name__ == 'TickEvent':
+        if event.__class__ == TickEvent:
             self.join_new_listeners() #necessary for at least the very first tick
             while self.eventdq:
                 ev = self.eventdq.popleft()
+                
                 self.join_new_listeners()
                 for callback in self._callbacks[ev.__class__]: 
                     #some of those listeners may enqueue events on the fly

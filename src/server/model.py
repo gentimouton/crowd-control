@@ -35,8 +35,7 @@ class SGame():
         # scheduling of game actions
         self._sched = Scheduler(self._em, self.world)
 
-        # TODO: temporary bugfixing help
-        self.startgame('nobody')
+        #self.startgame('nobody')
       
 
     def __str__(self):
@@ -193,6 +192,7 @@ class SGame():
             if dmg != atk:
                 self.log.warn('%s says it attacked %s for %d, but server computed'
                               + ' %d instead' % (atkername, defername, atk, dmg))
+                # TODO: this sometimes get called, but raises error
 
 
 

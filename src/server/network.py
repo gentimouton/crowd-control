@@ -27,10 +27,9 @@ class ClientChannel(Channel):
     
     def Network(self, data):
         """ called for all received msgs """
-        #self.log.debug('Received from ' + str(self.addr) + ' : ' + str(data))
+        #self.log.debug('Received %s from %s' %(str(data), str(self.addr)))
         pass
         
-    
 
     def Network_namechange(self, data):
         """ change name messages """
@@ -96,7 +95,7 @@ class NetworkController(Server):
         assign a temporary name to a client, a la IRC. 
         """
         
-        self.log.debug('Connection try from ' + str(addr))
+        self.log.debug('%s tries to connect' % str(addr))
         
         # accept connections only after model is built
         if not self.accept_connections: 
@@ -108,10 +107,11 @@ class NetworkController(Server):
         # repick until unique.
         while name in self.chan_to_name.keys(): 
             name = 'anon-' + str(uuid4())[:4]
+            
         self.chan_to_name[channel] = name
         self.name_to_chan[name] = channel
         
-        self.log.debug(name + ' joined ' + str(channel.addr))
+        self.log.debug('%s joined %s' % (name, str(channel.addr)))
         self.model.on_playerjoin(name)
         
         
@@ -141,14 +141,15 @@ class NetworkController(Server):
         self.accept_connections = True
         
         
-    def send(self, chan, data):
+    def _send(self, chan, data):
         """ send data to a channel """
+        self.log.debug('%s is sent %s' % (self.chan_to_name[chan], str(data)))
         chan.Send(data)
         
-    def broadcast(self, data):
+    def _bc(self, data):
         """ Send data to all channels """
         for chan in self.chan_to_name:
-            self.send(chan, data) 
+            self._send(chan, data) 
 
 
 
@@ -166,7 +167,7 @@ class NetworkController(Server):
                'dmg': dmg}
         amsg = SrvAtkMsg(dic)
         data = {"action": "attack", "msg": amsg.d}
-        self.broadcast(data)
+        self._bc(data)
         
         
         
@@ -182,7 +183,7 @@ class NetworkController(Server):
         dic = {'author':pname, 'txt':txt}
         cmsg = SrvChatMsg(dic)
         data = {"action": "chat", "msg": cmsg.d}
-        self.broadcast(data)
+        self._bc(data)
         
 
 
@@ -196,9 +197,8 @@ class NetworkController(Server):
                'cinfo':cinfo}
         mmsg = SrvCreepJoinedMsg(dic)
         data = {"action": "creepjoin", "msg": mmsg.d}
-        for chan in self.chan_to_name:
-            self.send(chan, data) 
-    
+        self._bc(data)
+
         
 
 
@@ -209,7 +209,7 @@ class NetworkController(Server):
         dic = {'name':name}
         dmsg = SrvDeathMsg(dic)
         data = {"action": "death", "msg": dmsg.d}
-        self.broadcast(data)
+        self._bc(data)
     
     
     
@@ -219,7 +219,7 @@ class NetworkController(Server):
     def bc_gameadmin(self, pname, cmd):
         mmsg = SrvGameAdminMsg({"pname":pname, 'cmd':cmd})
         data = {"action": "gameadmin", "msg": mmsg.d}
-        self.broadcast(data) 
+        self._bc(data) 
     
     
     
@@ -240,7 +240,7 @@ class NetworkController(Server):
         chan = self.name_to_chan[name]
         try:
             data = {"action": 'greet', "msg": greetmsg.d}
-            self.send(chan, data)
+            self._send(chan, data)
         except KeyError:
             self.log.error('Could not find greet message data for ' + str(chan.addr))
         
@@ -262,15 +262,19 @@ class NetworkController(Server):
                'facing':facing}
         mmsg = SrvMoveMsg(dic)
         data = {"action": "move", "msg": mmsg.d}
-        self.broadcast(data)
+        self._bc(data)
         
 
 
 
             
     #############  namechange  #################
+    
+    
+    
     def rcv_namechange(self, channel, newname):
         """ Tell the model tat a player wants to change her name. """
+        self.log.debug('%s requests namechange' % self.chan_to_name[channel])
         oldname = self.chan_to_name[channel]
         self.model.on_playernamechange(oldname, newname)
                
@@ -289,7 +293,7 @@ class NetworkController(Server):
         
         # notify everyone
         data = {'action':'namechange', 'msg':bcmsg.d}
-        self.broadcast(data)
+        self._bc(data)
 
 
     def send_namechangefail(self, pname, failname, reason):
@@ -302,7 +306,7 @@ class NetworkController(Server):
             
         chan = self.name_to_chan[pname]
         data = {"action": 'namechangefail', "msg": fmsg.d}
-        self.send(chan, data)
+        self._send(chan, data)
         
         
         
@@ -318,7 +322,7 @@ class NetworkController(Server):
         # broadcast to everyone BUT the player who just arrived
         for chan in self.chan_to_name:
             if self.chan_to_name[chan] != bcmsg.d['pname']:
-                self.send(chan, data)
+                self._send(chan, data)
      
      
          
@@ -330,7 +334,7 @@ class NetworkController(Server):
         bcmsg = SrvPlyrLeftMsg(dic)
         data = {"action": 'playerleft', "msg": bcmsg.d}
         # The player who left has been deleted, so he won't be notified.
-        self.broadcast(data)
+        self._bc(data)
 
 
 
@@ -343,5 +347,5 @@ class NetworkController(Server):
                "info":info}
         wmsg = SrvRezMsg(dic)
         data = {"action": "resurrect", "msg": wmsg.d}
-        self.broadcast(data)
+        self._bc(data)
         

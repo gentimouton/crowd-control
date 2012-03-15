@@ -39,11 +39,11 @@ class NetworkController(ConnectionListener):
         connection.Pump() # push to socket
 
 
-    def send(self, data):
+    def _send(self, data):
         """ Send data to the server.
         data is a dict.
         """
-        #self.log.debug('Network sends: ' + str(data))
+        self.log.debug('Send ' + str(data))
         connection.Send(data)
         
                         
@@ -51,8 +51,8 @@ class NetworkController(ConnectionListener):
         """ Receive data from the socket. 
         Triggered along all Network_* callbacks 
         """
-        #self.log.debug("Network received: " + str(data))
-        pass
+        self.log.debug("Received " + str(data))
+        
 
   
     def Network_connected(self, data):
@@ -83,7 +83,7 @@ class NetworkController(ConnectionListener):
         """ Send an attack msg to the server """
         dic = {'targetname': event.tname, 'dmg':event.dmg}
         amsg = ClAtkMsg(dic)
-        self.send({'action':'attack', 'msg':amsg.d})
+        self._send({'action':'attack', 'msg':amsg.d})
         
     def Network_attack(self, data):
         """ Receive atk message from server """
@@ -99,7 +99,7 @@ class NetworkController(ConnectionListener):
         txt = event.txt
         d = {'txt':txt}
         cmsg = ClChatMsg(d)
-        self.send({"action": "chat", "msg": cmsg.d})
+        self._send({"action": "chat", "msg": cmsg.d})
         
     def Network_chat(self, data):
         """ Receive chat msg from server. """
@@ -173,7 +173,7 @@ class NetworkController(ConnectionListener):
         """ Send a movement msg to the server """
         dic = {'coords':event.coords, 'facing':event.facing}
         mmsg = ClMoveMsg(dic)
-        self.send({'action':'move', 'msg':mmsg.d})
+        self._send({'action':'move', 'msg':mmsg.d})
     
     def Network_move(self, data):
         """ Receive a movement msg from the server. """
@@ -188,6 +188,7 @@ class NetworkController(ConnectionListener):
     def Network_namechange(self, data):
         """ Someone changed name. """
         oldname, newname = unpack_msg(data['msg'], SrvNameChangeMsg)
+        self.log.debug('namechange: %s becomes %s' %(oldname, newname))
         ev = NwRcvNameChangeEvt(oldname, newname)
         self._em.post(ev)
         
@@ -195,7 +196,7 @@ class NetworkController(ConnectionListener):
         """ Ask the server to change name """
         d = {'pname':newname}
         nmsg = ClNameChangeMsg(d)
-        self.send({"action": 'namechange', "msg":nmsg.d})
+        self._send({"action": 'namechange', "msg":nmsg.d})
 
     def Network_namechangefail(self, data):
         """ Failed to change my name. """

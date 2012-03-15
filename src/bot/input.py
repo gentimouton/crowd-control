@@ -23,7 +23,8 @@ class BotInputController():
         
     def on_tick(self, event):
         """ Move every now and then """
-                
+        return # TODO: just a try
+            
         if self.mvtimer <= 0:
             self.mvtimer = int(config_get_fps() / config_get_movefreq())
             ev = InputMoveRequest(random.choice(self.moves))

@@ -101,3 +101,9 @@ def config_get_nick():
     return _dict['nick']
 
 
+
+# ---- logging
+
+def config_get_logfolder():
+    return _dict['logfolder']
+

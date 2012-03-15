@@ -5,21 +5,24 @@ from client.config import config_get_fps, config_get_hostport, config_get_nick, 
     load_client_config
 from client.events_client import ClientEventManager
 from client.input import InputController
+from client.logger import config_logger
 from client.model import Game
 from client.network import NetworkController
 from client.view import MasterView
-import logging.config
+from threading import current_thread
 
 
 def main():
-    
-    logging.config.fileConfig('client_logging.conf')
 
-    clogger = logging.getLogger('client')
-
-    clogger.debug('Client started')
-    
     load_client_config() #config contains all the constants for the game
+
+    tid = current_thread().ident
+    clogger = config_logger(str(tid))
+        
+    #logging.config.fileConfig('client_logging.conf')
+    #clogger = logging.getLogger('client')
+
+    clogger.debug('Client started')    
     
     em = ClientEventManager()
 
