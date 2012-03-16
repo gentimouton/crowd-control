@@ -9,6 +9,8 @@ from client.events_client import QuitEvent, SubmitChat, CharactorRemoveEvent, \
     RemoteCharactorRezEvt, SendAtkEvt, MGreetNameEvt, MBuiltMapEvt
 from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
+from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
+    DIRECTION_RIGHT
 from common.events import TickEvent
 from pygame.sprite import RenderUpdates, Sprite
 import logging
@@ -497,30 +499,73 @@ class CellSprite(Sprite):
 
 
 
+
 class CharactorSprite(IndexableSprite):
     """ The representation of a character """
+    
     
     def __init__(self, char, sprdims, bgcolor, groups=None):
         self.key = char # must be set before adding the spr to group(s)
         Sprite.__init__(self, groups)
         
-        charactorSurf = pygame.Surface(sprdims)
-        charactorSurf = charactorSurf.convert_alpha()
-        charactorSurf.fill((0, 0, 0, 0)) #make transparent
-        # draw a circle as big as dims
-        w, h = sprdims
-        ctr_coords = int(w / 2), int(h / 2)
-        radius = int(min(w / 2, h / 2)) #don't overflow the given sprdims
-        pygame.draw.circle(charactorSurf, bgcolor, ctr_coords, radius)
-        self.image = charactorSurf
-        self.rect = charactorSurf.get_rect()
-
         self.char = char
         self.dest = None
 
+        # build the various sprite orientations
+        w, h = sprdims
+        self.facing_sprites = self.build_facingsprites(bgcolor, w, h) # TODO: PERF class var
+        
+        charsurf = self.facing_sprites[self.char.facing]
+        self.image = charsurf
+        self.rect = charsurf.get_rect()
+
+
+    def build_facingsprites(self, bgcolor, w, h):
+        """ Given width and height of the cell,
+        return a dict {DIRECTION_XXX: sprite for that direction} 
+        """
+        
+        facing_sprites = {}
+        dirs = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT]
+        
+        for d in dirs:
+            spr = pygame.Surface((w, h))
+            spr = spr.convert_alpha()
+            spr.fill((0, 0, 0, 0)) #make transparent
+            # triangular shape to show char.facing
+            vertices = self.get_vertices(d, w, h)
+            pygame.draw.polygon(spr, bgcolor, vertices)
+            
+            facing_sprites[d] = spr
+            
+        return facing_sprites
+
+        
+    def get_vertices(self, facing, w, h):
+        """ Get a list of triangle vertices from the character's facing
+        and the width and height of the cell. 
+        TODO: move me out of the CharactorSprite class
+        """
+        
+        vert = []
+        
+        if facing == DIRECTION_UP:
+            vert = [(0, h), (w, h), (int(w / 2), 0)]
+        elif facing == DIRECTION_DOWN:
+            vert = [(0, 0), (w, 0), (int(w / 2), h)]
+        elif facing == DIRECTION_LEFT:
+            vert = [(w, 0), (w, h), (0, int(h / 2))]
+        elif facing == DIRECTION_RIGHT:
+            vert = [(0, 0), (0, h), (w, int(h / 2))]
+        
+        return vert
     
+    
+    
+        
     def update(self):
         """ movement could be smoother and last for longer than 1 frame """
+        
         if self.dest:
             self.rect.center = self.dest
             self.dest = None
