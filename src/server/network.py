@@ -143,7 +143,7 @@ class NetworkController(Server):
         
     def _send(self, chan, data):
         """ send data to a channel """
-        self.log.debug('%s is sent %s' % (self.chan_to_name[chan], str(data)))
+        #self.log.debug('%s is sent %s' % (self.chan_to_name[chan], str(data)))
         chan.Send(data)
         
     def _bc(self, data):

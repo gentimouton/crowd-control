@@ -6,9 +6,9 @@ from client.config import config_get_fontsize, config_get_unfocusedbtn_bgcolor, 
     config_get_txtlabel_bgcolor, config_get_chatlog_txtcolor, \
     config_get_chatlog_bgcolor
 from client.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
-    UnicodeKeyPushedEvent, NonprintableKeyEvent, SendChatEvt, ChatlogUpdatedEvent, \
-    MdAddPlayerEvt, NwRcvNameChangeEvt, NwRcvPlayerLeftEvt, NwRcvGameAdminEvt, \
-    NwRcvNameChangeFailEvt
+    UnicodeKeyPushedEvent, NonprintableKeyEvent, SubmitChat, ChatlogUpdatedEvent, \
+    MdAddPlayerEvt, MPlayerLeftEvt, MNameChangedEvt, MMyNameChangedEvent, \
+    MNameChangeFailEvt, MGameAdminEvt
 from collections import deque
 from pygame.font import Font
 from pygame.locals import K_BACKSPACE, K_RETURN
@@ -222,7 +222,7 @@ class InputFieldWidget(Widget):
     def submit_text(self):
         """ send the string typed, and reset the text input field """
         self.log.debug('Widget submit text: ' + self.text)
-        ev = SendChatEvt(self.text)
+        ev = SubmitChat(self.text)
         self.set_text('')
         self._em.post(ev)
         
@@ -354,14 +354,16 @@ class PlayerListWidget(Widget):
         # addevents_attrs maps event classes to the text attr of events 
         # that add text to display.
         self.addevents_attrs = {MdAddPlayerEvt:'pname',
-                                NwRcvNameChangeEvt:'newname'}
+                                MNameChangedEvt:'newname',
+                                MMyNameChangedEvent:'newname'}
         for evtClass in self.addevents_attrs:
             self._em.reg_cb(evtClass, self.on_addtextevent)
         
         # rmevents_attrs maps event classes to the text attributes of events 
         # that remove text to display.
-        self.rmevents_attrs = {NwRcvPlayerLeftEvt: 'pname',
-                               NwRcvNameChangeEvt:'oldname'}
+        self.rmevents_attrs = {MPlayerLeftEvt: 'pname',
+                               MNameChangedEvt:'oldname',
+                               MMyNameChangedEvent:'oldname'}
         for evtClass in self.rmevents_attrs:
             self._em.reg_cb(evtClass, self.on_rmtextevent)
         
@@ -457,10 +459,11 @@ class ChatLogWidget(Widget):
     def __init__(self, evManager, numlines=3, rect=None):
         Widget.__init__(self, evManager)
 
-        self._em.reg_cb(ChatlogUpdatedEvent, self.on_chatmsg)
-        self._em.reg_cb(NwRcvGameAdminEvt, self.on_gameadmin)
-        self._em.reg_cb(NwRcvNameChangeFailEvt, self.on_namechangefail)
-        self._em.reg_cb(NwRcvNameChangeEvt, self.on_namechangesuccess)
+        self._em.reg_cb(ChatlogUpdatedEvent, self.on_remotechat)
+        self._em.reg_cb(MGameAdminEvt, self.on_gameadmin)
+        self._em.reg_cb(MNameChangeFailEvt, self.on_namechangefail)
+        self._em.reg_cb(MMyNameChangedEvent, self.on_namechangesuccess)
+        self._em.reg_cb(MNameChangedEvt, self.on_namechangesuccess)
 
         self.font = Font(None, config_get_fontsize())
         if rect:
@@ -480,7 +483,7 @@ class ChatLogWidget(Widget):
         
         
         
-    def on_chatmsg(self, event):
+    def on_remotechat(self, event):
         """ display a chat msg """
         linetxt = event.pname + ': ' + event.txt        
         self.log.debug('Chatlog widget printed chat line: ' + linetxt)
@@ -506,8 +509,8 @@ class ChatLogWidget(Widget):
         
     def on_namechangesuccess(self, event):
         """ Notify that the player changed name. """
-        newname = event.newname
-        linetxt = 'New name: ' + newname
+        oldname, newname = event.oldname, event.newname
+        linetxt = '%s -> %s' % (oldname, newname)
         self.log.debug('Chatlog widget printed namechange line: ' + linetxt)
         self.addline(linetxt)
         

@@ -67,7 +67,51 @@ class SGame():
 
 
 
-    ##############  player join, left, and namechange  ######################
+
+    ######################  attack  #####################################
+    
+    def on_attack(self, atkername, defername, atk):
+        """ This function is called by the network controller only.
+        Trigger the attacking charactor's function attack(defer)
+        """
+        
+        # get charactors from names
+        atker = self.get_charactor(atkername)
+        defer = self.get_charactor(defername)
+        
+        if atker and defer: # both are still present
+            dmg = atker.attack(defer)
+            if dmg == None: # atker attacked cell where the defer was not
+                self.log.debug('%s missed the cell of %s' % (atkername, defername))
+                # TODO: FT broadcast a miss msg
+            elif dmg != atk:
+                self.log.warn('%s says it attacked %s for %d, but server computed'
+                              + ' %d instead' % (atkername, defername, atk, dmg))
+
+
+
+    ##########################  chat  #################################
+    
+            
+    def on_chat(self, pname, txt):
+        """ When a chat message is received, 
+        parse eventual commands,
+        or broadcast the text to all connected users.
+        """
+                
+        self.log.debug(pname + ' says ' + txt)
+        
+        if txt and txt[0] == '/': # command
+            args = txt.split()
+            cmd = args[0][1:] # remove the leading '/'
+            self.exec_cmd(pname, cmd, args[1:])
+            
+        else: # normal chat msg
+            self._nw.bc_chat(pname, txt)
+
+
+
+    ##############  join  ######################
 
             
     def on_playerjoin(self, pname):
@@ -106,7 +150,10 @@ class SGame():
         # notify the connected players of this arrival
         self._nw.bc_playerjoined(pname, myinfo)
             
+
     
+    ##############  left  ######################
+
     def on_playerleft(self, pname):
         """ remove player's avatar from game state and notify everyone """
         
@@ -119,6 +166,20 @@ class SGame():
                           ', but it was not found in player list')
                 
         
+    ###########################  move  ##################################
+    
+    def on_move(self, pname, coords, facing):
+        """ Make a player move. 
+        The player object will check for cheats itself. 
+        """
+
+        player = self.players[pname]
+        newcell = self.world.get_cell(coords) #None means non-walkable or out
+        player.move(newcell, facing)
+            
+                   
+    ##############  namechange  ######################
+
     def on_playernamechange(self, oldname, newname):
         """ Change player's name only if the new name is not taken already. """
                 
@@ -137,62 +198,6 @@ class SGame():
             else: # could not change name (e.g. too long or too short)
                 self._nw.send_namechangefail(oldname, newname, reason)
         
-
-    
-    
-    ##########################  chat  #################################
-    
-            
-    def on_chat(self, pname, txt):
-        """ When a chat message is received, 
-        parse eventual commands,
-        or broadcast the text to all connected users.
-        """
-                
-        self.log.debug(pname + ' says ' + txt)
-        
-        if txt and txt[0] == '/': # command
-            args = txt.split()
-            cmd = args[0][1:] # remove the leading '/'
-            self.exec_cmd(pname, cmd, args[1:])
-            
-        else: # normal chat msg
-            self._nw.bc_chat(pname, txt)
-
-
-
-    ###########################  move  ##################################
-    
-    def on_move(self, pname, coords, facing):
-        """ Make a player move. 
-        The player object will check for cheats itself. 
-        """
-
-        player = self.players[pname]
-        newcell = self.world.get_cell(coords) #None means non-walkable or out
-        player.move(newcell, facing)
-            
-
-
-
-
-    ######################  attack  #####################################
-    
-    def on_attack(self, atkername, defername, atk):
-        """ This function is called by the network controller only.
-        Trigger the attacking charactor's function attack(defer)
-        """
-        
-        # get charactors from names
-        atker = self.get_charactor(atkername)
-        defer = self.get_charactor(defername)
-        
-        if atker and defer: # both are still present
-            dmg = atker.attack(defer)
-            if dmg != atk:
-                self.log.warn('%s says it attacked %s for %d, but server computed'
-                              + ' %d instead' % (atkername, defername, atk, dmg))
-                # TODO: this sometimes get called, but raises error
 
 
 

@@ -1,8 +1,8 @@
 from PodSixNet.Connection import connection, ConnectionListener
-from client.events_client import SendChatEvt, NwRcvChatEvt, NwRcvGreetEvt, \
-    NwRcvNameChangeEvt, NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvCharMoveEvt, \
-    SendMoveEvt, NwRcvGameAdminEvt, NwRcvCreepJoinEvt, SendAtkEvt, NwRcvAtkEvt, \
-    NwRcvDeathEvt, NwRcvRezEvt, NwRcvNameChangeFailEvt
+from client.events_client import SendChatEvt, NwRcvChatEvt, NwRcvNameChangeEvt, \
+    NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvCharMoveEvt, SendMoveEvt, \
+    NwRcvGameAdminEvt, NwRcvCreepJoinEvt, SendAtkEvt, NwRcvAtkEvt, NwRcvDeathEvt, \
+    NwRcvRezEvt, NwRcvNameChangeFailEvt, NwRcvGreetEvt
 from common.events import TickEvent
 from common.messages import SrvGreetMsg, SrvPlyrJoinMsg, SrvPlyrLeftMsg, \
     ClNameChangeMsg, SrvNameChangeMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, SrvMoveMsg, \

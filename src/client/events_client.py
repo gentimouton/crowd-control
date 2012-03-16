@@ -3,7 +3,7 @@ import logging
 
 
         
-######################## USER INPUT ########################################
+########################  input  ########################################
 
 
 class QuitEvent():
@@ -43,48 +43,12 @@ class InputAtkRequest():
     pass
 
 
-#################### MODEL TO VIEW #######################################
-""" message passing from model to view """
-
-class MdAddPlayerEvt():
-    """ Add a player name to the list of connected players 
-    in a text widget from the view. 
-    """
-    def __init__(self, pname):
-        self.pname = pname
-        
-        
-                
-################# GAME LOGIC ##############################################
 
 
-class ModelBuiltMapEvent():
-    def __init__(self, worldmap):
-        self.worldmap = worldmap
-
-class NwRcvGameAdminEvt():
-    def __init__(self, pname, cmd):
-        self.pname = pname
-        self.cmd = cmd
-
-class NwRcvCreepJoinEvt():
-    """ Sent from nw ctrler to model to notify of creep join """
-    def __init__(self, cname, cinfo):
-        self.cname = cname
-        self.cinfo = cinfo
-
-class CreepPlaceEvent():
-    """ Sent from model to view to notify of creep appearance """
-    def __init__(self, creep):
-        self.creep = creep
-
-class NwRcvDeathEvt():
-    """ from nw to model to notify of creep death """
-    def __init__(self, name):
-        self.name = name
 
 
-######################## ATTACK ##################################
+
+########################  attack  ##################################
 
 class SendAtkEvt():
     """ Model to network. Local avatar attacks a cell. """
@@ -113,23 +77,106 @@ class RemoteCharactorAtkEvt():
         self.atker = atker
 
 
-######################### ADMIN ######################################
+    
+#################  chat  ###################################################
 
-class MyNameChangedEvent():
-    """ sent from model to a text label widget 
-    to notify that the local player changed name. 
-    """
-    def __init__(self, oldname, newname):
-        self.oldname = oldname
+
+class SendChatEvt():
+    """ Model asks nw to send chat msg to server """
+    def __init__(self, txt):
+        self.txt = txt
+class SubmitChat():
+    """ Input controller or widget submits chat to model """
+    def __init__(self, txt):
+        self.txt = txt
+
+class NwRcvChatEvt():
+    def __init__(self, pname, txt):
+        self.pname = pname
+        self.txt = txt
+
+class ChatlogUpdatedEvent():
+    """ The model asks the view to refresh the chatlog """
+    def __init__(self, pname, txt):
+        self.pname = pname
+        self.txt = txt
+
+##################### creepjoin #################
+
+
+class NwRcvCreepJoinEvt():
+    """ Sent from nw ctrler to model to notify of creep join """
+    def __init__(self, cname, cinfo):
+        self.cname = cname
+        self.cinfo = cinfo
+
+class CreepPlaceEvent():
+    """ Sent from model to view to notify of creep appearance """
+    def __init__(self, creep):
+        self.creep = creep
+        
+        
+####################  death  ##############
+
+
+class NwRcvDeathEvt():
+    """ from nw to model to notify of creep death """
+    def __init__(self, name):
+        self.name = name
+        
+class CharactorDeathEvt():
+    """ From Charactor to View. """
+    def __init__(self, ch):
+        self.charactor = ch
+        
+class CharactorRemoveEvent():
+    """this event occurs when a creep or avatar is removed from the model, 
+    and the view needs to be notified of that removal. """
+    def __init__(self, ch):
+        self.charactor = ch
+
+
+
+################### gameadmin ####################
+
+
+class NwRcvGameAdminEvt():
+    """ nw tells model about start or stop of the game """
+    def __init__(self, pname, cmd):
+        self.pname = pname
+        self.cmd = cmd
+        
+class MGameAdminEvt():
+    """ Model notifies view/widgets of game start or stop. """
+    def __init__(self, pname, cmd):
+        self.pname = pname
+        self.cmd = cmd
+        
+        
+###################  greet  ##############################################
+
+class NwRcvGreetEvt():
+    """ nw tells model the state of the world sent by the server """
+    def __init__(self, mapname, newname, myinfo, onlineppl, creeps):
+        self.mapname = mapname
+        self.newname = newname
+        self.myinfo = myinfo
+        self.onlineppl = onlineppl
+        self.creeps = creeps
+
+class MGreetNameEvt():
+    """ model tells the view about the player's name given by the server """
+    def __init__(self, newname):
         self.newname = newname
         
-######################### MOVEMENT #########################################
+class MBuiltMapEvt():
+    """ model tells the view it can start displaying the world """
+    def __init__(self, worldmap):
+        self.worldmap = worldmap
+        
 
+###################  join  #########################
 
-class InputMoveRequest():
-    """ sent from input controller to model """
-    def __init__(self, direction):
-        self.direction = direction
 
 class OtherAvatarPlaceEvent():
     """this event occurs when another client's avatar is *placed* in a cell,
@@ -145,6 +192,39 @@ class LocalAvatarPlaceEvent():
         self.avatar = char
         self.cell = cell
 
+class NwRcvPlayerJoinEvt():
+    def __init__(self, pname, pinfo):
+        self.pname = pname
+        self.pinfo = pinfo
+        
+class MdAddPlayerEvt():
+    """ Add a player name to the list of connected players 
+    in a text widget from the view. 
+    """
+    def __init__(self, pname):
+        self.pname = pname
+
+
+####################### left ####################
+
+class NwRcvPlayerLeftEvt():
+    def __init__(self, pname):
+        self.pname = pname
+
+class MPlayerLeftEvt():
+    """ model notifies view that player left """
+    def __init__(self, pname):
+        self.pname = pname
+
+                
+#########################  move  #########################################
+
+
+class InputMoveRequest():
+    """ sent from input controller to model """
+    def __init__(self, direction):
+        self.direction = direction
+
 class SendMoveEvt():
     """ sent from model to view and network controller when my avatar moved """
     def __init__(self, char, coords, facing):
@@ -159,28 +239,50 @@ class NwRcvCharMoveEvt():
         self.coords = coords
         self.facing = facing
 
-
-
 class RemoteCharactorMoveEvent():
     """ sent from model to view when an avatar or a creep moved """
     def __init__(self, char, coords):
         self.charactor = char
         self.coords = coords
         
-class CharactorRemoveEvent():
-    """this event occurs when a creep or avatar is removed from the model, 
-    and the view needs to be notified of that removal. """
-    def __init__(self, ch):
-        self.charactor = ch
 
+#########################  namechange  ######################################
 
+class MMyNameChangedEvent():
+    """ sent from model to a text label widget 
+    to notify that the local player changed name. 
+    """
+    def __init__(self, oldname, newname):
+        self.oldname = oldname
+        self.newname = newname
 
-class CharactorDeathEvt():
-    """ From Charactor to View. """
-    def __init__(self, ch):
-        self.charactor = ch
+class MNameChangedEvt():
+    """ Model notifies view/widgets that someone 
+    (except local client) changed name.
+    """
+    def __init__(self, oldname, newname):
+        self.oldname = oldname
+        self.newname = newname
+
+class NwRcvNameChangeEvt():
+    def __init__(self, oldname, newname):
+        self.oldname = oldname
+        self.newname = newname
         
-        
+class NwRcvNameChangeFailEvt():
+    """ Sent from nw to model when player name change was denied """
+    def __init__(self, failname, reason):
+        self.failname = failname
+        self.reason = reason
+
+class MNameChangeFailEvt():
+    """ Sent from model to view when player name change was denied """
+    def __init__(self, failname, reason):
+        self.failname = failname
+        self.reason = reason
+
+
+
 ################# resurrect ###############################################
 
 class NwRcvRezEvt():
@@ -198,55 +300,7 @@ class LocalAvRezEvt():
     def __init__(self, av):
         self.avatar = av
  
-################# CHAT ###################################################
-
-
-class SendChatEvt():
-    def __init__(self, txt):
-        self.txt = txt
-
-class NwRcvChatEvt():
-    def __init__(self, pname, txt):
-        self.pname = pname
-        self.txt = txt
-
-class ChatlogUpdatedEvent():
-    """ The model asks the view to refresh the chatlog """
-    def __init__(self, pname, txt):
-        self.pname = pname
-        self.txt = txt
-
-
-################### NETWORK ##############################################
-
-
-
-class NwRcvGreetEvt():
-    def __init__(self, mapname, newname, myinfo, onlineppl, creeps):
-        self.mapname = mapname
-        self.newname = newname
-        self.myinfo = myinfo
-        self.onlineppl = onlineppl
-        self.creeps = creeps
-
-class NwRcvNameChangeEvt():
-    def __init__(self, oldname, newname):
-        self.oldname = oldname
-        self.newname = newname
-class NwRcvNameChangeFailEvt():
-    def __init__(self, failname, reason):
-        self.failname = failname
-        self.reason = reason
     
-class NwRcvPlayerJoinEvt():
-    def __init__(self, pname, pinfo):
-        self.pname = pname
-        self.pinfo = pinfo
-
-class NwRcvPlayerLeftEvt():
-    def __init__(self, pname):
-        self.pname = pname
-
 
 ##############################################################################
 

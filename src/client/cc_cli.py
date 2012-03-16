@@ -11,21 +11,23 @@ from client.network import NetworkController
 from client.view import MasterView
 from threading import current_thread
 
-
+    
+    
 def main():
 
     load_client_config() #config contains all the constants for the game
 
-    tid = current_thread().ident
-    clogger = config_logger(str(tid))
-        
+    # make sure that 2 clients running on the same machine log into 2 separate files
+    clientid = str(current_thread().ident)
+    clogger = config_logger(clientid)
+    
     #logging.config.fileConfig('client_logging.conf')
     #clogger = logging.getLogger('client')
 
-    clogger.debug('Client started')    
+    clogger.debug('Client started')
     
     em = ClientEventManager()
-
+    
     # These components are shared with bots. Their config is given to them. 
     clock = CClockController(em, config_get_fps()) #main loop is in there
     n = NetworkController(em, config_get_hostport(), config_get_nick())
