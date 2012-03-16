@@ -43,28 +43,10 @@ class SGame():
         return '%s, %d players, %d creeps' % args 
     
 
-    ##########  modifiers of self.players and self.creeps  ##############
 
     
-    def get_charactor(self, name):
-        """ Return a SCharactor (SCreep or SAvatar) from its name """
-        if name in self.players:
-            return self.players[name]
-        else: 
-            try: 
-                return self.creeps[name]
-            except KeyError: # creep not found
-                self.log.error("Creep %s not found" % name)
-                return None
         
     
-    def rmv_creep(self, name):
-        """ Remove a creep given its name. Called by Creep. """
-        try:
-            del self.creeps[name]
-        except KeyError:
-            self.log.warning('Tried to remove creep %s but failed.' % (name))
-
 
 
 
@@ -78,6 +60,7 @@ class SGame():
         # get charactors from names
         atker = self.get_charactor(atkername)
         defer = self.get_charactor(defername)
+        # defer may be None if atker = client with outdated model and defer = creep already dead 
         
         if atker and defer: # both are still present
             dmg = atker.attack(defer)
@@ -87,7 +70,23 @@ class SGame():
             elif dmg != atk:
                 self.log.warn('%s says it attacked %s for %d, but server computed'
                               + ' %d instead' % (atkername, defername, atk, dmg))
-
+        else:
+            self.log.debug('%s attacked %s who was dead already' % (atkername, defername))
+            # Dont do anything else: the client rendered his attack locally already
+            # so, no need for the other clients to know about the failed attack.
+            
+             
+                
+    def get_charactor(self, name):
+        """ Return an SCharactor (SCreep or SAvatar) from its name """
+        
+        if name in self.players:
+            return self.players[name]
+        else: 
+            try:
+                return self.creeps[name]
+            except KeyError: # char not found = player left or creep died
+                return None
 
 
     ##########################  chat  #################################
@@ -109,6 +108,16 @@ class SGame():
         else: # normal chat msg
             self._nw.bc_chat(pname, txt)
 
+
+    ##################### death ################
+    
+
+    def rmv_creep(self, name):
+        """ Remove a creep given its name. Called by Creep. """
+        try:
+            del self.creeps[name]
+        except KeyError:
+            self.log.warning('Tried to remove creep %s but failed.' % (name))
 
 
     ##############  join  ######################

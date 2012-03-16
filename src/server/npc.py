@@ -1,8 +1,9 @@
-from server.charactor import Charactor
+from random import randint
+from server.charactor import SCharactor
 import logging
 
 
-class SCreep(Charactor):
+class SCreep(SCharactor):
     
     log = logging.getLogger('server')
 
@@ -10,7 +11,10 @@ class SCreep(Charactor):
     def __init__(self, mdl, sched, nw, cname, cell, facing):
         """ Starting state is idle. """
         
-        Charactor.__init__(self, cname, cell, facing, 10, 6) # 10 HP, 6 atk
+        SCharactor.__init__(self, cname, cell, facing, 10, 6) # 10 HP, 6 atk
+        
+        self.cell = cell
+        self.cell.add_creep(self)
         
         self._mdl = mdl
         self._sched = sched     
@@ -35,8 +39,8 @@ class SCreep(Charactor):
 
         # remove from old cell and add to new cell
         oldcell = self.cell
-        oldcell.rm_occ(self)
-        newcell.add_occ(self)
+        oldcell.rm_creep(self)
+        newcell.add_creep(self)
         self.cell = newcell
         self.facing = facing
         self._nw.bc_move(self.name, newcell.coords, facing)
@@ -47,6 +51,20 @@ class SCreep(Charactor):
             return False
         else:
             return True
+
+
+
+    def get_target(self):
+        """ return an avatar in the cell the creep is facing. """
+        
+        target_cell = self.cell.get_adjacent_cell(self.facing)
+        if target_cell: #only attack walkable cells
+            avs = target_cell.get_avs()
+            if avs: # pick a random av
+                av = avs[randint(0, len(avs) - 1)]
+                return av
+            
+        return None
 
 
 
@@ -80,7 +98,7 @@ class SCreep(Charactor):
         
         # remove all scheduled actions
         self._sched.unschedule_actor(self.name)
-        self.cell.rm_occ(self)
+        self.cell.rm_creep(self)
         
         #if creep has to do something when it dies, 
         #it should do it before having the model remove it
@@ -96,18 +114,20 @@ class SCreep(Charactor):
     
     def update(self):
         """ Handle creep's state machine and comm with AI director. """
+        
         if self.state == 'idle': 
-            # TODO: Make an AI config for each creep behavior.
+            # TODO: FT Make an AI config for each creep behavior.
             #cell = random.choice(self.cell.get_neighbors())
             # move to a neighbor cell closer to the map entrance
             direction, cell = self.cell.get_nextcell_inpath()
-            occupant = cell.get_occ()
+            target = self.get_target()
             
-            if occupant: # TODO: should only get *players* in that cell instead.. 
-                self.attack(occupant)
+            if target: # only get players in that cell 
+                self.attack(target)
                 self.state = 'atking'
                 atkduration = 200
                 self._sched.schedule_action(atkduration, self.name, self.update) 
+                
             else: # move if no one in next cell
                 if self.move(cell, direction): # if I didn't reach the entrance
                     self.state = 'moving'

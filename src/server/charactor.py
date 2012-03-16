@@ -1,12 +1,10 @@
 
-class Charactor():
+class SCharactor():
     """ Abstract class representing game charactors, 
     such as player avatars or creeps. 
     """
     def __init__(self, name, cell, facing, hp, atk):
         self.name = name
-        self.cell = cell
-        self.cell.add_occ(self)
         self.facing = facing #direction the player is facing
         self.hp = hp
         self.atk = atk

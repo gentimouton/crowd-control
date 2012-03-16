@@ -1,5 +1,6 @@
 from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
     DIRECTION_RIGHT
+from random import randint
 import logging
 import os
 import random
@@ -168,12 +169,12 @@ class Cell():
         self.entrance_dist = None # server-side: to be filled in world.buildpath
         
         self.iswalkable = walkable
-        self._occupants = dict() # ids of things currently on this cell
-
+        self._avs = dict() # ids of things currently on this cell
+        self._creeps = dict()
 
 
     def __str__(self):
-        return '%s, %d occs' % (self.coords, len(self._occupants))
+        return '%s, %d occs' % (self.coords, len(self._avs) + len(self._creeps))
     
     
     def get_neighbors(self):
@@ -228,34 +229,41 @@ class Cell():
         self.islair = value
         
 
-    #### OCCUPANTS
+    #### avatars
     
-    def add_occ(self, occ):
-        """ Add occupant; occ should be a Charactor. """
-        self._occupants[occ] = 1
-        
-    def rm_occ(self, occ):
-        """ remove occupant; occ should be a Charactor. """
+    def add_av(self, av):
+        """ Add avatar. """
+        self._avs[av] = 1
+
+    def rm_av(self, av):
+        """ remove Avatar from cell. """
         try:
-            del self._occupants[occ]
+            del self._avs[av]
         except KeyError: 
-            self.log.warning('Failed to remove Charactor %s from cell %s' 
-                             % (occ.name, self.coords))
+            self.log.warning('Failed to remove Avatar %s from cell %s' 
+                             % (av.name, self.coords))
     
+    def get_avs(self):
+        """ Return all the Avs in the cell. """
+        return list(self._avs.keys())
+
+
+
+    #### creeps
+    
+    def add_creep(self, c):
+        """ Add creep to cell. """
+        self._creeps[c] = 1
         
-    def get_occ(self):
-        """ Return a Charactor in the cell. 
-        TODO: should return all the occupants.
-         """
-        if self._occupants:
-            return list(self._occupants.keys())[0] # TODO: ugly! if not needed anymore, replace _occ=dict by set
-        else:
-            return None
-
-
-    def get_occs(self):
-        """ Return all the Charactors in the cell. """
-        if self._occupants:
-            return list(self._occupants.keys())
-        else:
-            return None
+    def rm_creep(self, c):
+        """ remove creep from cell. """
+        try:
+            del self._creeps[c]
+        except KeyError: 
+            self.log.warning('Failed to remove Creep %s from cell %s' 
+                             % (c.name, self.coords))
+            
+    def get_creeps(self):
+        """ Return all the Creeps in the cell. """
+        return list(self._creeps.keys())
+    

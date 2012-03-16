@@ -1,5 +1,5 @@
 from bot.config import config_get_fps, config_get_movefreq
-from client.events_client import ModelBuiltMapEvent, InputMoveRequest
+from client.events_client import MBuiltMapEvt, InputMoveRequest
 from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
     DIRECTION_RIGHT
 from common.events import TickEvent
@@ -11,7 +11,7 @@ class BotInputController():
     
     def __init__(self, evManager):
         self._em = evManager
-        self._em.reg_cb(ModelBuiltMapEvent, self.start)
+        self._em.reg_cb(MBuiltMapEvt, self.start)
         self.moves = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT]
         self.mvtimer = int(config_get_fps())
         
@@ -23,7 +23,6 @@ class BotInputController():
         
     def on_tick(self, event):
         """ Move every now and then """
-        return # TODO: just a try
             
         if self.mvtimer <= 0:
             self.mvtimer = int(config_get_fps() / config_get_movefreq())

@@ -1,9 +1,9 @@
-from server.charactor import Charactor
+from server.charactor import SCharactor
 import logging
 
 
 
-class SAvatar(Charactor):
+class SAvatar(SCharactor):
     """ represents a player in the game world.
     On the server-side, it mostly only checks 
     the moves and commands sent by the real players. 
@@ -13,7 +13,11 @@ class SAvatar(Charactor):
 
 
     def __init__(self, mdl, nw, pname, cell, facing):
-        Charactor.__init__(self, pname, cell, facing, 10, 6)
+        SCharactor.__init__(self, pname, cell, facing, 10, 6)
+        # place in cell
+        self.cell = cell
+        self.cell.add_av(self)
+        
         self._mdl = mdl
         self._nw = nw
         
@@ -34,7 +38,7 @@ class SAvatar(Charactor):
         # pickle/persist the avatar state should happen here
         cell = self.cell
         if cell: # i'm still alive
-            cell.rm_occ(self)
+            cell.rm_av(self)
             cell = None
         self._nw.bc_playerleft(self.name)
 
@@ -48,8 +52,8 @@ class SAvatar(Charactor):
         if newcell: # walkable cell
             # remove from old cell and add to new cell
             oldcell = self.cell
-            oldcell.rm_occ(self)
-            newcell.add_occ(self)
+            oldcell.rm_av(self)
+            newcell.add_av(self)
             self.cell = newcell
             self.facing = facing
             self._nw.bc_move(self.name, newcell.coords, facing)
@@ -99,7 +103,7 @@ class SAvatar(Charactor):
         """
         
         self.log.debug('Player %s died' % self.name)
-        self.cell.rm_occ(self)
+        self.cell.rm_av(self)
         self.cell = None
         self._nw.bc_death(self.name)
         self.resurrect() # TODO: should resurrect in 2 seconds instead -> scheduler
@@ -114,7 +118,7 @@ class SAvatar(Charactor):
         self.hp = 10
         # return  to entrance cell
         newcell = self._mdl.world.get_entrance()
-        newcell.add_occ(self)
+        newcell.add_av(self)
         self.cell = newcell
         # broadcast
         avinfo = self.serialize()
