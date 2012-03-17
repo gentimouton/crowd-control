@@ -155,18 +155,19 @@ class Game:
         """
         if self.acceptinput:
             mychar = self.avs[self.myname]
-            mychar.move_relative(event.direction)
+            mychar.move_relative(event.direction, event.strafing)
 
   
     def on_remotemove(self, event):
         """ Move the avatar of the player which cname is pname. """
         
-        name, coords = event.name, event.coords
+        name = event.name
+        coords, facing = event.coords, event.facing
         
         if name != self.myname: # client is in charge of making its local av move
             char = self.get_charactor(name)
             destcell = self.world.get_cell(coords)
-            char.move_absolute(destcell)
+            char.move_absolute(destcell, facing)
 
 
 

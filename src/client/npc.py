@@ -17,17 +17,20 @@ class Creep(Charactor):
         self._em.post(ev)
     
           
-    def move_absolute(self, destcell):
-        """ move to the specified destination. """ 
+    def move_absolute(self, destcell, facing):
+        """ move to the specified destination. """
+        
+        self.facing = facing
+ 
         if destcell:
             self.cell.rm_creep(self)
             self.cell = destcell
             self.cell.add_creep(self)
-            ev = RemoteCharactorMoveEvent(self, destcell.coords)
+            ev = RemoteCharactorMoveEvent(self)
             self._em.post(ev)
             
-        else: #ignore illegal creep moves: most likely due to lag or missed packets
-            pass
+        else: #ignore illegal creep moves
+            pass # because most likely due to lag or missed packets
         
         
     def die(self):

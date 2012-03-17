@@ -33,42 +33,55 @@ class Avatar(Charactor):
         return '%s, hp=%d' % (self.name, self.hp)
     
     
-    def move_relative(self, direction):
+    def move_relative(self, direction, strafing):
         """ If possible, start moving towards that direction 
         (change facing first, then start changing cell). 
         If not, only change facing.
+        If strafing is True, move without changing facing.
         """
         
         dest_cell = self.cell.get_adjacent_cell(direction) # None if non-walkable
         
-        if self.facing != direction or (not dest_cell): # i must stay on my current cell
-            dest_cell = self.cell
-            
-        self.cell.rm_av(self)
-        self.cell = dest_cell
-        self.cell.add_av(self)
-        self.facing = direction
-    
+        if strafing: 
+            if dest_cell: # walkable: move to cell without changing facing 
+                self.cell.rm_av(self)
+                self.cell = dest_cell
+                self.cell.add_av(self)
+            else: # strafing to non-walkable cell == not moving at all
+                return # dont send a move event
+        
+        else: # no strafing
+            if self.facing == direction: # if facing dest,
+                if dest_cell: # and dest is walkable, then move to it
+                    self.cell.rm_av(self)
+                    self.cell = dest_cell
+                    self.cell.add_av(self)
+                else: # dest is not walkable: pushing the wall is not moving 
+                    return # dont send a move event
+            else: # only change dir
+                self.facing = direction                
+                    
         # send to view and server that I moved
-        ev = SendMoveEvt(self, dest_cell.coords, direction)
+        ev = SendMoveEvt(self, self.cell.coords, self.facing)
         self._em.post(ev)
 
           
-    def move_absolute(self, destcell):
-        """ move to the specified destination.
-        During a split second, the charactor is in no cell. 
-        """ 
+    def move_absolute(self, destcell, facing):
+        """ move to the specified destination with the given facing. """ 
+        
+        self.facing = facing
+        
         if destcell:
             self.cell.rm_av(self)
             self.cell = destcell
             self.cell.add_av(self)
-            ev = RemoteCharactorMoveEvent(self, destcell.coords)
+            ev = RemoteCharactorMoveEvent(self)
             self._em.post(ev)
             
         else: #illegal move
             self.log.debug('Illegal move from ' + self.name)
             #TODO: FT should report to server of potential cheat/hack
-            pass
+            
         
     def atk_local(self):
         """ Attack a charactor in a cell nearby, 
