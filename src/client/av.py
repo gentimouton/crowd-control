@@ -34,11 +34,16 @@ class Avatar(Charactor):
     
     
     def move_relative(self, direction):
-        """ If possible, move towards that direction. 
+        """ If possible, start moving towards that direction 
+        (change facing first, then start changing cell). 
         If not, only change facing.
         """
-
-        dest_cell = self.cell.get_adjacent_cell(direction) or self.cell
+        
+        dest_cell = self.cell.get_adjacent_cell(direction) # None if non-walkable
+        
+        if self.facing != direction or (not dest_cell): # i must stay on my current cell
+            dest_cell = self.cell
+            
         self.cell.rm_av(self)
         self.cell = dest_cell
         self.cell.add_av(self)
