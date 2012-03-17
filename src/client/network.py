@@ -10,15 +10,16 @@ from common.messages import SrvGreetMsg, SrvPlyrJoinMsg, SrvPlyrLeftMsg, \
     SrvRezMsg, SrvNameChangeFailMsg
 import logging
 
-
+log = None # logger
 
 class NetworkController(ConnectionListener):
-    
-    log = logging.getLogger('client')
 
 
     def __init__(self, evManager, hostport, nick):
         """ open connection to the server """
+        global log
+        log = logging.getLogger('client')
+        
         self._em = evManager
         self._em.reg_cb(TickEvent, self.on_tick)
         
@@ -43,7 +44,7 @@ class NetworkController(ConnectionListener):
         """ Send data to the server.
         data is a dict.
         """
-        self.log.debug('Send ' + str(data))
+        log.debug('Send ' + str(data))
         connection.Send(data)
         
                         
@@ -51,27 +52,27 @@ class NetworkController(ConnectionListener):
         """ Receive data from the socket. 
         Triggered along all Network_* callbacks 
         """
-        self.log.debug("Received " + str(data))
+        log.debug("Received " + str(data))
         
 
   
     def Network_connected(self, data):
-        self.log.info("Client connected to the server " 
+        log.info("Client connected to the server " 
                       + str(connection.address))
 
     
     def Network_error(self, data):
         try:
-            self.log.error("Network error: " + data['error'][1])
+            log.error("Network error: " + data['error'][1])
         except TypeError:
-            self.log.error('Network error: ' + str(data['error']))
-            self.log.error('The server is not running.')
+            log.error('Network error: ' + str(data['error']))
+            log.error('The server is not running.')
         connection.Close()
     
 
     def Network_disconnected(self, data):
         """ don't let the player in game if the server goes down """
-        self.log.info("Network disconnected.")
+        log.info("Network disconnected.")
         connection.Close()
         exit()
     
@@ -188,7 +189,7 @@ class NetworkController(ConnectionListener):
     def Network_namechange(self, data):
         """ Someone changed name. """
         oldname, newname = unpack_msg(data['msg'], SrvNameChangeMsg)
-        self.log.debug('namechange: %s becomes %s' %(oldname, newname))
+        log.debug('namechange: %s becomes %s' %(oldname, newname))
         ev = NwRcvNameChangeEvt(oldname, newname)
         self._em.post(ev)
         

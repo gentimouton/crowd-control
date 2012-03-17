@@ -34,21 +34,19 @@ class Avatar(Charactor):
     
     
     def move_relative(self, direction):
-        """ If possible, move towards that direction. """
+        """ If possible, move towards that direction. 
+        If not, only change facing.
+        """
 
-        dest_cell = self.cell.get_adjacent_cell(direction)
-        if dest_cell:
-            self.cell.rm_av(self)
-            self.cell = dest_cell
-            self.cell.add_av(self)
-            self.facing = direction
-        
-            # send to view and server that I moved
-            ev = SendMoveEvt(self, dest_cell.coords, direction)
-            self._em.post(ev)
-
-        else: #move is not possible: TODO: FT give (audio?) feedback 
-            pass 
+        dest_cell = self.cell.get_adjacent_cell(direction) or self.cell
+        self.cell.rm_av(self)
+        self.cell = dest_cell
+        self.cell.add_av(self)
+        self.facing = direction
+    
+        # send to view and server that I moved
+        ev = SendMoveEvt(self, dest_cell.coords, direction)
+        self._em.post(ev)
 
           
     def move_absolute(self, destcell):

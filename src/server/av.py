@@ -49,8 +49,10 @@ class SAvatar(SCharactor):
     def move(self, newcell, facing):
         """ Check that move is legal, then move avatar in that cell. """
         # TODO: FT also check if newcell is within reach of oldcell  
+        
         if newcell: # walkable cell
-            # remove from old cell and add to new cell
+            # remove from old cell and add to new cell 
+            # old and new cells could be the same cell if only facing changed
             oldcell = self.cell
             oldcell.rm_av(self)
             newcell.add_av(self)

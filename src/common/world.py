@@ -1,6 +1,5 @@
 from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
     DIRECTION_RIGHT
-from random import randint
 import logging
 import os
 import random

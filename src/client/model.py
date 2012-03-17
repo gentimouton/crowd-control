@@ -17,14 +17,18 @@ from client.npc import Creep
 from common.world import World
 import logging
 
-
+log = None # logger
 
 class Game:
     """ The top of the model. Contains players and world. """
 
-    log = logging.getLogger('client')
     
     def __init__(self, evManager):
+        """Create the world and wait for the greet msg from the server. """
+        
+        global log
+        log = logging.getLogger('client')
+        
         self._em = evManager
         self._em.reg_cb(NwRcvGreetEvt, self.on_greeted)
         # all other callbacks are registered AFTER having been greeted
@@ -34,7 +38,7 @@ class Game:
         
         self.acceptinput = False # start accepting player input after greeted by server
         
-        self.world = World(evManager, self.log)
+        self.world = World(evManager, log)
         self.chatlog = ChatLog(evManager)
 
 
@@ -59,7 +63,7 @@ class Game:
         # myself, local player
         # The map has to be built before positioning the player's avatar.
         self.myname = newname
-        self.log.info('My name is %s' % newname)
+        log.info('My name is %s' % newname)
         self.add_player(newname, myinfo)
         # notify the view 
         ev = MGreetNameEvt(newname)
@@ -109,7 +113,7 @@ class Game:
             try: 
                 return self.creeps[name]
             except KeyError: # creep not found
-                self.log.error("Creep %s not found" % name)
+                log.error("Creep %s not found" % name)
                 return None
 
 
@@ -225,7 +229,7 @@ class Game:
             ev = MPlayerLeftEvt(pname)
             self._em.post(ev)
         except KeyError:
-            self.log.warning('Player ' + pname + ' had already been removed') 
+            log.warning('Player ' + pname + ' had already been removed') 
         
     
     ################## namechange ###################
@@ -236,13 +240,13 @@ class Game:
         oldname, newname = event.oldname, event.newname
          
         if newname in self.avs:
-            self.log.warning('%s changed name to %s, which was already in use'
+            log.warning('%s changed name to %s, which was already in use'
                              % (oldname, newname))
         
         if self.myname == oldname: # I changed name
             self.myname = newname
             # notify the widget in charge of holding my cname
-            self.log.info('Changed name to %s' % newname)
+            log.info('Changed name to %s' % newname)
             ev = MMyNameChangedEvent(oldname, newname)
             self._em.post(ev)
         else: # someone else changed name
@@ -283,7 +287,7 @@ class Game:
                 self.acceptinput = False # stop accepting player inputs
                 
         else: # name not found
-            self.log.warn('Received death of ' + name
+            log.warn('Received death of ' + name
                           + ', but model does not know that name.')
         
         
@@ -294,7 +298,7 @@ class Game:
             self.creeps[name].rmv()
             del self.creeps[name]
         except KeyError:
-            self.log.warning('Creep %s may have already been removed' % name) 
+            log.warning('Creep %s may have already been removed' % name) 
            
            
     def on_remoterez(self, event):
@@ -328,6 +332,6 @@ class Game:
         ev = MGameAdminEvt(pname, cmd)
         self._em.post(ev)
         
-        self.log.info(event.pname + ' ' + event.cmd + ' the game')
+        log.info(event.pname + ' ' + event.cmd + ' the game')
         
         
