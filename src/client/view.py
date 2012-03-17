@@ -213,9 +213,10 @@ class MasterView:
         
 
 
-    def display_charactor(self, charspr, cleft, ctop):
+    def display_charactor(self, charspr):
         """ display (or not) a avatar on the screen given his cell coords """
         
+        cleft, ctop = charspr.char.cell.coords
         cell_shift_left = cleft - self.bg_shift_left
         cell_shift_top = ctop - self.bg_shift_top
         
@@ -303,8 +304,7 @@ class MasterView:
         bgcolor = config_get_creep_bgcolor()
         creepspr = CharactorSprite(creep, sprdims, bgcolor, self.charactor_sprites)
         # TODO: CreepSprite() instead of CharactorSprite()
-        cleft, ctop = creep.cell.coords
-        self.display_charactor(creepspr, cleft, ctop)
+        self.display_charactor(creepspr)
 
 
     ########## death ############
@@ -391,7 +391,7 @@ class MasterView:
         charspr = CharactorSprite(avatar, sprdims, bgcolor, self.charactor_sprites)
         cleft, ctop = avatar.cell.coords
         self.center_screen_on_coords(cleft, ctop) #must be done before display_char
-        self.display_charactor(charspr, cleft, ctop)
+        self.display_charactor(charspr)
         
         
     def on_remoteavplace(self, event):
@@ -403,8 +403,7 @@ class MasterView:
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_avdefault_bgcolor()
         charspr = CharactorSprite(avatar, sprdims, bgcolor, self.charactor_sprites)
-        cleft, ctop = avatar.cell.coords
-        self.display_charactor(charspr, cleft, ctop)
+        self.display_charactor(charspr)
 
 
     ################# move ################
@@ -419,8 +418,7 @@ class MasterView:
         for charspr in self.charactor_sprites:
             cell = charspr.char.cell
             if cell: # char is still alive
-                cleft, ctop = cell.coords
-                self.display_charactor(charspr, cleft, ctop)
+                self.display_charactor(charspr)
 
 
     def on_remotecharmove(self, event):
@@ -428,8 +426,7 @@ class MasterView:
 
         char = event.charactor
         charspr = self.charactor_sprites.get_spr(char)
-        cleft, ctop = char.cell.coords
-        self.display_charactor(charspr, cleft, ctop) 
+        self.display_charactor(charspr) 
         
     #################  resurrect  ############
     
@@ -448,8 +445,7 @@ class MasterView:
         for charspr in self.charactor_sprites:
             cell = charspr.char.cell
             if cell: # char is still alive
-                cleft, ctop = cell.coords
-                self.display_charactor(charspr, cleft, ctop)
+                self.display_charactor(charspr)
     
 
     def on_remoterez(self, event):
@@ -457,8 +453,7 @@ class MasterView:
         
         char = event.charactor
         charspr = self.charactor_sprites.get_spr(char)
-        cleft, ctop = char.cell.coords
-        self.display_charactor(charspr, cleft, ctop)
+        self.display_charactor(charspr)
         log.info('%s resurrected' % event.charactor.name)
         
 
@@ -564,8 +559,10 @@ class CharactorSprite(IndexableSprite):
     
         
     def update(self):
-        """ movement could be smoother and last for longer than 1 frame """
+        """ Eventually move the spr and update its orientation.
+        movement could be smoother and last for longer than 1 frame.
+        """
         
-        if self.dest:
-            self.rect.center = self.dest
-            self.dest = None
+        charsurf = self.facing_sprites[self.char.facing]
+        self.image = charsurf
+        
