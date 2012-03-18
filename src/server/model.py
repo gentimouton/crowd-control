@@ -45,10 +45,6 @@ class SGame():
 
 
     
-        
-    
-
-
 
     ######################  attack  #####################################
     
@@ -230,7 +226,10 @@ class SGame():
             if args: # check that the user provided a new name
                 newname = args[0]
                 self.on_playernamechange(pname, newname)
-            
+
+        elif cmd == 'run':
+            av = self.players[pname]
+            av.toggle_movespeed()
 
 
     ########################  game commands  ###################

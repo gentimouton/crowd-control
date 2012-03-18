@@ -2,12 +2,12 @@ from PodSixNet.Connection import connection, ConnectionListener
 from client.events_client import SendChatEvt, NwRcvChatEvt, NwRcvNameChangeEvt, \
     NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvCharMoveEvt, SendMoveEvt, \
     NwRcvGameAdminEvt, NwRcvCreepJoinEvt, SendAtkEvt, NwRcvAtkEvt, NwRcvDeathEvt, \
-    NwRcvRezEvt, NwRcvNameChangeFailEvt, NwRcvGreetEvt
+    NwRcvRezEvt, NwRcvNameChangeFailEvt, NwRcvGreetEvt, NwRcvMoveSpeedEvt
 from common.events import TickEvent
 from common.messages import SrvGreetMsg, SrvPlyrJoinMsg, SrvPlyrLeftMsg, \
     ClNameChangeMsg, SrvNameChangeMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, SrvMoveMsg, \
     SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
-    SrvRezMsg, SrvNameChangeFailMsg
+    SrvRezMsg, SrvNameChangeFailMsg, SrvMoveSpeedMsg
 import logging
 
 log = None # logger
@@ -183,6 +183,14 @@ class NetworkController(ConnectionListener):
         self._em.post(ev)
 
 
+    #################  movespeed  ###############
+    
+    def Network_movespeed(self, data):
+        """ A player changed his movement speed. """
+        name, move_cd, txt = unpack_msg(data['msg'], SrvMoveSpeedMsg) 
+        ev = NwRcvMoveSpeedEvt(name, move_cd, txt)
+        self._em.post(ev)
+
 
     ############### namechange ############
     
@@ -232,6 +240,5 @@ class NetworkController(ConnectionListener):
         name, info = unpack_msg(data['msg'], SrvRezMsg) 
         ev = NwRcvRezEvt(name, info)
         self._em.post(ev)
-        
         
         

@@ -4,7 +4,7 @@ from common.events import TickEvent
 from common.messages import SrvPlyrJoinMsg, SrvPlyrLeftMsg, ClNameChangeMsg, \
     ClChatMsg, SrvChatMsg, SrvGreetMsg, SrvNameChangeMsg, ClMoveMsg, SrvMoveMsg, \
     SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
-    SrvRezMsg, SrvNameChangeFailMsg
+    SrvRezMsg, SrvNameChangeFailMsg, SrvMoveSpeedMsg
 from server.config import config_get_hostport
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
@@ -265,6 +265,18 @@ class NetworkController(Server):
         self._bc(data)
         
 
+    #################  movespeed  #####################
+    
+    def bc_movespeed(self, name, move_cd, txt):
+        """ notify everyone that a player toggled to running or walking """
+        
+        dic = {'name': name, 
+               'move_cd': move_cd,
+               'move_txt': txt}
+        rmsg = SrvMoveSpeedMsg(dic)
+        data = {"action": "movespeed", "msg": rmsg.d}
+        self._bc(data)
+        
 
 
             
@@ -339,13 +351,14 @@ class NetworkController(Server):
 
 
 
-    ################ warp ################
+    ################  resurrect  ################
     
     def bc_resurrect(self, name, info):
         """ Notify everyone of a resurrection; send the charactor info. """
         dic = {"name":name,
                "info":info}
-        wmsg = SrvRezMsg(dic)
-        data = {"action": "resurrect", "msg": wmsg.d}
+        rmsg = SrvRezMsg(dic)
+        data = {"action": "resurrect", "msg": rmsg.d}
         self._bc(data)
         
+

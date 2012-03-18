@@ -1,24 +1,27 @@
 from random import randint
 from server.charactor import SCharactor
+from server.config import config_get_maxhp, config_get_baseatk
 import logging
 
+log = None
 
 class SCreep(SCharactor):
-    
-    log = logging.getLogger('server')
 
+    global log    
+    log = logging.getLogger('server')
     
     def __init__(self, mdl, sched, nw, cname, cell, facing):
         """ Starting state is idle. """
-        
-        SCharactor.__init__(self, cname, cell, facing, 10, 6) # 10 HP, 6 atk
+
+        hp, atk = config_get_maxhp(), config_get_baseatk()
+        SCharactor.__init__(self, cname, cell, facing, hp, atk)
         
         self.cell = cell
         self.cell.add_creep(self)
         
         self._mdl = mdl
-        self._sched = sched     
-        self._nw = nw           
+        self._sched = sched
+        self._nw = nw
         self._sched.schedule_action(500, self.name, self.update) # trigger a move in 500 ms
         
         self.state = 'idle'
@@ -46,7 +49,7 @@ class SCreep(SCharactor):
         self._nw.bc_move(self.name, newcell.coords, facing)
         
         # check if game over
-        if newcell == self._mdl.world.get_entrance(): # TODO: ugly!
+        if newcell == self._mdl.world.get_entrance(): # TODO: FT ugly or not?
             self._mdl.stopgame(self.name)
             return False
         else:
@@ -81,7 +84,7 @@ class SCreep(SCharactor):
         """ Receive damage from an attacker. Return amount of dmg received. """
         
         self.hp -= dmg
-        self.log.debug('Creep %s received %d dmg from %s' 
+        log.debug('Creep %s received %d dmg from %s' 
                        % (self.name, dmg, atker.name))
         self._nw.bc_attack(atker.name, self.name, dmg)
 

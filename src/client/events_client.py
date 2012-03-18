@@ -244,7 +244,21 @@ class RemoteCharactorMoveEvent():
     """ sent from model to view when an avatar or a creep moved """
     def __init__(self, char):
         self.charactor = char
+      
         
+#########################  movespeed  ################################
+
+class NwRcvMoveSpeedEvt():
+    """ nw tells model that a player changed his movement speed """
+    def __init__(self, name, cooldown, txt):
+        self.name = name
+        self.move_cd = cooldown
+        self.move_txt = txt
+        
+class ChangedMoveSpeedEvt():
+    """ model tells view/widgets that the local player changed his movement speed """
+    def __init__(self, txt):
+        self.move_txt = txt # 'running' or 'walking'
 
 #########################  namechange  ######################################
 

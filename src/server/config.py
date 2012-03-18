@@ -35,3 +35,20 @@ def config_get_hostport():
     port = int(hostport[1])
     return host, port
 
+
+
+# game design
+
+def config_get_walkcd():
+    return int(_dict['walkcd'])
+def config_get_runcd():
+    return int(_dict['runcd'])
+
+def config_get_baseatk():
+    return int(_dict['baseatk'])
+def config_get_maxhp():
+    return int(_dict['maxhp'])
+
+
+
+    

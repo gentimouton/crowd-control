@@ -101,7 +101,7 @@ class MasterView:
         self._em.reg_cb(RemoteCharactorMoveEvent, self.on_remotecharmove)
         #resu
         self._em.reg_cb(LocalAvRezEvt, self.on_localavrez)        
-        self._em.reg_cb(RemoteCharactorRezEvt, self.on_remoterez)
+        self._em.reg_cb(RemoteCharactorRezEvt, self.on_resurrect)
         
 
 
@@ -216,21 +216,27 @@ class MasterView:
     def display_charactor(self, charspr):
         """ display (or not) a avatar on the screen given his cell coords """
         
-        cleft, ctop = charspr.char.cell.coords
-        cell_shift_left = cleft - self.bg_shift_left
-        cell_shift_top = ctop - self.bg_shift_top
-        
-        if abs(cell_shift_left) <= self.visib_rad\
-        and abs(cell_shift_top) <= self.visib_rad:
-            self.active_charactor_sprites.add(charspr)
-            # char is near: display his spr on the screen
-            charleft = (self.visib_diam / 2 + cell_shift_left) * self.cspr_size
-            chartop = (self.visib_diam / 2 + cell_shift_top) * self.cspr_size
-            charspr.rect.center = (charleft, chartop)
+        if charspr.char.cell:
+            cleft, ctop = charspr.char.cell.coords
+            cell_shift_left = cleft - self.bg_shift_left
+            cell_shift_top = ctop - self.bg_shift_top
             
-        else: # avatar got out of screen: remove his spr from the groups
-            self.active_charactor_sprites.remove(charspr)
-   
+            if abs(cell_shift_left) <= self.visib_rad\
+            and abs(cell_shift_top) <= self.visib_rad:
+                self.active_charactor_sprites.add(charspr)
+                # char is near: display his spr on the screen
+                charleft = (self.visib_diam / 2 + cell_shift_left) * self.cspr_size
+                chartop = (self.visib_diam / 2 + cell_shift_top) * self.cspr_size
+                charspr.rect.center = (charleft, chartop)
+                
+            else: # avatar got out of screen: remove his spr from the groups
+                self.active_charactor_sprites.remove(charspr)
+        
+        else: # most likely, the char was resurrected (re-add cell)
+            # and killed again (remove cell) during the same frame
+            # hence model's resurrect events make the view crazy  
+            log.debug('Can not display char %s: no cell' % charspr.char)
+        
         
         
     ###################### RENDERING OF SPRITES and BG ######################
@@ -269,7 +275,7 @@ class MasterView:
         """
         
         atker, defer, dmg = event.atker, event.defer, event.dmg
-        # TODO: display text with the atk amount instead of log.info
+        # TODO: FT display text with the atk amount instead of log.info
         log.info('%s localatk %s for %d dmg' 
                       % (atker.name, defer.name, dmg))
 
@@ -303,7 +309,7 @@ class MasterView:
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_creep_bgcolor()
         creepspr = CharactorSprite(creep, sprdims, bgcolor, self.charactor_sprites)
-        # TODO: CreepSprite() instead of CharactorSprite()
+        # TODO: FT CreepSprite() instead of CharactorSprite()
         self.display_charactor(creepspr)
 
 
@@ -428,27 +434,33 @@ class MasterView:
         charspr = self.charactor_sprites.get_spr(char)
         self.display_charactor(charspr) 
         
+        
     #################  resurrect  ############
     
     def on_localavrez(self, event):
-        """ rez my avatar: center screen where my av is """
+        """ Resurrect my avatar: display my av, and center screen on my av. 
+        Note: it can happen that, within the same frame, 
+        the avatar resurrects and is killed again.
+        Don't display the avatar if it is dead again/still dead. 
+        """
         
         myav = event.avatar
 
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_myav_bgcolor()
         charspr = CharactorSprite(myav, sprdims, bgcolor, self.charactor_sprites)
-        cleft, ctop = myav.cell.coords
-        self.center_screen_on_coords(cleft, ctop) #must be done before display_char
+        if myav.cell: # av has not been killed again in the same frame
+            cleft, ctop = myav.cell.coords
+            self.center_screen_on_coords(cleft, ctop) #must be done before display_char
 
-        # redisplay all the charactors (includes me) 
+        # redisplay all the charactors that are alive (includes me) 
         for charspr in self.charactor_sprites:
             cell = charspr.char.cell
             if cell: # char is still alive
                 self.display_charactor(charspr)
     
 
-    def on_remoterez(self, event):
+    def on_resurrect(self, event):
         """ Resurrect another charactor (creep or avatar) """
         
         char = event.charactor
@@ -494,10 +506,53 @@ class CellSprite(Sprite):
 
 
 
+##  sprite builders
+
+def build_facingsprites(bgcolor, w, h):
+    """ Given width and height of the cell,
+    return a dict {DIRECTION_XXX: sprite for that direction} 
+    """
+    
+    facing_sprites = {}
+    dirs = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT]
+    
+    for d in dirs:
+        spr = pygame.Surface((w, h))
+        spr = spr.convert_alpha()
+        spr.fill((0, 0, 0, 0)) #make transparent
+        # triangular shape to show char.facing
+        vertices = get_vertices(d, w, h)
+        pygame.draw.polygon(spr, bgcolor, vertices)
+        
+        facing_sprites[d] = spr
+        
+    return facing_sprites
+
+    
+def get_vertices(facing, w, h):
+    """ Get a list of triangle vertices from the character's facing
+    and the width and height of the cell. 
+    """
+    
+    vert = []
+    
+    if facing == DIRECTION_UP:
+        vert = [(0, h), (w, h), (int(w / 2), 0)]
+    elif facing == DIRECTION_DOWN:
+        vert = [(0, 0), (w, 0), (int(w / 2), h)]
+    elif facing == DIRECTION_LEFT:
+        vert = [(w, 0), (w, h), (0, int(h / 2))]
+    elif facing == DIRECTION_RIGHT:
+        vert = [(0, 0), (0, h), (w, int(h / 2))]
+    
+    return vert
+
+
 
 class CharactorSprite(IndexableSprite):
-    """ The representation of a character """
+    """ The representation of a Charactor. """
     
+    facing_sprites = {}
     
     def __init__(self, char, sprdims, bgcolor, groups=None):
         self.key = char # must be set before adding the spr to group(s)
@@ -508,55 +563,14 @@ class CharactorSprite(IndexableSprite):
 
         # build the various sprite orientations
         w, h = sprdims
-        self.facing_sprites = self.build_facingsprites(bgcolor, w, h) # TODO: PERF class var
-        
+        if not self.facing_sprites: # TODO: make this cleaner
+            self.facing_sprites = build_facingsprites(bgcolor, w, h) 
+
         charsurf = self.facing_sprites[self.char.facing]
         self.image = charsurf
         self.rect = charsurf.get_rect()
 
 
-    def build_facingsprites(self, bgcolor, w, h):
-        """ Given width and height of the cell,
-        return a dict {DIRECTION_XXX: sprite for that direction} 
-        """
-        
-        facing_sprites = {}
-        dirs = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT]
-        
-        for d in dirs:
-            spr = pygame.Surface((w, h))
-            spr = spr.convert_alpha()
-            spr.fill((0, 0, 0, 0)) #make transparent
-            # triangular shape to show char.facing
-            vertices = self.get_vertices(d, w, h)
-            pygame.draw.polygon(spr, bgcolor, vertices)
-            
-            facing_sprites[d] = spr
-            
-        return facing_sprites
-
-        
-    def get_vertices(self, facing, w, h):
-        """ Get a list of triangle vertices from the character's facing
-        and the width and height of the cell. 
-        TODO: move me out of the CharactorSprite class
-        """
-        
-        vert = []
-        
-        if facing == DIRECTION_UP:
-            vert = [(0, h), (w, h), (int(w / 2), 0)]
-        elif facing == DIRECTION_DOWN:
-            vert = [(0, 0), (w, 0), (int(w / 2), h)]
-        elif facing == DIRECTION_LEFT:
-            vert = [(w, 0), (w, h), (0, int(h / 2))]
-        elif facing == DIRECTION_RIGHT:
-            vert = [(0, 0), (0, h), (w, int(h / 2))]
-        
-        return vert
-    
-    
-    
         
     def update(self):
         """ Eventually move the spr and update its orientation.

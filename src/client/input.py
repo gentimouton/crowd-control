@@ -32,10 +32,9 @@ class InputController:
         self._em = evManager
         self._em.reg_cb(TickEvent, self.on_tick)
         
-        #if key pushed for more than 150ms, then send KEYDOWN event every 50ms
-        # TODO: FT should keyboard sensitivity be configurable?
+        #if key pushed for more than 100ms, then send KEYDOWN event every 25ms
         pygame.init() #calling init() multiple times does not mess anything
-        pygame.key.set_repeat(150, 50) 
+        pygame.key.set_repeat(100, 25) 
     
 
     def on_tick(self, tickevent):

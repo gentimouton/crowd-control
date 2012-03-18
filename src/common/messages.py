@@ -124,6 +124,10 @@ class SrvRezMsg(SerializableMsg):
     
     
     
+# run
+class SrvMoveSpeedMsg(SerializableMsg):
+    """ sent from server to players when a charactor started or stopped running. """
+    attrs = ['name', 'move_cd', 'move_txt']
     
     
 
