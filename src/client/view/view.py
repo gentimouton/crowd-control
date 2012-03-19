@@ -196,7 +196,16 @@ class MasterView:
             # hence model's resurrect events make the view crazy  
             log.debug('Can not display char %s: no cell' % charspr.char)
         
+    
+    def activate_spr(self, spr):
+        """ start displaying a sprite """
+        self.active_charactor_sprites.add(spr)
         
+    def desactivate_spr(self, spr):
+        """ stop displaying a sprite """
+        self.active_charactor_sprites.remove(spr)
+        
+            
         
     ###################### RENDERING OF SPRITES and BG ######################
     
@@ -235,7 +244,8 @@ class MasterView:
         
         defer, dmg = event.defer, event.dmg
         deferspr = self.charactor_sprites.get_spr(defer)
-        #deferspr.display_dmg(dmg)
+        deferspr.start_displaying_dmg(dmg)
+        self.display_charactor(deferspr)
 
         
     def on_charatks(self, event):
@@ -250,12 +260,10 @@ class MasterView:
     def on_charrcvdmg(self, event):
         """ Display text with damage over charactor's sprite. """
         
-        # TODO: FT display text with damage over charactor's sprite.
         deferspr = self.charactor_sprites.get_spr(event.defer)
         dmg = event.dmg
+        deferspr.start_displaying_dmg(dmg)
         self.display_charactor(deferspr)
-        log.info('%s received %d dmg' % (event.defer.name, dmg))
-
 
 
     ####### creepjoin #########
