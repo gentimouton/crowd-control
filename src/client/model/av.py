@@ -1,4 +1,4 @@
-from client.charactor import Charactor
+from client.model.charactor import Charactor
 from client.events_client import LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, \
     SendMoveEvt, SendAtkEvt, LocalAvRezEvt, CharactorDeathEvt, RemoteCharactorRezEvt, \
     RemoteCharactorMoveEvent, CharactorRemoveEvent, ChangedMoveSpeedEvt
@@ -8,15 +8,12 @@ import logging
 
 
 
-log = None
+log = logging.getLogger('client')
     
     
 class Avatar(Charactor):
     """ An entity controlled by a player. One avatar per player. """
-    
-    global log
-    log = logging.getLogger('client')
-        
+            
     def __init__(self, name, cell, facing, atk, hp, move_cd, islocal, evManager):
         
         Charactor.__init__(self, cell, facing, name, atk, hp, evManager)
@@ -54,7 +51,7 @@ class Avatar(Charactor):
         if target: # found a target
             # send the atk event to the server
             # and notify the view to display the dmg
-            ev = SendAtkEvt(self, target, target.name, self.atk) 
+            ev = SendAtkEvt(target, target.name, self.atk) 
             self._em.post(ev)
         
         else:

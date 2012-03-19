@@ -51,9 +51,8 @@ class InputAtkRequest():
 ########################  attack  ##################################
 
 class SendAtkEvt():
-    """ Model to network. Local avatar attacks a cell. """
-    def __init__(self, atker, defer, targetname, dmg):
-        self.atker = atker # used by the view only
+    """ Model to network and view. Local avatar attacks a cell. """
+    def __init__(self, defer, targetname, dmg):
         self.defer = defer # used by the view only
         self.tname = targetname # used by the network only
         self.dmg = dmg

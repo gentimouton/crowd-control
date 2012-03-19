@@ -6,9 +6,9 @@ from client.config import config_get_fps, config_get_hostport, config_get_nick, 
 from client.events_client import ClientEventManager
 from client.input import InputController
 from client.logger import config_logger
-from client.model import Game
+from client.model.model import Game
 from client.network import NetworkController
-from client.view import MasterView
+from client.view.view import MasterView
 from threading import current_thread
 
     

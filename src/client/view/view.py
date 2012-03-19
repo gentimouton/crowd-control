@@ -1,3 +1,4 @@
+from client.view.charspr import CharactorSprite
 from client.config import config_get_screenres, config_get_loadingscreen_bgcolor, \
     config_get_fontsize, config_get_walkable_color, config_get_nonwalkable_color, \
     config_get_entrance_color, config_get_lair_color, config_get_avdefault_bgcolor, \
@@ -7,65 +8,20 @@ from client.events_client import QuitEvent, SubmitChat, CharactorRemoveEvent, \
     RemoteCharactorMoveEvent, CreepPlaceEvent, MMyNameChangedEvent, \
     CharactorRcvDmgEvt, RemoteCharactorAtkEvt, LocalAvRezEvt, CharactorDeathEvt, \
     RemoteCharactorRezEvt, SendAtkEvt, MGreetNameEvt, MBuiltMapEvt
-from client.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
+from client.view.indexablespr import RenderUpdatesDict
+from client.view.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
-from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
-    DIRECTION_RIGHT
 from common.events import TickEvent
 from pygame.sprite import RenderUpdates, Sprite
 import logging
 import pygame
 
 
-log = None
-
-class IndexableSprite(Sprite):
-    """ Sprite that can be fetched from a RenderUpdatesDict"""
-    def __init__(self, key=None):
-        Sprite.__init__(self)
-        self.key = key
+log = logging.getLogger('client')
         
-    def __str__(self):
-        return str(self.key)
-    
-class RenderUpdatesDict(RenderUpdates):
-    """ Group class that extends RenderUpdates to enable associating a spr 
-    to a user name """
-     
-    def __init__(self, *sprites):
-        RenderUpdates.__init__(self, *sprites)
-        self.__dict = dict() 
-
-    def __str__(self):
-        return '%d items' % len(self.__dict)
-        
-    def add_internal(self, spr):
-        """ add sprite to the group,
-        and index it if it's an IndexableSprite """
-        RenderUpdates.add_internal(self, spr)
-        if isinstance(spr, IndexableSprite):
-            self.__dict[spr.key] = spr
-            
-    def get_spr(self, key):
-        try:
-            return self.__dict[key]
-        except KeyError:
-            log.warn('Could not find sprite %s' % key)
-            return None
-        
-        
-        
-        
-        
-###########################################################################
 
 class MasterView:
     """ links to presentations of game world and HUD """
-    
-    # set the view logger
-    global log
-    log = logging.getLogger('client')
-
 
     def __init__(self, evManager):
         """ when view starts, register callbacks to events and build the GUI """
@@ -214,7 +170,9 @@ class MasterView:
 
 
     def display_charactor(self, charspr):
-        """ display (or not) a avatar on the screen given his cell coords """
+        """ display (or not) a charactor if it's in range.
+        This function is called when the charactor model changes.
+        """
         
         if charspr.char.cell:
             cleft, ctop = charspr.char.cell.coords
@@ -227,7 +185,8 @@ class MasterView:
                 # char is near: display his spr on the screen
                 charleft = (self.visib_diam / 2 + cell_shift_left) * self.cspr_size
                 chartop = (self.visib_diam / 2 + cell_shift_top) * self.cspr_size
-                charspr.rect.center = (charleft, chartop)
+                # tell the spr to position itself
+                charspr.update_img(charleft, chartop) 
                 
             else: # avatar got out of screen: remove his spr from the groups
                 self.active_charactor_sprites.remove(charspr)
@@ -274,17 +233,16 @@ class MasterView:
         (the HP update will happen from a server msg)
         """
         
-        atker, defer, dmg = event.atker, event.defer, event.dmg
-        # TODO: FT display text with the atk amount instead of log.info
-        log.info('%s localatk %s for %d dmg' 
-                      % (atker.name, defer.name, dmg))
+        defer, dmg = event.defer, event.dmg
+        deferspr = self.charactor_sprites.get_spr(defer)
+        #deferspr.display_dmg(dmg)
 
         
     def on_charatks(self, event):
         """ Display the charactor attacking. 
         The dmg are displayed by a char RECEIVING dmg. """
     
-        atker = self.charactor_sprites.get_spr(event.atker)
+        atkerspr = self.charactor_sprites.get_spr(event.atker)
         log.info('%s attacked' % event.atker.name) 
         # TODO: FT display the charactor attacking instead of log.info
 
@@ -293,8 +251,9 @@ class MasterView:
         """ Display text with damage over charactor's sprite. """
         
         # TODO: FT display text with damage over charactor's sprite.
-        defer = self.charactor_sprites.get_spr(event.defer)
+        deferspr = self.charactor_sprites.get_spr(event.defer)
         dmg = event.dmg
+        self.display_charactor(deferspr)
         log.info('%s received %d dmg' % (event.defer.name, dmg))
 
 
@@ -399,7 +358,6 @@ class MasterView:
         self.center_screen_on_coords(cleft, ctop) #must be done before display_char
         self.display_charactor(charspr)
         
-        
     def on_remoteavplace(self, event):
         """ Make a sprite and center the sprite 
         based on the cell location of the remote avatar.
@@ -440,24 +398,22 @@ class MasterView:
     def on_localavrez(self, event):
         """ Resurrect my avatar: display my av, and center screen on my av. 
         Note: it can happen that, within the same frame, 
-        the avatar resurrects and is killed again.
+        the avatar resurrects and is killed again 
+        (when the server sent rez and death msg in the same frame).
         Don't display the avatar if it is dead again/still dead. 
         """
         
+        # center screen on my av and redisplay all chars if my av resurrected
         myav = event.avatar
-
-        sprdims = (self.cspr_size, self.cspr_size)
-        bgcolor = config_get_myav_bgcolor()
-        charspr = CharactorSprite(myav, sprdims, bgcolor, self.charactor_sprites)
         if myav.cell: # av has not been killed again in the same frame
             cleft, ctop = myav.cell.coords
             self.center_screen_on_coords(cleft, ctop) #must be done before display_char
 
-        # redisplay all the charactors that are alive (includes me) 
-        for charspr in self.charactor_sprites:
-            cell = charspr.char.cell
-            if cell: # char is still alive
-                self.display_charactor(charspr)
+            # redisplay all the charactors that are alive (includes me) 
+            for charspr in self.charactor_sprites:
+                cell = charspr.char.cell
+                if cell: # char is still alive
+                    self.display_charactor(charspr)
     
 
     def on_resurrect(self, event):
@@ -501,82 +457,3 @@ class CellSprite(Sprite):
         self.cell = cell
         
 
-
-###########################################################################
-
-
-
-##  sprite builders
-
-def build_facingsprites(bgcolor, w, h):
-    """ Given width and height of the cell,
-    return a dict {DIRECTION_XXX: sprite for that direction} 
-    """
-    
-    facing_sprites = {}
-    dirs = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT]
-    
-    for d in dirs:
-        spr = pygame.Surface((w, h))
-        spr = spr.convert_alpha()
-        spr.fill((0, 0, 0, 0)) #make transparent
-        # triangular shape to show char.facing
-        vertices = get_vertices(d, w, h)
-        pygame.draw.polygon(spr, bgcolor, vertices)
-        
-        facing_sprites[d] = spr
-        
-    return facing_sprites
-
-    
-def get_vertices(facing, w, h):
-    """ Get a list of triangle vertices from the character's facing
-    and the width and height of the cell. 
-    """
-    
-    vert = []
-    
-    if facing == DIRECTION_UP:
-        vert = [(0, h), (w, h), (int(w / 2), 0)]
-    elif facing == DIRECTION_DOWN:
-        vert = [(0, 0), (w, 0), (int(w / 2), h)]
-    elif facing == DIRECTION_LEFT:
-        vert = [(w, 0), (w, h), (0, int(h / 2))]
-    elif facing == DIRECTION_RIGHT:
-        vert = [(0, 0), (0, h), (w, int(h / 2))]
-    
-    return vert
-
-
-
-class CharactorSprite(IndexableSprite):
-    """ The representation of a Charactor. """
-    
-    facing_sprites = {}
-    
-    def __init__(self, char, sprdims, bgcolor, groups=None):
-        self.key = char # must be set before adding the spr to group(s)
-        Sprite.__init__(self, groups)
-        
-        self.char = char
-        self.dest = None
-
-        # build the various sprite orientations
-        w, h = sprdims
-        if not self.facing_sprites: # TODO: make this cleaner
-            self.facing_sprites = build_facingsprites(bgcolor, w, h) 
-
-        charsurf = self.facing_sprites[self.char.facing]
-        self.image = charsurf
-        self.rect = charsurf.get_rect()
-
-
-        
-    def update(self):
-        """ Eventually move the spr and update its orientation.
-        movement could be smoother and last for longer than 1 frame.
-        """
-        
-        charsurf = self.facing_sprites[self.char.facing]
-        self.image = charsurf
-        

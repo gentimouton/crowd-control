@@ -5,7 +5,7 @@ from bot.input import BotInputController
 from bot.logger import config_logger
 from client.clock import CClockController
 from client.events_client import ClientEventManager
-from client.model import Game
+from client.model.model import Game
 from client.network import NetworkController
 from threading import current_thread
 

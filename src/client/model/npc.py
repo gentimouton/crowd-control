@@ -1,4 +1,4 @@
-from client.av import Charactor
+from client.model.av import Charactor
 from client.events_client import CreepPlaceEvent, RemoteCharactorMoveEvent, \
     CharactorRemoveEvent
 

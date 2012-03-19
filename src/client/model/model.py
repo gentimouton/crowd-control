@@ -5,15 +5,15 @@ Local actions with far-reaching consequences are only dead-reckoned
 to the point where they do not have to be rollbacked if they are wrong. 
 """
 
-from client.av import Avatar
-from client.chatlog import ChatLog
+from client.model.av import Avatar
+from client.model.chatlog import ChatLog
 from client.events_client import InputMoveRequest, MNameChangedEvt, \
     NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvNameChangeEvt, InputAtkRequest, \
     NwRcvCharMoveEvt, NwRcvAtkEvt, NwRcvGameAdminEvt, NwRcvCreepJoinEvt, \
     NwRcvDeathEvt, MdAddPlayerEvt, MMyNameChangedEvent, NwRcvRezEvt, \
     RemoteCharactorAtkEvt, NwRcvGreetEvt, NwRcvNameChangeFailEvt, MNameChangeFailEvt, \
     MGameAdminEvt, MPlayerLeftEvt, MGreetNameEvt, MBuiltMapEvt, NwRcvMoveSpeedEvt
-from client.npc import Creep
+from client.model.npc import Creep
 from common.world import World
 import logging
 

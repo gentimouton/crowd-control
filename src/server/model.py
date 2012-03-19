@@ -208,6 +208,9 @@ class SGame():
 
     ######################### commands parsing ##############################
 
+
+    # TODO: FT this should be in a Commander
+    
     def exec_cmd(self, pname, cmd, args):
         """ Execute a player command. 
         args[0] is not the command's name, it's the first cmd argument. 
@@ -241,7 +244,7 @@ class SGame():
         self.log.info('Game started by ' + pname)
         self._nw.bc_gameadmin(pname, 'start')
 
-        numcreeps = 10
+        numcreeps = 1
         cell = self.world.get_lair()
         for x in range(numcreeps):
             cname = 'creep-%d' % x

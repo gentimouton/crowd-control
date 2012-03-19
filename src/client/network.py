@@ -10,15 +10,13 @@ from common.messages import SrvGreetMsg, SrvPlyrJoinMsg, SrvPlyrLeftMsg, \
     SrvRezMsg, SrvNameChangeFailMsg, SrvMoveSpeedMsg
 import logging
 
-log = None # logger
+log = logging.getLogger('client')
 
 class NetworkController(ConnectionListener):
 
 
     def __init__(self, evManager, hostport, nick):
         """ open connection to the server """
-        global log
-        log = logging.getLogger('client')
         
         self._em = evManager
         self._em.reg_cb(TickEvent, self.on_tick)

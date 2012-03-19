@@ -3,13 +3,10 @@ from server.charactor import SCharactor
 from server.config import config_get_maxhp, config_get_baseatk
 import logging
 
-log = None
+log = logging.getLogger('server')
 
 class SCreep(SCharactor):
 
-    global log    
-    log = logging.getLogger('server')
-    
     def __init__(self, mdl, sched, nw, cname, cell, facing):
         """ Starting state is idle. """
 
@@ -85,7 +82,7 @@ class SCreep(SCharactor):
         
         self.hp -= dmg
         log.debug('Creep %s received %d dmg from %s' 
-                       % (self.name, dmg, atker.name))
+                  % (self.name, dmg, atker.name))
         self._nw.bc_attack(atker.name, self.name, dmg)
 
         # less than 0 HP => death
