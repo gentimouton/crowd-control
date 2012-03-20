@@ -36,6 +36,16 @@ def config_get_screenres():
 
 def config_get_fontsize():
     return int(_dict['fontsize'])
+def config_get_scrollfontsize():
+    return int(_dict['scrollfontsize'])
+def config_get_scrollfontcolor():
+    return int_tuple(_dict['scrollfontcolor'])
+
+def config_get_hpbarfullcolor():
+    return int_tuple(_dict['hpbarfullcolor'])
+def config_get_hpbaremptycolor():
+    return int_tuple(_dict['hpbaremptycolor'])
+    
 def config_get_loadingscreen_bgcolor():
     return int_tuple(_dict['loadingscreen_bgcolor'])
 def config_get_avdefault_bgcolor():

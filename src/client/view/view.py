@@ -227,9 +227,8 @@ class MasterView:
             scroll_height = self.cspr_size / 2 # how high should the text scroll until erased
             
             txt = str(dmg)
-            color = (0, 0, 0) # black # TODO: from config file
             duration = 500 # in millis
-            ScrollingTextSprite(txt, duration, centerpos, scroll_height, color, self.dmg_sprites)
+            ScrollingTextSprite(txt, duration, centerpos, scroll_height, self.dmg_sprites)
         
       
         

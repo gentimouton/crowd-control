@@ -1,10 +1,12 @@
+from client.config import config_get_scrollfontcolor, config_get_scrollfontsize, \
+    config_get_hpbarfullcolor
 from client.view.indexablespr import IndexableSprite
 from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
     DIRECTION_RIGHT
 from pygame import Rect
+from pygame.font import Font
 from pygame.sprite import Sprite
 import pygame
-from pygame.font import Font
 
 
 
@@ -50,14 +52,25 @@ class CharactorSprite(IndexableSprite):
         
         # add a 5-px thick hp bar, 4px per HP left
         # make a copy when char created, moved, or rcv_dmg
-        green = (0, 255, 0)
-        greenrect = Rect(self.w / 10, self.h / 10,
-                         4 * self.char.hp, self.h / 10 + 5)
-        self.image.fill(green, greenrect)
-        # TODO: add a red bar too
-        # TODO: rotate the display based on charactor's facing
+        color = config_get_hpbarfullcolor()
+        if self.char.facing == DIRECTION_LEFT: # vertical, right side
+            hpfullrect = Rect(self.w * 10 / 12, self.h / 8,
+                              self.w / 12, 4 * self.char.hp)
+        if self.char.facing == DIRECTION_RIGHT:# vertical, left side
+            hpfullrect = Rect(self.w * 1 / 12, self.h / 8,
+                              self.w / 12, 4 * self.char.hp)
+        if self.char.facing == DIRECTION_UP:# horizontal
+            hpfullrect = Rect(self.w / 8, self.h * 10 / 12,
+                              4 * self.char.hp, self.h / 12)
+        if self.char.facing == DIRECTION_DOWN:# horizontal
+            hpfullrect = Rect(self.w / 8, self.h * 1 / 12,
+                              4 * self.char.hp, self.h / 12)            
         
-            
+        self.image.fill(color, hpfullrect)
+        # TODO: add a red bar too from config_get_hpbaremptycolor()
+        # TODO: for vertical hp bars, green is at the top of red, whereas it should be at the bottom
+        # TODO: add maxhp to the model, and display in % of HP instead of absolute number of HP
+        
         
                 
     def update(self, duration):
@@ -117,7 +130,7 @@ class ScrollingTextSprite(Sprite):
     """ A sprite making text scroll upwards and disappear after a while. """
     
     
-    def __init__(self, txt, duration, centerpos, scroll_height, color, groups=None):
+    def __init__(self, txt, duration, centerpos, scroll_height, groups=None):
         """ start displaying the dmg at the given rect, 
         and for the given duration 
         """
@@ -125,7 +138,9 @@ class ScrollingTextSprite(Sprite):
         Sprite.__init__(self, groups)
 
         self.txt = txt
-        self.font = Font(None, 30) #default font, 30 pixels high # TODO: from config file
+        fontsize = config_get_scrollfontsize()
+        self.font = Font(None, fontsize) #default font
+        color = config_get_scrollfontcolor()
         self.image = self.font.render(txt, True, color)
         self.rect = self.image.get_rect(center=centerpos) # center the rect
         
@@ -151,7 +166,7 @@ class ScrollingTextSprite(Sprite):
         else:
             self.timer -= frame_dur
             shift = self.shiftspeed * frame_dur  
-            self.rect.move_ip(0, - shift) # shift upwards
+            self.rect.move_ip(0, -shift) # shift upwards
         
         
         
