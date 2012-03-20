@@ -40,8 +40,7 @@ class Creep(Charactor):
     
     def rmv(self):
         """ tell the view to remove this charactor's spr """ 
-        if self.cell:
-            self.cell.rm_creep(self) # TODO: FT should be a weakref instead?
+        self.cell.rm_creep(self) # TODO: FT should be a weakref instead?
         ev = CharactorRemoveEvent(self)
         self._em.post(ev)
         

@@ -1,4 +1,3 @@
-from client.view.charspr import CharactorSprite
 from client.config import config_get_screenres, config_get_loadingscreen_bgcolor, \
     config_get_fontsize, config_get_walkable_color, config_get_nonwalkable_color, \
     config_get_entrance_color, config_get_lair_color, config_get_avdefault_bgcolor, \
@@ -8,6 +7,7 @@ from client.events_client import QuitEvent, SubmitChat, CharactorRemoveEvent, \
     RemoteCharactorMoveEvent, CreepPlaceEvent, MMyNameChangedEvent, \
     CharactorRcvDmgEvt, RemoteCharactorAtkEvt, LocalAvRezEvt, CharactorDeathEvt, \
     RemoteCharactorRezEvt, SendAtkEvt, MGreetNameEvt, MBuiltMapEvt
+from client.view.charspr import CharactorSprite, ScrollingTextSprite
 from client.view.indexablespr import RenderUpdatesDict
 from client.view.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
@@ -29,6 +29,7 @@ class MasterView:
         self._em = evManager
         self.register_callbacks()
         
+        self.build_screen()
         self.build_gui()
         
         
@@ -60,11 +61,10 @@ class MasterView:
         self._em.reg_cb(RemoteCharactorRezEvt, self.on_resurrect)
         
 
-
-    def build_gui(self):
-        """ Start pygame, and add widgets to the screen """
+    def build_screen(self):
+        """ init the pygame window, and build the world screen """
         
-        # -- init pygame's screen
+        # init pygame's screen
         pygame.init() #calling init() multiple times does not mess anything
         self.win_size = self.win_w, self.win_h = config_get_screenres()
         if self.win_w != 4 * self.win_h / 3:
@@ -76,8 +76,21 @@ class MasterView:
         
         # blit the loading screen: a black screen
         self.background = pygame.Surface(self.window.get_size()) 
-        self.background.fill(config_get_loadingscreen_bgcolor()) 
+        bgcolor = config_get_loadingscreen_bgcolor()
+        self.background.fill(bgcolor) 
         self.window.blit(self.background, (0, 0))
+        
+        # reveal
+        pygame.display.flip()
+
+        self.charactor_sprites = RenderUpdatesDict() # all in game charactors 
+        self.active_charactor_sprites = RenderUpdatesDict() # chars currently visible on screen
+        self.dmg_sprites = RenderUpdates() # dmg to display on screen
+
+
+    def build_gui(self):
+        """ Add widgets to the screen """
+
 
         # start adding widgets
         self.gui_sprites = RenderUpdates()   
@@ -138,12 +151,8 @@ class MasterView:
         chatwindow = ChatLogWidget(self._em, numlines=numlines, rect=rect)
         self.gui_sprites.add(chatwindow)
         
-        pygame.display.flip()
-
-        self.charactor_sprites = RenderUpdatesDict() # all in game charactors 
-        self.active_charactor_sprites = RenderUpdatesDict() # chars currently visible on screen
         
-
+        
         
     #################  gfx utils  ###############
     
@@ -168,44 +177,66 @@ class MasterView:
         pygame.display.flip() 
         
 
-
-    def display_charactor(self, charspr):
+    def game_to_screen_coords(self, gcoords):
+        """ gcoords are cell coords, from the game model.
+        Return the screen coords if in range, or None if outside of range. 
+        """
+        
+        cleft, ctop = gcoords
+        # cell distance from my av cell 
+        cell_shift_left = cleft - self.bg_shift_left
+        cell_shift_top = ctop - self.bg_shift_top
+            
+        if abs(cell_shift_left) <= self.visib_rad\
+            and abs(cell_shift_top) <= self.visib_rad:
+            # in range
+            screenleft = (self.visib_diam / 2 + cell_shift_left) * self.cspr_size
+            screentop = (self.visib_diam / 2 + cell_shift_top) * self.cspr_size
+            return screenleft, screentop
+        
+        else: # out of range
+            return None, None
+        
+        
+    def display_char_if_inrange(self, char):
         """ display (or not) a charactor if it's in range.
         This function is called when the charactor model changes.
         """
         
-        if charspr.char.cell:
-            cleft, ctop = charspr.char.cell.coords
-            cell_shift_left = cleft - self.bg_shift_left
-            cell_shift_top = ctop - self.bg_shift_top
+        gamecoords = char.cell.coords 
+        screenleft, screentop = self.game_to_screen_coords(gamecoords)
+        
+        if screenleft and screentop: # in screen range    
+            # ask the charactor's sprite to position itself
+            charspr = self.charactor_sprites.get_spr(char)
+            self.active_charactor_sprites.add(charspr) # activate the spr
+            charspr.update_img(screenleft, screentop)
             
-            if abs(cell_shift_left) <= self.visib_rad\
-            and abs(cell_shift_top) <= self.visib_rad:
-                self.active_charactor_sprites.add(charspr)
-                # char is near: display his spr on the screen
-                charleft = (self.visib_diam / 2 + cell_shift_left) * self.cspr_size
-                chartop = (self.visib_diam / 2 + cell_shift_top) * self.cspr_size
-                # tell the spr to position itself
-                charspr.update_img(charleft, chartop) 
-                
-            else: # avatar got out of screen: remove his spr from the groups
-                self.active_charactor_sprites.remove(charspr)
-        
-        else: # most likely, the char was resurrected (re-add cell)
-            # and killed again (remove cell) during the same frame
-            # hence model's resurrect events make the view crazy  
-            log.debug('Can not display char %s: no cell' % charspr.char)
-        
-    
-    def activate_spr(self, spr):
-        """ start displaying a sprite """
-        self.active_charactor_sprites.add(spr)
-        
-    def desactivate_spr(self, spr):
-        """ stop displaying a sprite """
-        self.active_charactor_sprites.remove(spr)
-        
+        else: # charactor got out of screen: desactivate the spr
+            self.active_charactor_sprites.remove(charspr)
             
+            
+    def display_dmg_if_inrange(self, char, dmg):
+        """ start displaying the dmg a charactor received """
+        
+        gcoords = char.cell.coords
+        screenleft, screentop = self.game_to_screen_coords(gcoords) # center of the char spr
+
+        if screenleft and screentop:
+            centerpos = screenleft, screentop - self.cspr_size / 4
+            scroll_height = self.cspr_size / 2 # how high should the text scroll until erased
+            
+            txt = str(dmg)
+            color = (0, 0, 0) # black # TODO: from config file
+            duration = 500 # in millis
+            ScrollingTextSprite(txt, duration, centerpos, scroll_height, color, self.dmg_sprites)
+        
+      
+        
+        
+        
+        
+        
         
     ###################### RENDERING OF SPRITES and BG ######################
     
@@ -215,18 +246,22 @@ class MasterView:
         
         # clear the window from all the sprites, replacing them with the bg
         self.active_charactor_sprites.clear(self.window, self.background)
+        self.dmg_sprites.clear(self.window, self.background)
         self.gui_sprites.clear(self.window, self.background)
         
         # update all the sprites - calls update() on each sprite of the groups
-        self.active_charactor_sprites.update()
-        self.gui_sprites.update()
+        duration = event.duration # how long passed since last tick
+        self.active_charactor_sprites.update(duration)
+        self.dmg_sprites.update(duration)
+        self.gui_sprites.update(duration)
         
         # collect the display areas that have changed
         dirty_rects_chars = self.active_charactor_sprites.draw(self.window)
+        dirty_rects_dmg = self.dmg_sprites.draw(self.window)
         dirty_rects_gui = self.gui_sprites.draw(self.window)
         
         # and redisplay those areas only
-        dirty_rects = dirty_rects_chars + dirty_rects_gui
+        dirty_rects = dirty_rects_chars + dirty_rects_dmg + dirty_rects_gui 
         pygame.display.update(dirty_rects)
         
         
@@ -237,22 +272,18 @@ class MasterView:
     
                 
     def on_localavatk(self, event):
-        """ Local avatar attacked: only display dmg, 
-        but dont update defender's life 
-        (the HP update will happen from a server msg)
+        """ Local avatar attacked: only display dmg, but 
+        dont update defender's HP bar: the HP update comes from a server msg.
         """
         
         defer, dmg = event.defer, event.dmg
-        deferspr = self.charactor_sprites.get_spr(defer)
-        deferspr.start_displaying_dmg(dmg)
-        self.display_charactor(deferspr)
-
+        self.display_dmg_if_inrange(defer, dmg)        
         
+            
     def on_charatks(self, event):
         """ Display the charactor attacking. 
         The dmg are displayed by a char RECEIVING dmg. """
     
-        atkerspr = self.charactor_sprites.get_spr(event.atker)
         log.info('%s attacked' % event.atker.name) 
         # TODO: FT display the charactor attacking instead of log.info
 
@@ -260,10 +291,12 @@ class MasterView:
     def on_charrcvdmg(self, event):
         """ Display text with damage over charactor's sprite. """
         
-        deferspr = self.charactor_sprites.get_spr(event.defer)
-        dmg = event.dmg
-        deferspr.start_displaying_dmg(dmg)
-        self.display_charactor(deferspr)
+        defer, dmg = event.defer, event.dmg
+        fromremotechar = event.fromremotechar
+        
+        self.display_char_if_inrange(defer)
+        if fromremotechar: # if atker was local, the dmg was already rendered
+            self.display_dmg_if_inrange(defer, dmg)
 
 
     ####### creepjoin #########
@@ -275,9 +308,9 @@ class MasterView:
         creep = event.creep
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_creep_bgcolor()
-        creepspr = CharactorSprite(creep, sprdims, bgcolor, self.charactor_sprites)
+        CharactorSprite(creep, sprdims, bgcolor, self.charactor_sprites)
         # TODO: FT CreepSprite() instead of CharactorSprite()
-        self.display_charactor(creepspr)
+        self.display_char_if_inrange(creep)
 
 
     ########## death ############
@@ -361,21 +394,21 @@ class MasterView:
         avatar = event.avatar
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_myav_bgcolor()
-        charspr = CharactorSprite(avatar, sprdims, bgcolor, self.charactor_sprites)
+        CharactorSprite(avatar, sprdims, bgcolor, self.charactor_sprites)
         cleft, ctop = avatar.cell.coords
         self.center_screen_on_coords(cleft, ctop) #must be done before display_char
-        self.display_charactor(charspr)
+        self.display_char_if_inrange(avatar)
         
     def on_remoteavplace(self, event):
         """ Make a sprite and center the sprite 
         based on the cell location of the remote avatar.
         """
         
-        avatar = event.avatar
+        av = event.avatar
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_avdefault_bgcolor()
-        charspr = CharactorSprite(avatar, sprdims, bgcolor, self.charactor_sprites)
-        self.display_charactor(charspr)
+        CharactorSprite(av, sprdims, bgcolor, self.charactor_sprites)
+        self.display_char_if_inrange(av)
 
 
     ################# move ################
@@ -386,19 +419,18 @@ class MasterView:
         myav = event.avatar
         cleft, ctop = myav.cell.coords
         self.center_screen_on_coords(cleft, ctop)
-        # redisplay the other charactors 
+        # redisplay the charactors that are in range
         for charspr in self.charactor_sprites:
-            cell = charspr.char.cell
-            if cell: # char is still alive
-                self.display_charactor(charspr)
+            char = charspr.char
+            if char.cell: # char is still alive
+                self.display_char_if_inrange(char)
 
 
     def on_remotecharmove(self, event):
         """ Move the spr of creeps or other avatars. """
 
         char = event.charactor
-        charspr = self.charactor_sprites.get_spr(char)
-        self.display_charactor(charspr) 
+        self.display_char_if_inrange(char) 
         
         
     #################  resurrect  ############
@@ -419,17 +451,16 @@ class MasterView:
 
             # redisplay all the charactors that are alive (includes me) 
             for charspr in self.charactor_sprites:
-                cell = charspr.char.cell
-                if cell: # char is still alive
-                    self.display_charactor(charspr)
+                char = charspr.char
+                if char.cell: # char is still alive
+                    self.display_char_if_inrange(char)
     
 
     def on_resurrect(self, event):
         """ Resurrect another charactor (creep or avatar) """
         
         char = event.charactor
-        charspr = self.charactor_sprites.get_spr(char)
-        self.display_charactor(charspr)
+        self.display_char_if_inrange(char)
         log.info('%s resurrected' % event.charactor.name)
         
 

@@ -81,7 +81,7 @@ class ButtonWidget(Widget):
 
 
 
-    def update(self):
+    def update(self, duration):
         if self.dirty == 0:
             return
 
@@ -189,7 +189,7 @@ class InputFieldWidget(Widget):
         self.textPos = (4, 2) # 4px padding-left and 2px padding-top 
 
 
-    def update(self):
+    def update(self, duration):
         """ render the text in the box """
         if self.dirty == 0:
             return
@@ -322,7 +322,7 @@ class TextLabelWidget(Widget):
         self.set_text(txt)
         
         
-    def update(self):
+    def update(self, duration):
         if self.dirty == 0:
             return
         
@@ -429,7 +429,7 @@ class PlayerListWidget(Widget):
         
         
         
-    def update(self):
+    def update(self, duration):
         """ update all the contained linewidgets """
         
         if self.dirty == 0:
@@ -442,7 +442,7 @@ class PlayerListWidget(Widget):
         for i in range(numelemts):
             wid = self.linewidgets[i]
             wid.set_text(self.texts[-i - 1])
-            wid.update()
+            wid.update(duration)
             self.image.blit(wid.image, wid.rect)
 
         self.dirty = 0
@@ -549,7 +549,7 @@ class ChatLogWidget(Widget):
         self.dirty = 1 # causes all linewidgets to be updated
         
         
-    def update(self):
+    def update(self, duration):
         """ update all the contained linewidgets """
         
         if self.dirty == 0:
@@ -559,7 +559,7 @@ class ChatLogWidget(Widget):
         self.image.fill(self.bgcolor)
         
         for wid in self.linewidgets:
-            wid.update()
+            wid.update(duration)
             self.image.blit(wid.image, wid.rect)
 
         self.dirty = 0

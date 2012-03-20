@@ -66,9 +66,10 @@ class NwRcvAtkEvt():
 
 class CharactorRcvDmgEvt():
     """ Sent from model to view when a charactor received damage. """
-    def __init__(self, defer, dmg):
+    def __init__(self, defer, dmg, fromremotechar):
         self.defer = defer
         self.dmg = dmg
+        self.fromremotechar = fromremotechar
 
 class RemoteCharactorAtkEvt():
     """ Sent from model to view when a charactor attacks. """

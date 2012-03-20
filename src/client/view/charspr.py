@@ -15,7 +15,6 @@ class CharactorSprite(IndexableSprite):
     
     facing_sprites = {}
     
-    dmg_color = (0, 0, 0) # black # TODO: from config file
 
 
     def __init__(self, char, sprdims, bgcolor, groups=None):
@@ -34,17 +33,7 @@ class CharactorSprite(IndexableSprite):
         # it will happen when view calls update_img
         # this rect will be updated in update_img
         self.rect = Rect(0, 0, self.w, self.h) 
-        
-        self.font = Font(None, 30) #default font, 30 pixels high # TODO: from config file
-        self.dmg_duration = 30 # in frames; TODO: hardcoded, and should be in millis 
-        self.dmg_timer = 0 # when 0, stop displaying 
-        # TODO: should be a list of (dmg, timer); 
-        # TODO: when the list is empty, it means dmg_displaying is False (no need for that boolean anymore)
-        self.dmg_rcved = None # store the number to display
-        self.dmg_displaying = False # not currently displaying dmg
-        # TODO: should allow multiple damages to be displayed at the same time
-        # TODO: dmg should scroll upwards then disappear 
-        
+                
             
     def update_img(self, sprleft, sprtop):
         """ update the image from the model.
@@ -68,40 +57,12 @@ class CharactorSprite(IndexableSprite):
         # TODO: add a red bar too
         # TODO: rotate the display based on charactor's facing
         
-        # eventually display dmg
-        if self.dmg_displaying:
-            txt = str(self.dmg_rcved)
-            txtimg = self.font.render(txt, True, self.dmg_color)
-            centerpos = self.image.get_width() / 2, 5 # centered horizontally, 5 px from top
-            txtpos = txtimg.get_rect(center = centerpos)
-            self.image.blit(txtimg, txtpos)
             
         
-         
-    def start_displaying_dmg(self, dmg):
-        """ start the timer displaying dmg on top of the charactor.
-        Will stop by itself after the timer is over.
-        TODO: Can only display ONE dmg at a time. 
-        """
-        self.dmg_rcved = dmg
-        self.dmg_displaying = True
-        self.dmg_timer = self.dmg_duration
-        
                 
-    def update(self):
-        """ Eventually move the spr and update its orientation.
-        movement could be smoother and last for longer than 1 frame.
-        This is called by the view every frame.
-        """
-        
-        if self.dmg_displaying: # still has to display dmg
-            self.dmg_timer -= 1 # reduce by 1 every frame
-
-            if self.dmg_timer <= 0: # done displaying
-                self.dmg_displaying = False
-                self.dmg_rcved = None # just in case
-                sprleft, sprtop = self.rect.center
-                self.update_img(sprleft, sprtop)
+    def update(self, duration):
+        """ This is called by the view every frame. """
+        pass
                 
         
 
@@ -148,3 +109,49 @@ def get_vertices(facing, w, h):
 
 
 
+
+#########################################################################
+
+
+class ScrollingTextSprite(Sprite):
+    """ A sprite making text scroll upwards and disappear after a while. """
+    
+    
+    def __init__(self, txt, duration, centerpos, scroll_height, color, groups=None):
+        """ start displaying the dmg at the given rect, 
+        and for the given duration 
+        """
+        
+        Sprite.__init__(self, groups)
+
+        self.txt = txt
+        self.font = Font(None, 30) #default font, 30 pixels high # TODO: from config file
+        self.image = self.font.render(txt, True, color)
+        self.rect = self.image.get_rect(center=centerpos) # center the rect
+        
+        self.timer = duration
+        self.shiftspeed = scroll_height / duration # float, in pixels per millis
+        
+    
+    def __str__(self):
+        return '%s at %s - leaves in %dms' % (self.txt, self.rect, self.timer)
+            
+            
+    def update(self, frame_dur):
+        """ Update the position of the text:
+        - scroll upwards as time goes by, 
+        - follow the charactor that received the dmg
+        - if the char dies, stop following
+        frame_dur = how long it took between 2 ticks
+        """
+        
+        if self.timer <= 0:
+            self.kill()
+            del self
+        else:
+            self.timer -= frame_dur
+            shift = self.shiftspeed * frame_dur  
+            self.rect.move_ip(0, - shift) # shift upwards
+        
+        
+        

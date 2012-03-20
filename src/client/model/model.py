@@ -138,10 +138,11 @@ class Game:
         defer = self.get_charactor(event.defer)
         
         dmg = event.dmg
-        if atker.name != self.myname: # when attacks from remote charactors
+        fromremotechar = atker.name != self.myname # when attacks come from remote charactors
+        if fromremotechar: 
             ev = RemoteCharactorAtkEvt(atker) # notify the view
             self._em.post(ev)
-        defer.rcv_dmg(dmg) 
+        defer.rcv_dmg(dmg, fromremotechar)
         
     
 

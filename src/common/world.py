@@ -239,9 +239,8 @@ class Cell():
         try:
             del self._avs[av]
         except KeyError: 
-            self.log.warning('Failed to remove Avatar %s from cell %s' 
-                             % (av.name, self.coords))
-    
+            pass
+
     def get_avs(self):
         """ Return all the Avs in the cell. """
         return list(self._avs.keys())

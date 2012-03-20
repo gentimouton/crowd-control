@@ -22,15 +22,19 @@ class Charactor():
 
     def changename(self, newname):
         """ Update my name. """
+        
         self.name = newname
         
         
         
-    def rcv_dmg(self, dmg):
-        """ Receive damage: notify the view to update the display. """
+    def rcv_dmg(self, dmg, fromremotechar):
+        """ Receive damage: notify the view to update the display. 
+        fromremotechar = whether the attack originates from another char or not.
+        """
+        
         self.hp -= dmg
         # no need to check if hp < 0: death comes from the server only 
-        ev = CharactorRcvDmgEvt(self, dmg)
+        ev = CharactorRcvDmgEvt(self, dmg, fromremotechar)
         self._em.post(ev)
         
                
