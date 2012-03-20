@@ -1,6 +1,6 @@
 from server.charactor import SCharactor
 from server.config import config_get_walkcd, config_get_runcd, config_get_maxhp, \
-    config_get_baseatk
+    config_get_baseatk, config_get_rezcd
 from time import time
 import logging
 
@@ -37,6 +37,9 @@ class SAvatar(SCharactor):
                          }
         self.move_ts = 0 # timestamp of last movement; can move right away (no cooldown)
         self.move_cd = config_get_walkcd() # start by walking
+        
+        self.death_ts = 0 # can resurrect right away
+        self.rez_cd = config_get_rezcd() # minimum duration between death and rez
         
    
     def serialize(self):
@@ -86,7 +89,22 @@ class SAvatar(SCharactor):
         
         return dmg
     
-    
+       
+    ####################  death  ############################
+
+    def die(self):
+        """ Remove me from my cell, broadcast my death to all players,
+        and schedule my resurrection at the entrance. 
+        """
+        
+        log.debug('Player %s died' % self.name)
+        self.cell.rm_av(self)
+        self.cell = None
+        self.death_ts = time()
+        self._nw.bc_death(self.name)
+        # self.resurrect() # TODO: FT should resurrect in 2 seconds instead -> scheduler
+
+
     #########################  move  ##############################
     
         
@@ -155,21 +173,7 @@ class SAvatar(SCharactor):
             cell = None
         self._nw.bc_playerleft(self.name)
 
-        
-    ####################  death  ############################
-
-    def die(self):
-        """ Remove me from my cell, broadcast my death to all players,
-        and schedule my resurrection at the entrance. 
-        """
-        
-        log.debug('Player %s died' % self.name)
-        self.cell.rm_av(self)
-        self.cell = None
-        self._nw.bc_death(self.name)
-        self.resurrect() # TODO: FT should resurrect in 2 seconds instead -> scheduler
-        # TODO: FT or should resurrect when player asks for it (/rez)
-
+     
 
     ####################  resurrect  ####################
     
@@ -178,16 +182,22 @@ class SAvatar(SCharactor):
         and broadcast the resurrection to everyone. 
         """
         
-        log.debug('Player %s resurrected' % self.name)
-        self.hp = config_get_maxhp()
-        # return  to entrance cell
-        newcell = self._mdl.world.get_entrance()
-        newcell.add_av(self)
-        self.cell = newcell
-        # return to walking speed
-        self.move_cd = config_get_walkcd()
-        # broadcast
-        avinfo = self.serialize()
-        self._nw.bc_resurrect(self.name, avinfo)
-
+        now = time()
+        
+        if now - self.death_ts <= self.rez_cd: # can resurrect
+            self.hp = config_get_maxhp()
+            
+            newcell = self._mdl.world.get_entrance() # back to entrance
+            newcell.add_av(self)
+            self.cell = newcell
+        
+            self.move_cd = config_get_walkcd() # return to walking speed
+            log.debug('Player %s resurrected' % self.name)
+            
+            avinfo = self.serialize()
+            self._nw.bc_resurrect(self.name, avinfo) # broadcast
+        
+        else: # must wait
+            log.debug('Player %s must wait to rez' % self.name)
+            
         

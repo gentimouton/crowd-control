@@ -216,7 +216,20 @@ class SGame():
         args[0] is not the command's name, it's the first cmd argument. 
         """
 
-        if cmd == 'start':
+        if cmd == 'nick':
+            if args: # check that the user provided a new name
+                newname = args[0]
+                self.on_playernamechange(pname, newname)
+        
+        elif cmd == 'rez':
+            av = self.players[pname]
+            av.resurrect()
+            
+        elif cmd == 'run':
+            av = self.players[pname]
+            av.toggle_movespeed()
+
+        elif cmd == 'start':
             if self.gameon:
                 self.stopgame(pname)
             self.startgame(pname)
@@ -225,15 +238,6 @@ class SGame():
             if self.gameon:
                 self.stopgame(pname)
             
-        elif cmd == 'nick':
-            if args: # check that the user provided a new name
-                newname = args[0]
-                self.on_playernamechange(pname, newname)
-
-        elif cmd == 'run':
-            av = self.players[pname]
-            av.toggle_movespeed()
-
 
     ########################  game commands  ###################
     

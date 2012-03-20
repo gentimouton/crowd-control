@@ -44,6 +44,9 @@ def config_get_walkcd():
 def config_get_runcd():
     return int(_dict['runcd'])
 
+def config_get_rezcd():
+    return int(_dict['rezcd'])
+
 def config_get_baseatk():
     return int(_dict['baseatk'])
 def config_get_maxhp():
