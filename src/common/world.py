@@ -1,9 +1,9 @@
+from collections import deque
 from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
     DIRECTION_RIGHT
 import logging
 import os
 import random
-
 
 
 class World():
@@ -96,11 +96,12 @@ class World():
                 cb()
         
         
-    def buildpath(self):
+    def buildpath_old(self):
         """ Starting from entrance (d=0),
         a cell's distance to the entrance is d+1
         if the shortest distance of its neighbor cells to the entrance is d.
         """
+        
         def recursive_dist_fill(cell, dist):
             try:
                 assert self.iswalkable(cell.coords)
@@ -116,8 +117,32 @@ class World():
                 [recursive_dist_fill(c, dist + 1) for direc, c in neighbors]            
         
         recursive_dist_fill(self.get_entrance(), 0)
+           
+
         
     
+    def buildpath(self):
+        """ A cell is a vertex in the world graph. 
+        Edges are the links cells have with each other, using cell.get_neighbors. 
+        Using a breadth-first visit of the world graph 
+        makes path building linear with the number of cells.
+        """
+        
+        fifo = deque()
+        # add entrance
+        entrance = self.get_entrance()
+        entrance.entrance_dist = 0
+        fifo.append(entrance) # any cell added has its distance set
+        
+        while fifo: # until empty 
+            cell = fifo.popleft()
+            dist = cell.entrance_dist
+            for direction, c in cell.get_neighbors():
+                if not c.entrance_dist:
+                    c.entrance_dist = dist + 1
+                    fifo.append(c)
+                
+        
     
     def get_lair(self):
         return self.get_cell(self.lair_coords)
