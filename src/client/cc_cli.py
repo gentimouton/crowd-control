@@ -12,7 +12,6 @@ from client.view.view import MasterView
 from threading import current_thread
 
     
-    
 def main():
 
     load_client_config() #config contains all the constants for the game
@@ -21,9 +20,6 @@ def main():
     clientid = str(current_thread().ident)
     clogger = config_logger(clientid)
     
-    #logging.config.fileConfig('client_logging.conf')
-    #clogger = logging.getLogger('client')
-
     clogger.debug('Client started')
     
     em = ClientEventManager()

@@ -206,7 +206,7 @@ class MasterView:
         gamecoords = char.cell.coords 
         screenleft, screentop = self.game_to_screen_coords(gamecoords)
         
-        if screenleft and screentop: # in screen range    
+        if screenleft and screentop: # in screen range
             # ask the charactor's sprite to position itself
             charspr = self.charactor_sprites.get_spr(char)
             self.active_charactor_sprites.add(charspr) # activate the spr
@@ -320,8 +320,7 @@ class MasterView:
         """
                 
         char = event.charactor
-        charspr = self.charactor_sprites.get_spr(char)
-        self.active_charactor_sprites.remove(charspr)
+        self.display_char_if_inrange(char)
         log.info('%s died' % char.name)
 
 

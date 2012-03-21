@@ -5,9 +5,9 @@ from client.events_client import CreepPlaceEvent, RemoteCharactorMoveEvent, \
 class Creep(Charactor):
     """ Representation of a remote enemy monster. """
         
-    def __init__(self, evManager, cname, cell, facing, atk, hp):
+    def __init__(self, evManager, cname, cell, facing, atk, hp, maxhp):
         
-        Charactor.__init__(self, cell, facing, cname, atk, hp, evManager)
+        Charactor.__init__(self, cell, facing, cname, atk, hp, maxhp, evManager)
         
         # place in cell
         self.cell = cell

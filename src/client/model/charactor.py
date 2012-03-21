@@ -5,7 +5,7 @@ class Charactor():
     It is located on a cell, and can move to another cell.
     """
     
-    def __init__(self, cell, facing, name, atk, hp, evManager):
+    def __init__(self, cell, facing, name, atk, hp, maxhp, evManager):
         self._em = evManager
         
         self.name = name
@@ -13,11 +13,13 @@ class Charactor():
         self.facing = facing # which direction the charactor is facing     
         
         self.atk = atk
+        self.maxhp = maxhp
         self.hp = hp
         
       
     def __str__(self):
-        return '%s at %s, %d hp' % (self.name, self.cell.coords, self.hp)
+        return '%s at %s, %d/%d hp'\
+                % (self.name, self.cell.coords, self.hp, self.maxhp)
               
 
     def changename(self, newname):

@@ -1,5 +1,5 @@
 from client.config import config_get_scrollfontcolor, config_get_scrollfontsize, \
-    config_get_hpbarfullcolor
+    config_get_hpbarfullcolor, config_get_hpbaremptycolor
 from client.view.indexablespr import IndexableSprite
 from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
     DIRECTION_RIGHT
@@ -7,7 +7,7 @@ from pygame import Rect
 from pygame.font import Font
 from pygame.sprite import Sprite
 import pygame
-
+from math import log
 
 
 
@@ -15,9 +15,6 @@ import pygame
 class CharactorSprite(IndexableSprite):
     """ The representation of a Charactor. """
     
-    facing_sprites = {}
-    
-
 
     def __init__(self, char, sprdims, bgcolor, groups=None):
         
@@ -28,8 +25,8 @@ class CharactorSprite(IndexableSprite):
 
         # build the various sprite orientations
         self.w, self.h = sprdims
-        if not self.facing_sprites: # TODO: FT make this cleaner
-            self.facing_sprites = build_facingsprites(bgcolor, self.w, self.h) 
+        self.alive_facing_sprites = build_facingsprites(bgcolor, self.w, self.h)
+        self.dead_facing_sprites = build_facingsprites((111, 111, 111), self.w, self.h)
         
         # no need to build the img yet: 
         # it will happen when view calls update_img
@@ -46,35 +43,62 @@ class CharactorSprite(IndexableSprite):
         
         self.rect.center = sprleft, sprtop
         
-        # place the oriented av spr
-        charsurfbg = self.facing_sprites[self.char.facing]
-        self.image = charsurfbg.copy()
+        mhp, hp = self.char.maxhp, self.char.hp
         
-        # add a 5-px thick hp bar, 4px per HP left
-        # make a copy when char created, moved, or rcv_dmg
-        color = config_get_hpbarfullcolor()
-        if self.char.facing == DIRECTION_LEFT: # vertical, right side
-            hpfullrect = Rect(self.w * 10 / 12, self.h / 8,
-                              self.w / 12, 4 * self.char.hp)
-        if self.char.facing == DIRECTION_RIGHT:# vertical, left side
-            hpfullrect = Rect(self.w * 1 / 12, self.h / 8,
-                              self.w / 12, 4 * self.char.hp)
-        if self.char.facing == DIRECTION_UP:# horizontal
-            hpfullrect = Rect(self.w / 8, self.h * 10 / 12,
-                              4 * self.char.hp, self.h / 12)
-        if self.char.facing == DIRECTION_DOWN:# horizontal
-            hpfullrect = Rect(self.w / 8, self.h * 1 / 12,
-                              4 * self.char.hp, self.h / 12)            
-        
-        self.image.fill(color, hpfullrect)
-        # TODO: add a red bar too from config_get_hpbaremptycolor()
-        # TODO: for vertical hp bars, green is at the top of red, whereas it should be at the bottom
-        # TODO: add maxhp to the model, and display in % of HP instead of absolute number of HP
-        
-        
+        if hp > 0: # place the oriented av spr and add hp bar if alive
+            
+            charsurfbg = self.alive_facing_sprites[self.char.facing]
+            self.image = charsurfbg.copy()
+            
+            # hpbar is updated when char is created, moves, or rcv_dmg
+            thickness = max(1, log(mhp)) # logarithmically thicker with more hpmax 
+            
+            # get 'red' and 'green' bar sizes
+            def barsizes(sprsize):
+                # sprsize can take values in self.h and self.w
+                # e for empty 'red' bar, f for full 'green' bar
+                # when horizontal bar, padding of 1/8 of the spr size on the sides, 
+                # and padding of 1/12 of the spr size below.     
+                totalsize = int(6 / 8 * sprsize) 
+                fullsize = int(hp / mhp * 6 / 8 * sprsize)
+                #emptysize = (mhp - hp) / mhp * 6 / 8 * sprsize
+                emptysize = totalsize - fullsize
+                return emptysize, fullsize
+            
+            if self.char.facing == DIRECTION_LEFT: # vertical, right side
+                emptysize, fullsize = barsizes(self.h)
+                erect = Rect(self.w * 11 / 12 - thickness, self.h / 8,
+                             thickness, emptysize)
+                frect = Rect(erect.left, erect.bottom, thickness, fullsize)
+            if self.char.facing == DIRECTION_RIGHT:# vertical, left side
+                emptysize, fullsize = barsizes(self.h)
+                erect = Rect(self.w / 12, self.h / 8, thickness, emptysize)
+                frect = Rect(erect.left, erect.bottom, thickness, fullsize)
+            if self.char.facing == DIRECTION_UP:# horizontal, upwards
+                emptysize, fullsize = barsizes(self.w)
+                frect = Rect(self.w / 8, self.h * 11 / 12 - thickness,
+                             fullsize, thickness)
+                erect = Rect(frect.right, frect.top, emptysize, thickness)
+            if self.char.facing == DIRECTION_DOWN:# horizontal, downwards
+                emptysize, fullsize = barsizes(self.w)
+                frect = Rect(self.w / 8, self.h / 12, fullsize, thickness)
+                erect = Rect(frect.right, frect.top, emptysize, thickness)
                 
+            ecolor = config_get_hpbaremptycolor() # red bar
+            fcolor = config_get_hpbarfullcolor() # green bar
+            self.image.fill(ecolor, erect)
+            self.image.fill(fcolor, frect)
+        
+        else: # display in gray if dead
+            charsurfbg = self.dead_facing_sprites[self.char.facing]
+            self.image = charsurfbg.copy()
+        
+        
+        
+        
     def update(self, duration):
         """ This is called by the view every frame. """
+        
         pass
                 
         

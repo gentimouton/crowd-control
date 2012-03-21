@@ -14,9 +14,9 @@ log = logging.getLogger('client')
 class Avatar(Charactor):
     """ An entity controlled by a player. One avatar per player. """
             
-    def __init__(self, name, cell, facing, atk, hp, move_cd, islocal, evManager):
+    def __init__(self, name, cell, facing, atk, hp, maxhp, move_cd, islocal, evManager):
         
-        Charactor.__init__(self, cell, facing, name, atk, hp, evManager)
+        Charactor.__init__(self, cell, facing, name, atk, hp, maxhp, evManager)
            
         self.cell = cell
         self.cell.add_av(self)

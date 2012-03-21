@@ -6,7 +6,7 @@ class SCharactor():
     def __init__(self, name, cell, facing, hp, atk):
         self.name = name
         self.facing = facing #direction the player is facing
-        self.hp = hp
+        self.hp = self.maxhp = hp
         self.atk = atk
         
     
@@ -19,6 +19,7 @@ class SCharactor():
         dic = {'coords':self.cell.coords,
                'facing':self.facing,
                'atk':self.atk,
+               'maxhp':self.maxhp,
                'hp':self.hp}
         return dic
     

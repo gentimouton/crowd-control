@@ -21,8 +21,8 @@ class SAvatar(SCharactor):
     def __init__(self, mdl, nw, pname, cell, facing):
         """ Create an Avatar """
         
-        hp, atk = config_get_maxhp(), config_get_baseatk()
-        SCharactor.__init__(self, pname, cell, facing, hp, atk)
+        maxhp, atk = config_get_maxhp(), config_get_baseatk()
+        SCharactor.__init__(self, pname, cell, facing, maxhp, atk)
         self._mdl = mdl
         self._nw = nw
         
@@ -79,7 +79,7 @@ class SAvatar(SCharactor):
         """ Receive damage from an attacker. Return amount of dmg received. """
         self.hp -= dmg
         log.debug('Player %s received %d dmg from %s' 
-                       % (self.name, dmg, atker.name))
+                  % (self.name, dmg, atker.name))
         
         self._nw.bc_attack(atker.name, self.name, dmg)
         
@@ -99,7 +99,6 @@ class SAvatar(SCharactor):
         
         log.debug('Player %s died' % self.name)
         self.cell.rm_av(self)
-        self.cell = None
         self.death_ts = time()
         self._nw.bc_death(self.name)
         # self.resurrect() # TODO: FT should resurrect in 2 seconds instead -> scheduler

@@ -207,14 +207,15 @@ class Game:
         """
         
         coords, facing = pinfo['coords'], pinfo['facing']
-        atk, hp = pinfo['atk'], pinfo['hp']
+        atk = pinfo['atk']
+        hp, maxhp = pinfo['hp'], pinfo['maxhp']
         move_cd = pinfo['move_cd_txt'][0] # dont care about move_txt when spawning avs
         cell = self.world.get_cell(coords)
 
         # whether that Player is the local client or a remote client
         islocal = hasattr(self, 'myname') and pname == self.myname 
         
-        newplayer = Avatar(pname, cell, facing, atk, hp, move_cd, islocal, self._em)       
+        newplayer = Avatar(pname, cell, facing, atk, hp, maxhp, move_cd, islocal, self._em)       
         self.avs[pname] = newplayer
         
         # notify the view 
@@ -234,12 +235,15 @@ class Game:
         Info is a dic made on the server side by SCreep. """
         
         cell, facing = self.world.get_cell(creepinfo['coords']), creepinfo['facing']
-        atk, hp = creepinfo['atk'], creepinfo['hp']
+        atk = creepinfo['atk']
+        hp, maxhp = creepinfo['hp'], creepinfo['maxhp']
         
-        creep = Creep(self._em, cname, cell, facing, atk, hp)       
+        creep = Creep(self._em, cname, cell, facing, atk, hp, maxhp)       
         self.creeps[cname] = creep
 
         
+    
+    ######################  left  ##################################
             
     def on_playerleft(self, event):
         """ remove a player """
