@@ -94,30 +94,7 @@ class World():
         elif callbacks: # server-side
             for cb in callbacks:
                 cb()
-        
-        
-    def buildpath_old(self):
-        """ Starting from entrance (d=0),
-        a cell's distance to the entrance is d+1
-        if the shortest distance of its neighbor cells to the entrance is d.
-        """
-        
-        def recursive_dist_fill(cell, dist):
-            try:
-                assert self.iswalkable(cell.coords)
-            except AssertionError:
-                self.log.warning('Cell ' + str(cell) + ' should not be reachable')
-                return
-            
-            if cell.entrance_dist is not None and cell.entrance_dist <= dist:
-                return
-            else:
-                cell.entrance_dist = dist
-                neighbors = cell.get_neighbors()
-                [recursive_dist_fill(c, dist + 1) for direc, c in neighbors]            
-        
-        recursive_dist_fill(self.get_entrance(), 0)
-           
+                  
 
         
     
