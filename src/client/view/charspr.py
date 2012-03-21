@@ -16,10 +16,9 @@ class CharactorSprite(IndexableSprite):
     """ The representation of a Charactor. """
     
 
-    def __init__(self, char, sprdims, bgcolor, groups=None):
+    def __init__(self, char, sprdims, bgcolor, *groups):
         
-        self.key = char # must be set before adding the spr to group(s)
-        Sprite.__init__(self, groups)
+        IndexableSprite.__init__(self, char, *groups)
         
         self.char = char
 
@@ -35,14 +34,25 @@ class CharactorSprite(IndexableSprite):
                 
             
     def update_img(self, sprleft, sprtop):
-        """ update the image from the model.
-        Position the spr as told by the view. 
+        """ Position the spr as told by the view. 
         This is called when the model changed,
         or when dmg have to be displayed. 
         """
-        
+
         self.rect.center = sprleft, sprtop
+        self.dirty = 1 # self.update will take care of self.image
         
+        
+        
+    def update(self, duration):
+        """ This is called by the view every frame. 
+        If dirty, update the image based on the model.
+        if self.dirty == 1, LayeredDirty.draw sets it to 0.  
+        """
+        
+        if self.dirty == 0: # nothing to do
+            return
+    
         mhp, hp = self.char.maxhp, self.char.hp
         
         if hp > 0: # place the oriented av spr and add hp bar if alive
@@ -92,14 +102,8 @@ class CharactorSprite(IndexableSprite):
         else: # display in gray if dead
             charsurfbg = self.dead_facing_sprites[self.char.facing]
             self.image = charsurfbg.copy()
-        
-        
-        
-        
-    def update(self, duration):
-        """ This is called by the view every frame. """
-        
-        pass
+                
+
                 
         
 
