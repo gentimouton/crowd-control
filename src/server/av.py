@@ -18,13 +18,14 @@ class SAvatar(SCharactor):
     # TODO: RFCTR should globalize model and network too
 
     
-    def __init__(self, mdl, nw, pname, cell, facing):
+    def __init__(self, mdl, nw, sched, pname, cell, facing):
         """ Create an Avatar """
         
         maxhp, atk = config_get_maxhp(), config_get_baseatk()
         SCharactor.__init__(self, pname, cell, facing, maxhp, atk)
         self._mdl = mdl
         self._nw = nw
+        self._sched = sched
         
         # place in cell
         self.cell = cell
@@ -37,9 +38,7 @@ class SAvatar(SCharactor):
                          }
         self.move_ts = 0 # timestamp of last movement; can move right away (no cooldown)
         self.move_cd = config_get_walkcd() # start by walking
-        
-        self.death_ts = 0 # can resurrect right away
-        self.rez_cd = config_get_rezcd() # minimum duration between death and rez
+                
         
    
     def serialize(self):
@@ -99,9 +98,10 @@ class SAvatar(SCharactor):
         
         log.debug('Player %s died' % self.name)
         self.cell.rm_av(self)
-        self.death_ts = time()
         self._nw.bc_death(self.name)
-        # self.resurrect() # TODO: FT should resurrect in 2 seconds instead -> scheduler
+        # schedule rez after rez cooldown
+        rez_cd = config_get_rezcd() # duration between death and rez
+        self._sched.schedule_action(rez_cd, self.name, self.resurrect) 
 
 
     #########################  move  ##############################
@@ -177,13 +177,11 @@ class SAvatar(SCharactor):
     ####################  resurrect  ####################
     
     def resurrect(self):
-        """ Return avatar to entrance with full HP,
+        """ If dead, return avatar to entrance with full HP,
         and broadcast the resurrection to everyone. 
         """
-        
-        now = time()
-        
-        if now - self.death_ts <= self.rez_cd: # can resurrect
+        if self.hp <= 0:
+                
             self.hp = config_get_maxhp()
             
             newcell = self._mdl.world.get_entrance() # back to entrance
@@ -196,7 +194,5 @@ class SAvatar(SCharactor):
             avinfo = self.serialize()
             self._nw.bc_resurrect(self.name, avinfo) # broadcast
         
-        else: # must wait
-            log.debug('Player %s must wait to rez' % self.name)
             
         

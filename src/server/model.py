@@ -144,7 +144,7 @@ class SGame():
         # build the new player on the entrance cell and facing upwards
         cell = self.world.get_entrance()
         facing = DIRECTION_UP
-        player = SAvatar(self, self._nw, pname, cell, facing)
+        player = SAvatar(self, self._nw, self._sched, pname, cell, facing)
         self.players[pname] = player
         
         # greet the new player
