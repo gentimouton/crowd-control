@@ -115,7 +115,7 @@ class World():
             cell = fifo.popleft()
             dist = cell.entrance_dist
             for direction, c in cell.get_neighbors():
-                if not c.entrance_dist:
+                if c.entrance_dist == None:
                     c.entrance_dist = dist + 1
                     fifo.append(c)
                 
