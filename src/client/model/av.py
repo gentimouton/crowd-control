@@ -122,8 +122,11 @@ class Avatar(Charactor):
                 self.cell.add_av(self)
                 self.facing = direction
                 #self.move_ts = now
-            else: # dest is not walkable: pushing the wall is not moving 
-                return # dont send a move event
+            elif self.facing != direction: # turn while facing a wall
+                self.facing = direction # then change facing
+            else: # if same facing as before, do nothing
+                return 
+                
                 
         # send to view and server that I moved
         ev = SendMoveEvt(self, self.cell.coords, self.facing)

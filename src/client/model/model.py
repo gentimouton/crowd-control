@@ -268,7 +268,7 @@ class Game:
         """
         if self.acceptinput:
             mychar = self.avs[self.myname]
-            mychar.move_relative(event.direction, event.strafing, event.rotate)
+            mychar.move_relative(event.direction, event.strafing, event.rotating)
 
   
     def on_remotemove(self, event):

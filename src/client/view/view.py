@@ -8,11 +8,11 @@ from client.events_client import QuitEvent, SubmitChat, CharactorRemoveEvent, \
     CharactorRcvDmgEvt, RemoteCharactorAtkEvt, LocalAvRezEvt, CharactorDeathEvt, \
     RemoteCharactorRezEvt, SendAtkEvt, MGreetNameEvt, MBuiltMapEvt
 from client.view.charspr import CharactorSprite, ScrollingTextSprite
-from client.view.indexablespr import RenderUpdatesDict
+from client.view.indexablespr import IndexedLayeredUpdates
 from client.view.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
 from common.events import TickEvent
-from pygame.sprite import RenderUpdates, Sprite
+from pygame.sprite import LayeredUpdates, Sprite
 import logging
 import pygame
 
@@ -83,9 +83,9 @@ class MasterView:
         # reveal
         pygame.display.flip()
 
-        self.charactor_sprites = RenderUpdatesDict() # all in game charactors 
-        self.active_charactor_sprites = RenderUpdatesDict() # chars currently visible on screen
-        self.dmg_sprites = RenderUpdates() # dmg to display on screen
+        self.charactor_sprites = IndexedLayeredUpdates() # all in game charactors 
+        self.active_charactor_sprites = IndexedLayeredUpdates() # chars currently visible on screen
+        self.dmg_sprites = LayeredUpdates() # dmg to display on screen
 
 
     def build_gui(self):
@@ -93,7 +93,7 @@ class MasterView:
 
 
         # start adding widgets
-        self.gui_sprites = RenderUpdates()   
+        self.gui_sprites = LayeredUpdates()   
 
         # -- add quit button  at bottom-right 
         rect = pygame.Rect((self.win_w * 7 / 8, self.win_h * 11 / 12),
@@ -312,7 +312,8 @@ class MasterView:
         creep = event.creep
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_creep_bgcolor()
-        CharactorSprite(creep, sprdims, bgcolor, self.charactor_sprites)
+        layer = 1 # which layer to put that spr into
+        CharactorSprite(creep, sprdims, bgcolor, layer, self.charactor_sprites)
         # TODO: FT CreepSprite() instead of CharactorSprite()
         self.display_char_if_inrange(creep)
 
@@ -397,7 +398,8 @@ class MasterView:
         avatar = event.avatar
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_myav_bgcolor()
-        CharactorSprite(avatar, sprdims, bgcolor, self.charactor_sprites)
+        layer = 3 # local avatar sprite is over other avs, and over creeps 
+        CharactorSprite(avatar, sprdims, bgcolor, layer, self.charactor_sprites)
         cleft, ctop = avatar.cell.coords
         self.center_screen_on_coords(cleft, ctop) #must be done before display_char
         self.display_char_if_inrange(avatar)
@@ -410,7 +412,8 @@ class MasterView:
         av = event.avatar
         sprdims = (self.cspr_size, self.cspr_size)
         bgcolor = config_get_avdefault_bgcolor()
-        CharactorSprite(av, sprdims, bgcolor, self.charactor_sprites)
+        layer = 2 # other av sprites are over creeps but below the local av spr 
+        CharactorSprite(av, sprdims, bgcolor, layer, self.charactor_sprites)
         self.display_char_if_inrange(av)
 
 
@@ -433,7 +436,7 @@ class MasterView:
         """ Move the spr of creeps or other avatars. """
 
         char = event.charactor
-        self.display_char_if_inrange(char) 
+        self.display_char_if_inrange(char)
         
         
     #################  resurrect  ############

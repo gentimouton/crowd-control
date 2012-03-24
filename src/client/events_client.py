@@ -222,10 +222,10 @@ class MPlayerLeftEvt():
 
 class InputMoveRequest():
     """ sent from input controller to model """
-    def __init__(self, direction, strafing=False, rotate=False):
+    def __init__(self, direction, strafing=False, rotating=False):
         self.direction = direction
         self.strafing = strafing
-        self.rotate = rotate
+        self.rotating = rotating
 
 class SendMoveEvt():
     """ sent from model to view and network controller when my avatar moved """

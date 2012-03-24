@@ -16,9 +16,9 @@ class CharactorSprite(IndexableSprite):
     """ The representation of a Charactor. """
     
 
-    def __init__(self, char, sprdims, bgcolor, *groups):
+    def __init__(self, char, sprdims, bgcolor, layer=None, *groups):
         
-        IndexableSprite.__init__(self, char, *groups)
+        IndexableSprite.__init__(self, char, layer, *groups)
         
         self.char = char
 
