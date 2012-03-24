@@ -205,15 +205,15 @@ class MasterView:
         
         gamecoords = char.cell.coords 
         screenleft, screentop = self.game_to_screen_coords(gamecoords)
+        charspr = self.charactor_sprites.get_spr(char)
         
         if screenleft and screentop: # in screen range
             # ask the charactor's sprite to position itself
-            charspr = self.charactor_sprites.get_spr(char)
             self.active_charactor_sprites.add(charspr) # activate the spr
             charspr.update_img(screenleft, screentop)
             
         else: # charactor got out of screen: desactivate the spr
-            self.active_charactor_sprites.remove(char)
+            self.active_charactor_sprites.remove(charspr)
             
             
     def display_dmg_if_inrange(self, char, dmg):
@@ -243,21 +243,26 @@ class MasterView:
     def on_tick(self, event):    
         """ Render all the dirty sprites """
         
+        chars = self.active_charactor_sprites
+        dmgs = self.dmg_sprites
+        gui = self.gui_sprites
+        win, bg = self.window, self.background
+        
         # clear the window from all the sprites, replacing them with the bg
-        self.active_charactor_sprites.clear(self.window, self.background)
-        self.dmg_sprites.clear(self.window, self.background)
-        self.gui_sprites.clear(self.window, self.background)
+        chars.clear(win, bg)
+        dmgs.clear(win, bg)
+        gui.clear(win, bg)
         
         # update all the sprites - calls update() on each sprite of the groups
         duration = event.duration # how long passed since last tick
-        self.active_charactor_sprites.update(duration)
-        self.dmg_sprites.update(duration)
-        self.gui_sprites.update(duration)
+        chars.update(duration)
+        dmgs.update(duration)
+        gui.update(duration)
         
         # collect the display areas that have changed
-        dirty_rects_chars = self.active_charactor_sprites.draw(self.window)
-        dirty_rects_dmg = self.dmg_sprites.draw(self.window)
-        dirty_rects_gui = self.gui_sprites.draw(self.window)
+        dirty_rects_chars = chars.draw(self.window)
+        dirty_rects_dmg = dmgs.draw(self.window)
+        dirty_rects_gui = gui.draw(self.window)
         
         # and redisplay those areas only
         dirty_rects = dirty_rects_chars + dirty_rects_dmg + dirty_rects_gui 

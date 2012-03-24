@@ -40,19 +40,7 @@ class CharactorSprite(IndexableSprite):
         """
 
         self.rect.center = sprleft, sprtop
-        self.dirty = 1 # self.update will take care of self.image
         
-        
-        
-    def update(self, duration):
-        """ This is called by the view every frame. 
-        If dirty, update the image based on the model.
-        if self.dirty == 1, LayeredDirty.draw sets it to 0.  
-        """
-        
-        if self.dirty == 0: # nothing to do
-            return
-    
         mhp, hp = self.char.maxhp, self.char.hp
         
         if hp > 0: # place the oriented av spr and add hp bar if alive
@@ -80,16 +68,16 @@ class CharactorSprite(IndexableSprite):
                 erect = Rect(self.w * 11 / 12 - thickness, self.h / 8,
                              thickness, emptysize)
                 frect = Rect(erect.left, erect.bottom, thickness, fullsize)
-            if self.char.facing == DIRECTION_RIGHT:# vertical, left side
+            elif self.char.facing == DIRECTION_RIGHT:# vertical, left side
                 emptysize, fullsize = barsizes(self.h)
                 erect = Rect(self.w / 12, self.h / 8, thickness, emptysize)
                 frect = Rect(erect.left, erect.bottom, thickness, fullsize)
-            if self.char.facing == DIRECTION_UP:# horizontal, upwards
+            elif self.char.facing == DIRECTION_UP:# horizontal, upwards
                 emptysize, fullsize = barsizes(self.w)
                 frect = Rect(self.w / 8, self.h * 11 / 12 - thickness,
                              fullsize, thickness)
                 erect = Rect(frect.right, frect.top, emptysize, thickness)
-            if self.char.facing == DIRECTION_DOWN:# horizontal, downwards
+            elif self.char.facing == DIRECTION_DOWN:# horizontal, downwards
                 emptysize, fullsize = barsizes(self.w)
                 frect = Rect(self.w / 8, self.h / 12, fullsize, thickness)
                 erect = Rect(frect.right, frect.top, emptysize, thickness)
@@ -102,7 +90,17 @@ class CharactorSprite(IndexableSprite):
         else: # display in gray if dead
             charsurfbg = self.dead_facing_sprites[self.char.facing]
             self.image = charsurfbg.copy()
-                
+        
+
+        
+        
+        
+    def update(self, duration):
+        """ This is called by the view every frame. 
+        If dirty, update the image based on the model.
+        if self.dirty == 1, LayeredDirty.draw sets it to 0.  
+        """
+        pass        
 
                 
         

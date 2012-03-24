@@ -1,3 +1,4 @@
+from client.config import config_get_kbsensitivity
 from client.events_client import InputMoveRequest, QuitEvent, UpClickEvent, \
     DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, NonprintableKeyEvent, \
     InputAtkRequest
@@ -35,7 +36,8 @@ class InputController:
         
         #if key pushed for more than 100ms, then send KEYDOWN event every 25ms
         pygame.init() #calling init() multiple times does not mess anything
-        pygame.key.set_repeat(100, 50) 
+        trigger, repeat = config_get_kbsensitivity()
+        pygame.key.set_repeat(trigger, repeat) 
     
 
     def on_tick(self, tickevent):

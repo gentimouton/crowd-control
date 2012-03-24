@@ -112,6 +112,12 @@ def config_get_nick():
 
 
 
+# ------ input 
+
+def config_get_kbsensitivity():
+    trigger, repeat = _dict['kbsensitivity'].strip().split(',')
+    return int(trigger), int(repeat)
+
 # ---- logging
 
 def config_get_logfolder():
