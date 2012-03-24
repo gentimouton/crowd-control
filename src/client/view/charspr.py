@@ -91,9 +91,6 @@ class CharactorSprite(IndexableSprite):
             charsurfbg = self.dead_facing_sprites[self.char.facing]
             self.image = charsurfbg.copy()
         
-
-        
-        
         
     def update(self, duration):
         """ This is called by the view every frame. 
@@ -101,8 +98,6 @@ class CharactorSprite(IndexableSprite):
         if self.dirty == 1, LayeredDirty.draw sets it to 0.  
         """
         pass        
-
-                
         
 
 ###############  sprite builders

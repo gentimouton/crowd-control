@@ -260,12 +260,12 @@ class MasterView:
         gui.update(duration)
         
         # collect the display areas that have changed
-        dirty_rects_chars = chars.draw(self.window)
-        dirty_rects_dmg = dmgs.draw(self.window)
-        dirty_rects_gui = gui.draw(self.window)
+        dirty_chars = chars.draw(self.window)
+        dirty_dmg = dmgs.draw(self.window)
+        dirty_gui = gui.draw(self.window)
         
         # and redisplay those areas only
-        dirty_rects = dirty_rects_chars + dirty_rects_dmg + dirty_rects_gui 
+        dirty_rects = dirty_chars + dirty_dmg + dirty_gui
         pygame.display.update(dirty_rects)
         
         
