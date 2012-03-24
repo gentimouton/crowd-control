@@ -222,9 +222,10 @@ class MPlayerLeftEvt():
 
 class InputMoveRequest():
     """ sent from input controller to model """
-    def __init__(self, direction, strafing=False):
+    def __init__(self, direction, strafing=False, rotate=False):
         self.direction = direction
         self.strafing = strafing
+        self.rotate = rotate
 
 class SendMoveEvt():
     """ sent from model to view and network controller when my avatar moved """
@@ -246,19 +247,6 @@ class RemoteCharactorMoveEvent():
         self.charactor = char
       
         
-#########################  movespeed  ################################
-
-class NwRcvMoveSpeedEvt():
-    """ nw tells model that a player changed his movement speed """
-    def __init__(self, name, cooldown, txt):
-        self.name = name
-        self.move_cd = cooldown
-        self.move_txt = txt
-        
-class ChangedMoveSpeedEvt():
-    """ model tells view/widgets that the local player changed his movement speed """
-    def __init__(self, txt):
-        self.move_txt = txt # 'running' or 'walking'
 
 #########################  namechange  ######################################
 

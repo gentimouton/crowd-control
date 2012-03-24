@@ -225,10 +225,6 @@ class SGame():
             av = self.players[pname]
             av.resurrect()
             
-        elif cmd == 'run':
-            av = self.players[pname]
-            av.toggle_movespeed()
-
         elif cmd == 'start':
             if self.gameon:
                 self.stopgame(pname)

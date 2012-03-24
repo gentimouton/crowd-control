@@ -39,10 +39,8 @@ def config_get_hostport():
 
 # game design
 
-def config_get_walkcd():
-    return int(_dict['walkcd'])
-def config_get_runcd():
-    return int(_dict['runcd'])
+def config_get_atkcd():
+    return int(_dict['atkcd'])
 
 def config_get_rezcd():
     return int(_dict['rezcd'])

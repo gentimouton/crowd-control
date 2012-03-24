@@ -6,7 +6,7 @@ from common.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
 from common.events import TickEvent
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, \
     K_BACKSPACE, K_RETURN, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION, K_RCTRL, \
-    K_LCTRL, KMOD_LSHIFT, KMOD_RSHIFT
+    K_LCTRL, KMOD_LSHIFT, KMOD_RSHIFT, KMOD_RALT, KMOD_ALT
 import pygame
 
 
@@ -26,7 +26,8 @@ class InputController:
     #non-printable keys used to detect when typing in a text input field
     _nonprintable_keys = [K_RETURN, K_BACKSPACE]
     _atk_keys = [K_RCTRL, K_LCTRL]     
-    _straf_keys = [KMOD_LSHIFT, KMOD_RSHIFT]
+    _strafmod_keys = [KMOD_LSHIFT, KMOD_RSHIFT]
+    _rotatemod_keys = [KMOD_RALT, KMOD_ALT] 
         
     def __init__(self, evManager):
         self._em = evManager
@@ -34,7 +35,7 @@ class InputController:
         
         #if key pushed for more than 100ms, then send KEYDOWN event every 25ms
         pygame.init() #calling init() multiple times does not mess anything
-        pygame.key.set_repeat(100, 25) 
+        pygame.key.set_repeat(100, 50) 
     
 
     def on_tick(self, tickevent):
@@ -59,21 +60,29 @@ class InputController:
                     
                 elif key in self._key2dir:
                     mods = pygame.key.get_mods()
+                    
                     # check for strafing keys ON
                     straf = False
-                    for k in self._straf_keys:
+                    for k in self._strafmod_keys:
                         if mods & k:
                             straf = True
                             break
+                    
+                    # check for rotating keys ON
+                    rotate = False
+                    for k in self._rotatemod_keys:
+                        if mods & k:
+                            rotate = True
+                    
                     # send input msg 
-                    ev = InputMoveRequest(self._key2dir[key], straf)
+                    ev = InputMoveRequest(self._key2dir[key], straf, rotate)
 
                 elif key in self._nonprintable_keys: 
                     ev = NonprintableKeyEvent(key)
                 elif unicode is not '': 
                     # visible chars: letters, numbers, punctuation, space, tab
                     ev = UnicodeKeyPushedEvent(key, unicode)
-                    
+            
             # click events
             elif pevent.type == MOUSEBUTTONDOWN and pevent.button == 1:
                 ev = DownClickEvent(pevent.pos)

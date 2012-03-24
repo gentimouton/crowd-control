@@ -4,7 +4,7 @@ from common.events import TickEvent
 from common.messages import SrvPlyrJoinMsg, SrvPlyrLeftMsg, ClNameChangeMsg, \
     ClChatMsg, SrvChatMsg, SrvGreetMsg, SrvNameChangeMsg, ClMoveMsg, SrvMoveMsg, \
     SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
-    SrvRezMsg, SrvNameChangeFailMsg, SrvMoveSpeedMsg
+    SrvRezMsg, SrvNameChangeFailMsg
 from server.config import config_get_hostport
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
@@ -265,18 +265,6 @@ class NetworkController(Server):
         self._bc(data)
         
 
-    #################  movespeed  #####################
-    
-    def bc_movespeed(self, name, move_cd, txt):
-        """ notify everyone that a player toggled to running or walking """
-        
-        dic = {'name': name, 
-               'move_cd': move_cd,
-               'move_txt': txt}
-        rmsg = SrvMoveSpeedMsg(dic)
-        data = {"action": "movespeed", "msg": rmsg.d}
-        self._bc(data)
-        
 
 
             

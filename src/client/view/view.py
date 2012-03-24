@@ -213,7 +213,7 @@ class MasterView:
             charspr.update_img(screenleft, screentop)
             
         else: # charactor got out of screen: desactivate the spr
-            self.active_charactor_sprites.remove(charspr)
+            self.active_charactor_sprites.remove(char)
             
             
     def display_dmg_if_inrange(self, char, dmg):

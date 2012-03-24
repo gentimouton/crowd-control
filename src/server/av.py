@@ -1,6 +1,6 @@
 from server.charactor import SCharactor
-from server.config import config_get_walkcd, config_get_runcd, config_get_maxhp, \
-    config_get_baseatk, config_get_rezcd
+from server.config import config_get_maxhp, config_get_baseatk, config_get_rezcd, \
+    config_get_atkcd
 from time import time
 import logging
 
@@ -31,13 +31,8 @@ class SAvatar(SCharactor):
         self.cell = cell
         self.cell.add_av(self)
         
-        # skill durations and cooldowns
-        self.MOVE_TXT = {
-                         config_get_walkcd(): 'walking',
-                         config_get_runcd(): 'running'
-                         }
-        self.move_ts = 0 # timestamp of last movement; can move right away (no cooldown)
-        self.move_cd = config_get_walkcd() # start by walking
+        self.atk_ts = 0 # timestamp of last atk; can atk right away (no cooldown)
+        self.atk_cd = config_get_atkcd()
                 
         
    
@@ -48,8 +43,8 @@ class SAvatar(SCharactor):
         """
         
         chardic = SCharactor.serialize(self)
-        move_cd_txt = self.move_cd, self.MOVE_TXT[self.move_cd]
-        avdic = {'move_cd_txt': move_cd_txt}
+        atk_cd = self.atk_cd
+        avdic = {'atk_cd': atk_cd}
         chardic.update(avdic) # merge avdic and chardic; pick avdic's values if key conflicts 
         return chardic
         
@@ -61,6 +56,11 @@ class SAvatar(SCharactor):
         check he's in a cell neighbor of and facing the target. 
         """
         
+        now = time()
+        if (now - self.atk_ts) * 1000 < self.atk_cd:
+            log.warn('Player %s has lots of jitter or speed hacks his attack' 
+                      % self.name)
+        
         atkercell = self.cell
         targetcell = atkercell.get_adjacent_cell(self.facing)
         
@@ -68,6 +68,7 @@ class SAvatar(SCharactor):
             dmg = defer.rcv_dmg(self, self.atk) # will do the broadcasting to everyone
             log.debug('Player %s attacked %s for %d dmg' 
                            % (self.name, defer.name, dmg))
+            self.atk_ts = now
             return dmg
         
         else: # target cell is not the defer's cell
@@ -111,11 +112,6 @@ class SAvatar(SCharactor):
         """ Check that move is legal, then move avatar in that cell. """
         # TODO: FT also check if newcell is within reach of oldcell (anti speed-hack)
         
-        now = time()
-        if (now - self.move_ts) * 1000 < self.move_cd:
-            log.warn('Player %s has lots of jitter or speed hacks his movement' 
-                      % self.name)
-            
         if newcell: # walkable cell
             # remove from old cell and add to new cell 
             # old and new cells could be the same cell if only facing changed
@@ -131,20 +127,6 @@ class SAvatar(SCharactor):
                           % (self.name, self.cell.coords))
         
 
-    
-    def toggle_movespeed(self):
-        """ If av is not running, decrease move cooldown (to run).
-        If av is already running, increase move cooldown (to walk).
-        """
-        
-        if self.move_cd == config_get_walkcd(): # was walking
-            self.move_cd = config_get_runcd() # now running
-        else: # was running
-            self.move_cd = config_get_walkcd() # now walking
-            
-        # no need to send serialize(self), only the move_cd is enough
-        txt = self.MOVE_TXT[self.move_cd]
-        self._nw.bc_movespeed(self.name, self.move_cd, txt)
 
         
         
@@ -188,7 +170,6 @@ class SAvatar(SCharactor):
             newcell.add_av(self)
             self.cell = newcell
         
-            self.move_cd = config_get_walkcd() # return to walking speed
             log.debug('Player %s resurrected' % self.name)
             
             avinfo = self.serialize()

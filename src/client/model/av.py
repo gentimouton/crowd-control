@@ -1,7 +1,7 @@
 from client.model.charactor import Charactor
 from client.events_client import LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, \
     SendMoveEvt, SendAtkEvt, LocalAvRezEvt, CharactorDeathEvt, RemoteCharactorRezEvt, \
-    RemoteCharactorMoveEvent, CharactorRemoveEvent, ChangedMoveSpeedEvt
+    RemoteCharactorMoveEvent, CharactorRemoveEvent
 from random import randint
 from time import time
 import logging
@@ -14,7 +14,7 @@ log = logging.getLogger('client')
 class Avatar(Charactor):
     """ An entity controlled by a player. One avatar per player. """
             
-    def __init__(self, name, cell, facing, atk, hp, maxhp, move_cd, islocal, evManager):
+    def __init__(self, name, cell, facing, atk, hp, maxhp, atk_cd, islocal, evManager):
         
         Charactor.__init__(self, cell, facing, name, atk, hp, maxhp, evManager)
            
@@ -25,8 +25,8 @@ class Avatar(Charactor):
         
         if islocal:
             # dont limit the speed of remote avatars  
-            self.move_ts = time() # timestamp of last movement
-            self.move_cd = move_cd # cooldown of movement, in millis; 
+            self.atk_ts = time() # timestamp of last movement
+            self.atk_cd = atk_cd # cooldown of movement, in millis; 
             ev = LocalAvatarPlaceEvent(self, cell)
         else: #avatar from someone else
             ev = OtherAvatarPlaceEvent(self, cell)
@@ -91,41 +91,40 @@ class Avatar(Charactor):
     ############  move  ###########################
     
     
-    def move_relative(self, direction, strafing):
+    def move_relative(self, direction, strafing, rotating):
         """ If possible, start moving towards that direction 
         (change facing first, then start changing cell). 
         If not, only change facing.
-        If strafing is True, move without changing facing.
+        If strafing is True, move without changing facing; move cooldown.
+        If strafing is False and rotating True, change facing without moving.
+        Rotating has no cooldown.
         """
-        
-        # check that move cooldown is over 
-        now = time()
-        move_delay = (now - self.move_ts) * 1000
-        if move_delay < self.move_cd:
-            return # if still in cooldown, dont do anything
         
         dest_cell = self.cell.get_adjacent_cell(direction) # None if non-walkable
         
         if strafing: 
-            if dest_cell: # walkable: move to cell without changing facing 
+            if dest_cell: # walkable: move to cell without changing facing
                 self.cell.rm_av(self)
                 self.cell = dest_cell
                 self.cell.add_av(self)
             else: # strafing to non-walkable cell == not moving at all
                 return # dont send a move event
         
-        else: # no strafing
-            if self.facing == direction: # if facing dest,
-                if dest_cell: # and dest is walkable, then move to it
-                    self.cell.rm_av(self)
-                    self.cell = dest_cell
-                    self.cell.add_av(self)
-                else: # dest is not walkable: pushing the wall is not moving 
-                    return # dont send a move event
-            else: # only change dir
-                self.facing = direction                
-        
-        self.move_ts = now
+        elif rotating:
+            if self.facing != direction: # do nothing if rotating to current direction
+                self.facing = direction
+            
+        else: # no strafing and no rotating
+            if dest_cell: # and dest is walkable, 
+                # then walk
+                self.cell.rm_av(self)
+                self.cell = dest_cell
+                self.cell.add_av(self)
+                self.facing = direction
+                #self.move_ts = now
+            else: # dest is not walkable: pushing the wall is not moving 
+                return # dont send a move event
+                
         # send to view and server that I moved
         ev = SendMoveEvt(self, self.cell.coords, self.facing)
         self._em.post(ev)
@@ -148,20 +147,11 @@ class Avatar(Charactor):
             #TODO: FT should report to server of potential cheat/hack
             
     
-    def update_movespeed(self, move_cd, move_txt):
-        """ Update the move cooldown of the avatar. 
-        Only useful for local av. Dont send any event if cooldown unchanged. 
-        """
-        
-        if self.islocal:
-            self.move_cd = move_cd
-            ev = ChangedMoveSpeedEvt(move_txt)
-            self._em.post(ev)
     
     
     ##################  resurrect  #######################
                
-    def resurrect(self, newcell, facing, hp, atk, move_cd, move_txt):
+    def resurrect(self, newcell, facing, hp, atk):
         """ resurrect charactor: update it from the given char info. """
         
         self.facing = facing
@@ -176,9 +166,6 @@ class Avatar(Charactor):
         if self.islocal: # notify the view if I just resurrected
             ev = LocalAvRezEvt(self)
             self._em.post(ev)
-            # update move speed only if different from before death
-            if self.move_cd != move_cd:
-                self.update_movespeed(move_cd, move_txt)
         else: # remote avatar
             ev = RemoteCharactorRezEvt(self) # self stores the new position
             self._em.post(ev)

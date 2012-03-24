@@ -12,7 +12,7 @@ from client.events_client import InputMoveRequest, MNameChangedEvt, \
     NwRcvCharMoveEvt, NwRcvAtkEvt, NwRcvGameAdminEvt, NwRcvCreepJoinEvt, \
     NwRcvDeathEvt, MdAddPlayerEvt, MMyNameChangedEvent, NwRcvRezEvt, \
     RemoteCharactorAtkEvt, NwRcvGreetEvt, NwRcvNameChangeFailEvt, MNameChangeFailEvt, \
-    MGameAdminEvt, MPlayerLeftEvt, MGreetNameEvt, MBuiltMapEvt, NwRcvMoveSpeedEvt
+    MGameAdminEvt, MPlayerLeftEvt, MGreetNameEvt, MBuiltMapEvt
 from client.model.npc import Creep
 from common.world import World
 import logging
@@ -85,7 +85,6 @@ class Game:
         
         self._em.reg_cb(InputMoveRequest, self.on_localavmove)
         self._em.reg_cb(NwRcvCharMoveEvt, self.on_remotemove)
-        self._em.reg_cb(NwRcvMoveSpeedEvt, self.on_movespeedchange)
         
         self._em.reg_cb(NwRcvPlayerJoinEvt, self.on_playerjoin)
         self._em.reg_cb(NwRcvCreepJoinEvt, self.on_creepjoin)
@@ -209,13 +208,13 @@ class Game:
         coords, facing = pinfo['coords'], pinfo['facing']
         atk = pinfo['atk']
         hp, maxhp = pinfo['hp'], pinfo['maxhp']
-        move_cd = pinfo['move_cd_txt'][0] # dont care about move_txt when spawning avs
+        atk_cd = pinfo['atk_cd']
         cell = self.world.get_cell(coords)
 
         # whether that Player is the local client or a remote client
         islocal = hasattr(self, 'myname') and pname == self.myname 
         
-        newplayer = Avatar(pname, cell, facing, atk, hp, maxhp, move_cd, islocal, self._em)       
+        newplayer = Avatar(pname, cell, facing, atk, hp, maxhp, atk_cd, islocal, self._em)       
         self.avs[pname] = newplayer
         
         # notify the view 
@@ -269,7 +268,7 @@ class Game:
         """
         if self.acceptinput:
             mychar = self.avs[self.myname]
-            mychar.move_relative(event.direction, event.strafing)
+            mychar.move_relative(event.direction, event.strafing, event.rotate)
 
   
     def on_remotemove(self, event):
@@ -283,17 +282,6 @@ class Game:
             destcell = self.world.get_cell(coords)
             char.move_absolute(destcell, facing)
 
-
-    #############################  movespeed  ###########################
-    
-    def on_movespeedchange(self, event):
-        """ A player changed his moving speed (run vs walk). 
-        Only care if it's local player.
-        """
-        name = event.name 
-        move_cd, move_txt = event.move_cd, event.move_txt
-        av = self.avs[name]
-        av.update_movespeed(move_cd, move_txt)
         
         
             
@@ -341,13 +329,12 @@ class Game:
         name, info = event.name, event.info
         coords, facing = info['coords'], info['facing']
         hp, atk = info['hp'], info['atk']
-        move_cd, move_txt = info['move_cd_txt']
         
         cell = self.world.get_cell(coords)
         
         # rez the char (update the view if local avatar)
         char = self.get_charactor(name)
-        char.resurrect(cell, facing, hp, atk, move_cd, move_txt)
+        char.resurrect(cell, facing, hp, atk)
         
         # restart accepting input
         if name == self.myname:
