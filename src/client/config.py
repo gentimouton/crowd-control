@@ -27,9 +27,8 @@ def int_tuple(str_):
 def config_get_fps():
     return int(_dict['fps'])
 
-def config_get_screenres():
-    a = int_tuple(_dict['screenres'])
-    return a
+def config_get_screensize():
+    return int_tuple(_dict['screenres'])
 
 
 # --- colors
@@ -115,8 +114,8 @@ def config_get_nick():
 # ------ input 
 
 def config_get_kbsensitivity():
-    trigger, repeat = _dict['kbsensitivity'].strip().split(',')
-    return int(trigger), int(repeat)
+    return int_tuple(_dict['kbsensitivity'])
+    
 
 # ---- logging
 

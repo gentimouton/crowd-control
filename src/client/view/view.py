@@ -1,15 +1,15 @@
-from client.config import config_get_screenres, config_get_loadingscreen_bgcolor, \
+from client.config import config_get_screensize, config_get_loadingscreen_bgcolor, \
     config_get_fontsize, config_get_walkable_color, config_get_nonwalkable_color, \
     config_get_entrance_color, config_get_lair_color, config_get_avdefault_bgcolor, \
     config_get_myav_bgcolor, config_get_creep_bgcolor
-from client.events_client import QuitEvent, SubmitChat, CharactorRemoveEvent, \
+from client.events_client import CharactorRemoveEvent, \
     OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, SendMoveEvt, \
     RemoteCharactorMoveEvent, CreepPlaceEvent, MMyNameChangedEvent, \
     CharactorRcvDmgEvt, RemoteCharactorAtkEvt, LocalAvRezEvt, CharactorDeathEvt, \
     RemoteCharactorRezEvt, SendAtkEvt, MGreetNameEvt, MBuiltMapEvt
 from client.view.charspr import CharactorSprite, ScrollingTextSprite
 from client.view.indexablespr import IndexedLayeredUpdates
-from client.view.widgets import ButtonWidget, InputFieldWidget, ChatLogWidget, \
+from client.view.widgets import InputFieldWidget, ChatLogWidget, \
     TextLabelWidget, PlayerListWidget
 from common.events import TickEvent
 from pygame.sprite import LayeredUpdates, Sprite
@@ -29,6 +29,9 @@ class MasterView:
         self._em = evManager
         self.register_callbacks()
         
+        # init pygame's screen
+        pygame.init() #calling init() multiple times does not mess anything
+
         self.build_screen()
         self.build_gui()
         
@@ -64,21 +67,24 @@ class MasterView:
     def build_screen(self):
         """ init the pygame window, and build the world screen """
         
-        # init pygame's screen
-        pygame.init() #calling init() multiple times does not mess anything
-        self.win_size = self.win_w, self.win_h = config_get_screenres()
-        if self.win_w != 4 * self.win_h / 3:
-            log.warn('Resolution ' + str(self.win_size) + ' is not 4x3.')
-
         # make the window screen
-        self.window = pygame.display.set_mode(self.win_size)
+        w, h = config_get_screensize()
+        # TODO: check that w > h
+        if w < h:
+            log.warn('Screen width (%d px) should be larger'
+                     + ' than screen height (%d px).' % (w, h))
+        self.gui_offset = w - h # left screen space = GUI
+        
+        self.win_size = w, h
+        resolution = w, h
+        self.window = pygame.display.set_mode(resolution)
         pygame.display.set_caption('CC')
         
         # blit the loading screen: a black screen
-        self.background = pygame.Surface(self.window.get_size()) 
+        self.screen_bg = pygame.Surface(resolution) 
         bgcolor = config_get_loadingscreen_bgcolor()
-        self.background.fill(bgcolor) 
-        self.window.blit(self.background, (0, 0))
+        self.screen_bg.fill(bgcolor) 
+        self.window.blit(self.screen_bg, (0, 0))
         
         # reveal
         pygame.display.flip()
@@ -91,66 +97,40 @@ class MasterView:
     def build_gui(self):
         """ Add widgets to the screen """
 
-
         # start adding widgets
-        self.gui_sprites = LayeredUpdates()   
-
-        # -- add quit button  at bottom-right 
-        rect = pygame.Rect((self.win_w * 7 / 8, self.win_h * 11 / 12),
-                           (self.win_w / 8 - 1, self.win_h / 12 - 1)) 
-        quitEvent = QuitEvent()
-        quit_btn = ButtonWidget(self._em, "Quit", rect=rect,
-                                onUpClickEvent=quitEvent)
-        self.gui_sprites.add(quit_btn)
-        
-        
-        # -- meh_btn at bottom right
-        rect = pygame.Rect((self.win_w * 6 / 8, self.win_h * 11 / 12),
-                            (self.win_w / 8 - 1, self.win_h / 12 - 1)) 
-        msgEvent = SubmitChat('meh...') #ask to send 'meh' to the server
-        meh_btn = ButtonWidget(self._em, "Meh.", rect=rect,
-                                   onUpClickEvent=msgEvent)
-        self.gui_sprites.add(meh_btn)
-        
-        
+        gui = LayeredUpdates()
+        h = self.win_size[1]
         line_h = config_get_fontsize()
+        gui_w = self.gui_offset
         
-        
-        # -- name label at top-right of the screen
-        rect = pygame.Rect((self.win_w * 3 / 4, 0),
-                           (self.win_w / 4 - 1, line_h - 1))
+        # -- name label at top-left of the screen
+        rect = pygame.Rect(0, 0, gui_w - 1, line_h - 1)
         evt_txt_dict = {MMyNameChangedEvent: 'newname', MGreetNameEvt:'newname'}
-        namebox = TextLabelWidget(self._em, '', events_attrs=evt_txt_dict, rect=rect)
-        self.gui_sprites.add(namebox)
-                
-                
-        # -- list of connected players at right of the screen
-        rect = pygame.Rect((self.win_w * 3 / 4, line_h),
-                           (self.win_w / 4 - 1, line_h - 1))
+        namebox = TextLabelWidget(self._em, '',
+                                  events_attrs=evt_txt_dict, rect=rect)
+        gui.add(namebox)
+        
+        # -- list of connected players, down until middle of the screen
+        rect = pygame.Rect(0, line_h, gui_w - 1, line_h - 1)
         whosonlinetitle = TextLabelWidget(self._em, 'Connected players:', rect=rect)
-        self.gui_sprites.add(whosonlinetitle)
-        
-        rect = pygame.Rect((self.win_w * 3 / 4, 2 * line_h),
-                            (self.win_w / 4 - 1, self.win_h / 2 - 2 * line_h - 1))
-        numlines = int(rect.height / line_h) 
+        gui.add(whosonlinetitle)
+        rect = pygame.Rect(0, 2 * line_h, gui_w - 1, h / 2 - 2 * line_h - 1)
+        numlines = int(rect.height / line_h)
         whosonlinebox = PlayerListWidget(self._em, numlines, rect=rect)
-        self.gui_sprites.add(whosonlinebox)
+        gui.add(whosonlinebox)
         
-        
-        # -- chat box input at bottom-right of the screen
-        rect = pygame.Rect((self.win_w * 3 / 4, self.win_h * 11 / 12 - line_h),
-                           (self.win_w / 4 - 1, line_h - 1)) 
+        # -- chat box input at bottom-left of the screen
+        rect = pygame.Rect(0, h - line_h - 1, gui_w - 1, line_h - 1) 
         chatbox = InputFieldWidget(self._em, rect=rect)
-        self.gui_sprites.add(chatbox)
-        
+        gui.add(chatbox)
 
         # -- chat window display, just above the chat input field
-        rect = pygame.Rect((self.win_w * 3 / 4, self.win_h * 6 / 12),
-                           (self.win_w / 4 - 1, self.win_h * 5 / 12 - line_h - 1))
+        rect = pygame.Rect(0, h / 2, gui_w - 1, h / 2 - line_h - 1)
         numlines = int(rect.height / line_h) 
         chatwindow = ChatLogWidget(self._em, numlines=numlines, rect=rect)
-        self.gui_sprites.add(chatwindow)
+        gui.add(chatwindow)
         
+        self.gui_sprites = gui
         
         
         
@@ -163,17 +143,18 @@ class MasterView:
         
         self.bg_shift_left = cleft
         self.bg_shift_top = ctop
-        
-        subsurf_left = cleft * self.cspr_size
-        subsurf_top = ctop * self.cspr_size
-        subsurf_dims = (self.visib_diam * self.cspr_size,
-                        self.visib_diam * self.cspr_size) 
+        celsize = self.cspr_size
+        subsurf_left = cleft * celsize
+        subsurf_top = ctop * celsize
+        v_diam = self.visib_diam
+        subsurf_dims = (v_diam * celsize, v_diam * celsize) 
         visible_area = pygame.Rect((subsurf_left, subsurf_top), subsurf_dims)
         # make bg from that area of interest
         # subsurface() should not raise any error when moving on the world borders
         # since the screen is squared and the world padded with an extra visib_diam
-        self.background = self.world_bg.subsurface(visible_area)
-        self.window.blit(self.background, (0, 0))
+        visible_bg = self.world_bg.subsurface(visible_area)
+        self.screen_bg.blit(visible_bg, (self.gui_offset, 0))
+        self.window.blit(visible_bg, (self.gui_offset, 0))
         pygame.display.flip() 
         
 
@@ -186,12 +167,16 @@ class MasterView:
         # cell distance from my av cell 
         cell_shift_left = cleft - self.bg_shift_left
         cell_shift_top = ctop - self.bg_shift_top
-            
-        if abs(cell_shift_left) <= self.visib_rad\
-            and abs(cell_shift_top) <= self.visib_rad:
+        
+        v_radius = self.visib_rad
+        if abs(cell_shift_left) <= v_radius\
+            and abs(cell_shift_top) <= v_radius:
             # in range
-            screenleft = (self.visib_diam / 2 + cell_shift_left) * self.cspr_size
-            screentop = (self.visib_diam / 2 + cell_shift_top) * self.cspr_size
+            v_diam = self.visib_diam
+            celsize = self.cspr_size
+            gui_offset = self.gui_offset
+            screenleft = (v_diam / 2 + cell_shift_left) * celsize + gui_offset
+            screentop = (v_diam / 2 + cell_shift_top) * celsize
             return screenleft, screentop
         
         else: # out of range
@@ -223,16 +208,15 @@ class MasterView:
         screenleft, screentop = self.game_to_screen_coords(gcoords) # center of the char spr
 
         if screenleft and screentop:
-            centerpos = screenleft, screentop - self.cspr_size / 4
-            scroll_height = self.cspr_size / 2 # how high should the text scroll until erased
+            celsize = self.cspr_size
+            centerpos = screenleft, screentop - celsize / 4
+            scroll_height = celsize / 2 # how high should the text scroll until erased
             
             txt = str(dmg)
-            duration = 500 # in millis
+            duration = 500 # in millis # TODO: move to config
             ScrollingTextSprite(txt, duration, centerpos, scroll_height, self.dmg_sprites)
         
       
-        
-        
         
         
         
@@ -241,12 +225,14 @@ class MasterView:
     
 
     def on_tick(self, event):    
-        """ Render all the dirty sprites """
+        """ Render all the dirty sprites.
+        The order is important: blit charactors first, then damage, then GUI.
+        """
         
         chars = self.active_charactor_sprites
         dmgs = self.dmg_sprites
         gui = self.gui_sprites
-        win, bg = self.window, self.background
+        win, bg = self.window, self.screen_bg
         
         # clear the window from all the sprites, replacing them with the bg
         chars.clear(win, bg)
@@ -259,10 +245,10 @@ class MasterView:
         dmgs.update(duration)
         gui.update(duration)
         
-        # collect the display areas that have changed
-        dirty_chars = chars.draw(self.window)
-        dirty_dmg = dmgs.draw(self.window)
-        dirty_gui = gui.draw(self.window)
+        # collect the display areas that need to be redrawn
+        dirty_chars = chars.draw(win) # ie, all char sprites
+        dirty_dmg = dmgs.draw(win) # all dmg being displayed
+        dirty_gui = gui.draw(win) # and all GUI elements
         
         # and redisplay those areas only
         dirty_rects = dirty_chars + dirty_dmg + dirty_gui
@@ -355,33 +341,37 @@ class MasterView:
         self.cellsprs = dict() # maps model.Cell to view.CellSprite
         
         # determine width and height of cell spr from map visibility 
-        self.visib_rad = worldmap.visibility_radius
-        self.visib_diam = 2 * self.visib_rad + 1
-        self.cspr_size = int(self.win_h / self.visib_diam)
+        r = worldmap.visibility_radius
+        self.visib_rad = r
+        diam = 2 * r + 1
+        self.visib_diam = diam
+        height = self.win_size[1]
+        celsize = int(height / diam)
+        self.cspr_size = celsize
         
-        # Build world background to be scrolled when the avatar moves
+        # Build world screen_bg to be scrolled when the avatar moves
         # so that world_bg can be scrolled. 
         # Padding of visib_diam so that the screen bg can subsurface(world_bg)
-        world_surf_w = self.cspr_size * (worldmap.width + 2 * self.visib_rad)
-        world_surf_h = self.cspr_size * (worldmap.height + 2 * self.visib_rad)
-        self.world_bg = pygame.Surface((world_surf_w, world_surf_h))
-        self.world_bg.fill(config_get_nonwalkable_color())
+        r = self.visib_rad
+        world_surf_w = celsize * (worldmap.width + 2 * r)
+        world_surf_h = celsize * (worldmap.height + 2 * r)
+        worldbg = pygame.Surface((world_surf_w, world_surf_h))
+        worldbg.fill(config_get_nonwalkable_color())
         
         for i in range(worldmap.width):
             for j in range(worldmap.height):
                 # don't forget the visib_rad of padding
-                cspr_left = (self.visib_rad + i) * self.cspr_size
-                cspr_top = (self.visib_rad + j) * self.cspr_size
-                cspr_dims = (self.cspr_size, self.cspr_size)
-                cellrect = pygame.Rect((cspr_left, cspr_top), cspr_dims)
-                
+                cspr_left = (self.visib_rad + i) * celsize
+                cspr_top = (self.visib_rad + j) * celsize
+                cellrect = pygame.Rect(cspr_left, cspr_top, celsize, celsize)                
                 cell = worldmap.get_cell(i, j)
                 cellspr = CellSprite(cell, cellrect)
                 self.cellsprs[cell] = cellspr
                 
-                self.world_bg.blit(cellspr.image, cellspr.rect)
+                worldbg.blit(cellspr.image, cellspr.rect)
         
-        # Center screen background on entrance cell, and blit
+        self.world_bg = worldbg
+        # Center screen screen_bg on entrance cell, and blit
         eleft, etop = worldmap.entrance_coords
         self.center_screen_on_coords(eleft, etop)
         
@@ -392,7 +382,7 @@ class MasterView:
     def on_localavplace(self, event):
         """ Center the map on the avatar's cell,
         build a charactor sprite in that cell, 
-        and reblit background, charactor sprites, and GUI.
+        and reblit screen_bg, charactor sprites, and GUI.
         """
     
         avatar = event.avatar
@@ -420,7 +410,7 @@ class MasterView:
     ################# move ################
     
     def on_localavmove(self, event):
-        """ move my avatar: scroll the background """
+        """ move my avatar: scroll the screen_bg """
     
         myav = event.avatar
         cleft, ctop = myav.cell.coords
@@ -478,7 +468,7 @@ class MasterView:
     
 class CellSprite(Sprite):
     """ The representation of a map cell. 
-    Used to draw the map background.
+    Used to draw the map screen_bg.
      """    
     
     def __init__(self, cell, rect, group=()):
