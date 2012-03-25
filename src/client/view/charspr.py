@@ -42,11 +42,13 @@ class CharactorSprite(IndexableSprite):
         self.rect.center = sprleft, sprtop
         
         mhp, hp = self.char.maxhp, self.char.hp
+        char = self.char
+        facing = char.facing
         
-        if hp > 0: # place the oriented av spr and add hp bar if alive
-            
-            charsurfbg = self.alive_facing_sprites[self.char.facing]
-            self.image = charsurfbg.copy()
+        # if alive, place the oriented av spr and add hp bar if alive
+        if hp > 0:             
+            charsurfbg = self.alive_facing_sprites[facing]
+            img = charsurfbg.copy()
             
             # hpbar is updated when char is created, moves, or rcv_dmg
             thickness = max(1, log(mhp)) # logarithmically thicker with more hpmax 
@@ -63,32 +65,34 @@ class CharactorSprite(IndexableSprite):
                 emptysize = totalsize - fullsize
                 return emptysize, fullsize
             
-            if self.char.facing == DIRECTION_LEFT: # vertical, right side
-                emptysize, fullsize = barsizes(self.h)
-                erect = Rect(self.w * 11 / 12 - thickness, self.h / 8,
+            myw, myh = self.w, self.h
+            if facing == DIRECTION_LEFT: # vertical, right side
+                emptysize, fullsize = barsizes(myh)
+                erect = Rect(myw * 11 / 12 - thickness, myh / 8,
                              thickness, emptysize)
                 frect = Rect(erect.left, erect.bottom, thickness, fullsize)
-            elif self.char.facing == DIRECTION_RIGHT:# vertical, left side
-                emptysize, fullsize = barsizes(self.h)
-                erect = Rect(self.w / 12, self.h / 8, thickness, emptysize)
+            elif facing == DIRECTION_RIGHT:# vertical, left side
+                emptysize, fullsize = barsizes(myh)
+                erect = Rect(myw / 12, myh / 8, thickness, emptysize)
                 frect = Rect(erect.left, erect.bottom, thickness, fullsize)
-            elif self.char.facing == DIRECTION_UP:# horizontal, upwards
-                emptysize, fullsize = barsizes(self.w)
-                frect = Rect(self.w / 8, self.h * 11 / 12 - thickness,
+            elif facing == DIRECTION_UP:# horizontal, upwards
+                emptysize, fullsize = barsizes(myw)
+                frect = Rect(myw / 8, myh * 11 / 12 - thickness,
                              fullsize, thickness)
                 erect = Rect(frect.right, frect.top, emptysize, thickness)
-            elif self.char.facing == DIRECTION_DOWN:# horizontal, downwards
-                emptysize, fullsize = barsizes(self.w)
-                frect = Rect(self.w / 8, self.h / 12, fullsize, thickness)
+            elif facing == DIRECTION_DOWN:# horizontal, downwards
+                emptysize, fullsize = barsizes(myw)
+                frect = Rect(myw / 8, myh / 12, fullsize, thickness)
                 erect = Rect(frect.right, frect.top, emptysize, thickness)
                 
             ecolor = config_get_hpbaremptycolor() # red bar
             fcolor = config_get_hpbarfullcolor() # green bar
-            self.image.fill(ecolor, erect)
-            self.image.fill(fcolor, frect)
+            img.fill(ecolor, erect)
+            img.fill(fcolor, frect)
+            self.image = img
         
         else: # display in gray if dead
-            charsurfbg = self.dead_facing_sprites[self.char.facing]
+            charsurfbg = self.dead_facing_sprites[facing]
             self.image = charsurfbg.copy()
         
         
@@ -111,7 +115,7 @@ def build_facingsprites(bgcolor, w, h):
     dirs = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT]
     
     for d in dirs:
-        spr = pygame.Surface((w, h))
+        spr = pygame.Surface((w, h), pygame.SRCALPHA)
         spr = spr.convert_alpha()
         spr.fill((0, 0, 0, 0)) #make transparent
         # triangular shape to show char.facing

@@ -1,18 +1,20 @@
-from client.config import config_get_screensize, config_get_loadingscreen_bgcolor, \
-    config_get_fontsize, config_get_walkable_color, config_get_nonwalkable_color, \
-    config_get_entrance_color, config_get_lair_color, config_get_avdefault_bgcolor, \
-    config_get_myav_bgcolor, config_get_creep_bgcolor
-from client.events_client import CharactorRemoveEvent, \
-    OtherAvatarPlaceEvent, LocalAvatarPlaceEvent, SendMoveEvt, \
-    RemoteCharactorMoveEvent, CreepPlaceEvent, MMyNameChangedEvent, \
-    CharactorRcvDmgEvt, RemoteCharactorAtkEvt, LocalAvRezEvt, CharactorDeathEvt, \
-    RemoteCharactorRezEvt, SendAtkEvt, MGreetNameEvt, MBuiltMapEvt
+from client.config import config_get_screensize, \
+    config_get_loadingscreen_bgcolor, config_get_fontsize, config_get_walkable_color, \
+    config_get_nonwalkable_color, config_get_entrance_color, config_get_lair_color, \
+    config_get_avdefault_bgcolor, config_get_myav_bgcolor, config_get_creep_bgcolor, \
+    config_get_txtlabel_bgcolor, config_get_chatlog_txtcolor, \
+    config_get_txtlabel_txtcolor
+from client.events_client import CharactorRemoveEvent, OtherAvatarPlaceEvent, \
+    LocalAvatarPlaceEvent, SendMoveEvt, RemoteCharactorMoveEvent, CreepPlaceEvent, \
+    MMyNameChangedEvent, CharactorRcvDmgEvt, RemoteCharactorAtkEvt, LocalAvRezEvt, \
+    CharactorDeathEvt, RemoteCharactorRezEvt, SendAtkEvt, MGreetNameEvt, \
+    MBuiltMapEvt
 from client.view.charspr import CharactorSprite, ScrollingTextSprite
 from client.view.indexablespr import IndexedLayeredUpdates
-from client.view.widgets import InputFieldWidget, ChatLogWidget, \
-    TextLabelWidget, PlayerListWidget
+from client.view.widgets import InputFieldWidget, ChatLogWidget, TextLabelWidget, \
+    PlayerListWidget
 from common.events import TickEvent
-from pygame.sprite import LayeredUpdates, Sprite
+from pygame.sprite import LayeredUpdates, Sprite, LayeredDirty
 import logging
 import pygame
 
@@ -69,11 +71,10 @@ class MasterView:
         
         # make the window screen
         w, h = config_get_screensize()
-        # TODO: check that w > h
         if w < h:
             log.warn('Screen width (%d px) should be larger'
                      + ' than screen height (%d px).' % (w, h))
-        self.gui_offset = w - h # left screen space = GUI
+        self.gui_offset = max(w - h, 0) # left screen space = GUI
         
         self.win_size = w, h
         resolution = w, h
@@ -81,10 +82,12 @@ class MasterView:
         pygame.display.set_caption('CC')
         
         # blit the loading screen: a black screen
-        self.screen_bg = pygame.Surface(resolution) 
+        bg = pygame.Surface(resolution) 
         bgcolor = config_get_loadingscreen_bgcolor()
-        self.screen_bg.fill(bgcolor) 
-        self.window.blit(self.screen_bg, (0, 0))
+        bg.fill(bgcolor)
+        bg = bg.convert()
+        self.screen_bg = bg 
+        self.window.blit(bg, (0, 0))
         
         # reveal
         pygame.display.flip()
@@ -95,42 +98,62 @@ class MasterView:
 
 
     def build_gui(self):
-        """ Add widgets to the screen """
+        """ Add widgets to the screen.
+        Widgets on the left need only be reblitted when they get dirty.
+        Widgets that overlay the world screen need to be reblitted every frame.
+        """
 
         # start adding widgets
-        gui = LayeredUpdates()
-        h = self.win_size[1]
+        leftgui = LayeredDirty() # only reblit when dirty=1
+        overlaygui = LayeredUpdates() # reblit every frame
+        w, h = self.win_size
         line_h = config_get_fontsize()
         gui_w = self.gui_offset
         
         # -- name label at top-left of the screen
-        rect = pygame.Rect(0, 0, gui_w - 1, line_h - 1)
+        rec = pygame.Rect(0, 0, gui_w - 1, line_h - 1)
         evt_txt_dict = {MMyNameChangedEvent: 'newname', MGreetNameEvt:'newname'}
-        namebox = TextLabelWidget(self._em, '',
-                                  events_attrs=evt_txt_dict, rect=rect)
-        gui.add(namebox)
+        txtcol = config_get_txtlabel_txtcolor()
+        bgcol = config_get_txtlabel_bgcolor()
+        namebox = TextLabelWidget(self._em, '', events_attrs=evt_txt_dict,
+                                  rect=rec, txtcolor=txtcol, bgcolor=bgcol)
+        leftgui.add(namebox)
         
-        # -- list of connected players, down until middle of the screen
-        rect = pygame.Rect(0, line_h, gui_w - 1, line_h - 1)
-        whosonlinetitle = TextLabelWidget(self._em, 'Connected players:', rect=rect)
-        gui.add(whosonlinetitle)
-        rect = pygame.Rect(0, 2 * line_h, gui_w - 1, h / 2 - 2 * line_h - 1)
-        numlines = int(rect.height / line_h)
-        whosonlinebox = PlayerListWidget(self._em, numlines, rect=rect)
-        gui.add(whosonlinebox)
+        # -- list of connected players, until middle of the screen
+        rec = pygame.Rect(0, line_h, gui_w - 1, line_h - 1)
+        txt = 'Connected players:'
+        txtcol = config_get_txtlabel_txtcolor()
+        bgcol = config_get_txtlabel_bgcolor()
+        whosonlinetitle = TextLabelWidget(self._em, txt, rect=rec,
+                                          txtcolor=txtcol, bgcolor=bgcol)
+        leftgui.add(whosonlinetitle)
+        rec = pygame.Rect(0, 2 * line_h, gui_w - 1, h / 2 - 2 * line_h - 1)
+        numlines = int(rec.height / line_h)
+        txtcol = config_get_chatlog_txtcolor()
+        bgcol = None #config_get_chatlog_bgcolor()
+        whosonlinebox = PlayerListWidget(self._em, numlines, rect=rec,
+                                         txtcolor=txtcol, bgcolor=bgcol)
+        leftgui.add(whosonlinebox)
         
-        # -- chat box input at bottom-left of the screen
-        rect = pygame.Rect(0, h - line_h - 1, gui_w - 1, line_h - 1) 
-        chatbox = InputFieldWidget(self._em, rect=rect)
-        gui.add(chatbox)
-
-        # -- chat window display, just above the chat input field
-        rect = pygame.Rect(0, h / 2, gui_w - 1, h / 2 - line_h - 1)
-        numlines = int(rect.height / line_h) 
-        chatwindow = ChatLogWidget(self._em, numlines=numlines, rect=rect)
-        gui.add(chatwindow)
+        # -- chat window overlay at bottom of the world screen
+        chat_height = h / 4  
+        numlines = int(chat_height / line_h)
+        if numlines > 0: # text input field
+            rec = pygame.Rect(gui_w + 1, h - line_h, w - gui_w - 1, line_h - 1) 
+            chatbox = InputFieldWidget(self._em, rect=rec)
+            overlaygui.add(chatbox)
+        if numlines > 1: # text display line
+            rec = pygame.Rect(gui_w + 1, h * 3 / 4,
+                              w - gui_w - 1, h / 4 - line_h - 1)            
+            txtcol = config_get_chatlog_txtcolor()
+            # no bg color to disply on top of world screen
+            chatwindow = ChatLogWidget(self._em, numlines=numlines, rect=rec,
+                                       txtcolor=txtcol)
+            overlaygui.add(chatwindow)
         
-        self.gui_sprites = gui
+        self.left_gui_sprites = leftgui
+        self.overlay_gui_sprites = overlaygui
+        
         
         
         
@@ -143,6 +166,7 @@ class MasterView:
         
         self.bg_shift_left = cleft
         self.bg_shift_top = ctop
+        # compute the rect of the world bg to subsurface from
         celsize = self.cspr_size
         subsurf_left = cleft * celsize
         subsurf_top = ctop * celsize
@@ -153,6 +177,7 @@ class MasterView:
         # subsurface() should not raise any error when moving on the world borders
         # since the screen is squared and the world padded with an extra visib_diam
         visible_bg = self.world_bg.subsurface(visible_area)
+        visible_bg = visible_bg.convert()
         self.screen_bg.blit(visible_bg, (self.gui_offset, 0))
         self.window.blit(visible_bg, (self.gui_offset, 0))
         pygame.display.flip() 
@@ -224,34 +249,39 @@ class MasterView:
     ###################### RENDERING OF SPRITES and BG ######################
     
 
-    def on_tick(self, event):    
+    def on_tick(self, event):
         """ Render all the dirty sprites.
         The order is important: blit charactors first, then damage, then GUI.
         """
         
         chars = self.active_charactor_sprites
         dmgs = self.dmg_sprites
-        gui = self.gui_sprites
+        leftgui = self.left_gui_sprites
+        ovgui = self.overlay_gui_sprites
+        
         win, bg = self.window, self.screen_bg
         
         # clear the window from all the sprites, replacing them with the bg
         chars.clear(win, bg)
         dmgs.clear(win, bg)
-        gui.clear(win, bg)
+        leftgui.clear(win, bg)
+        ovgui.clear(win, bg)
         
         # update all the sprites - calls update() on each sprite of the groups
         duration = event.duration # how long passed since last tick
         chars.update(duration)
         dmgs.update(duration)
-        gui.update(duration)
+        leftgui.update(duration)
+        ovgui.update(duration)
         
         # collect the display areas that need to be redrawn
         dirty_chars = chars.draw(win) # ie, all char sprites
         dirty_dmg = dmgs.draw(win) # all dmg being displayed
-        dirty_gui = gui.draw(win) # and all GUI elements
-        
+        dirty_lgui = leftgui.draw(win) # but only the left widgets that are dirty
+        dirty_ovgui = ovgui.draw(win) # and all overlay widgets
+
         # and redisplay those areas only
-        dirty_rects = dirty_chars + dirty_dmg + dirty_gui
+        dirty_rects = dirty_chars + dirty_dmg + dirty_lgui + dirty_ovgui
         pygame.display.update(dirty_rects)
         
         
@@ -352,24 +382,26 @@ class MasterView:
         # Build world screen_bg to be scrolled when the avatar moves
         # so that world_bg can be scrolled. 
         # Padding of visib_diam so that the screen bg can subsurface(world_bg)
-        r = self.visib_rad
-        world_surf_w = celsize * (worldmap.width + 2 * r)
-        world_surf_h = celsize * (worldmap.height + 2 * r)
-        worldbg = pygame.Surface((world_surf_w, world_surf_h))
+        v_rad = self.visib_rad
+        w_w, w_h = worldmap.width, worldmap.height
+        w_surf_w = celsize * (w_w + 2 * v_rad)
+        w_surf_h = celsize * (w_h + 2 * v_rad)
+        worldbg = pygame.Surface((w_surf_w, w_surf_h))
         worldbg.fill(config_get_nonwalkable_color())
         
-        for i in range(worldmap.width):
-            for j in range(worldmap.height):
+        for i in range(w_w):
+            for j in range(w_h):
                 # don't forget the visib_rad of padding
-                cspr_left = (self.visib_rad + i) * celsize
-                cspr_top = (self.visib_rad + j) * celsize
+                cspr_left = (v_rad + i) * celsize
+                cspr_top = (v_rad + j) * celsize
                 cellrect = pygame.Rect(cspr_left, cspr_top, celsize, celsize)                
                 cell = worldmap.get_cell(i, j)
                 cellspr = CellSprite(cell, cellrect)
                 self.cellsprs[cell] = cellspr
-                
+                # blit the cell to world bg
                 worldbg.blit(cellspr.image, cellspr.rect)
         
+        worldbg = worldbg.convert()
         self.world_bg = worldbg
         # Center screen screen_bg on entrance cell, and blit
         eleft, etop = worldmap.entrance_coords
@@ -492,3 +524,53 @@ class CellSprite(Sprite):
         self.cell = cell
         
 
+
+
+############################# TESTS ##################################
+
+
+if __name__ == "__main__":
+    import pygame
+    from pygame.sprite import Sprite
+    from pygame.surface import Surface
+    from pygame.locals import KEYDOWN, RLEACCEL, SRCALPHA
+    from pygame.font import Font
+        
+    pygame.init()
+    screen = pygame.display.set_mode((300, 300))
+
+    bg = Surface((200, 200))
+    bg.fill((255, 0, 0))    
+    bg = bg.convert()
+    screen.blit(bg, (50, 50))
+
+    font = Font(None, 25)
+    txt = 'qwertyuiop'
+    txtimg = font.render(txt, 1, (255, 255, 255)) # antialiasing w/o bg => alpha 
+    
+    b = Surface((100, 100), SRCALPHA)
+    b.fill((111, 111, 111, 128))
+    b.blit(txtimg, (10, 10))
+    b = b.convert_alpha()
+    screen.blit(b, (25, 25))
+    
+    # what's below has better perf, but bad output when antialias + transparency 
+    c = Surface((100, 100))
+    colkey = (255, 0, 255)
+    c.set_colorkey(colkey, RLEACCEL)
+    c.fill(colkey) # make the surface bg invisible
+    
+    c2 = Surface((100, 100))
+    c2.fill((111, 111, 111))
+    c2.set_alpha(128, RLEACCEL) # semi-transparent gray bg
+    #c.blit(c2, (0, 0))
+    c2 = c2.convert()
+    txtimg2 = txtimg.convert(c) # sucks if txtimg is antialiased
+    c.blit(txtimg2, (10, 10))
+    c = c.convert() 
+    screen.blit(c2, (125, 25))
+    screen.blit(c, (125, 25))
+    pygame.display.update()
+    
+    while pygame.event.poll().type != KEYDOWN:
+        pygame.time.delay(10)

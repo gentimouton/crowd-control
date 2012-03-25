@@ -2,31 +2,29 @@ from client.config import config_get_fontsize, config_get_unfocusedbtn_bgcolor, 
     config_get_unfocusedinput_txtcolor, config_get_focusedbtn_bgcolor, \
     config_get_unfocusedbtn_txtcolor, config_get_unfocusedinput_bgcolor, \
     config_get_focusedinput_bgcolor, config_get_focusedbtn_txtcolor, \
-    config_get_focusedinput_txtcolor, config_get_txtlabel_txtcolor, \
-    config_get_txtlabel_bgcolor, config_get_chatlog_txtcolor, \
-    config_get_chatlog_bgcolor
+    config_get_focusedinput_txtcolor, config_get_chatlog_txtcolor
 from client.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
     UnicodeKeyPushedEvent, NonprintableKeyEvent, SubmitChat, ChatlogUpdatedEvent, \
     MdAddPlayerEvt, MPlayerLeftEvt, MNameChangedEvt, MMyNameChangedEvent, \
     MNameChangeFailEvt, MGameAdminEvt
 from collections import deque
 from pygame.font import Font
-from pygame.locals import K_BACKSPACE, K_RETURN
+from pygame.locals import K_BACKSPACE, K_RETURN, RLEACCEL, SRCALPHA
 from pygame.rect import Rect
-from pygame.sprite import Sprite
+from pygame.sprite import DirtySprite
 from pygame.surface import Surface
 import logging
 import pygame
 
 
-class Widget(Sprite):
+class Widget(DirtySprite):
     """ abstract class for other types of widgets """
     
     log = logging.getLogger('client')
 
 
     def __init__(self, evManager):
-        Sprite.__init__(self)
+        DirtySprite.__init__(self)
 
         self._em = evManager
 
@@ -96,11 +94,12 @@ class ButtonWidget(Widget):
         self.image = Surface(self.rect.size) #rectangle container for the text
         self.image.fill(bgcolor)
         txtimg = self.font.render(self.text, True, color)
+        txtimg = txtimg.convert()
         textpos = txtimg.get_rect(centerx=self.image.get_width() / 2,
                                   centery=self.image.get_height() / 2)
         self.image.blit(txtimg, textpos)
         
-        self.dirty = 0
+        # self.dirty is set to 0 by LayeredDirty.update
 
 
     def on_downclick(self, event):
@@ -209,7 +208,7 @@ class InputFieldWidget(Widget):
         self.image.blit(emptyboximg, (0, 0))
         self.image.blit(textImg, self.textPos)
 
-        self.dirty = 0
+        #self.dirty = 0
 
 
 
@@ -271,8 +270,8 @@ class InputFieldWidget(Widget):
 class TextLabelWidget(Widget):
     """ display static text """ 
     
-    def __init__(self, evManager, text, events_attrs=None, rect=None,
-                 txtcolor=None, bgcolor=None):
+    def __init__(self, evManager, text, events_attrs=[], rect=None,
+                 txtcolor=(255, 0, 0), bgcolor=None):
         
         Widget.__init__(self, evManager)
             
@@ -293,20 +292,14 @@ class TextLabelWidget(Widget):
             #default width = 100px,
             # 4px from 1px each of  border bottom,
             # padding bottom, padding top, and border top 
-        
-        
-        if not txtcolor:
-            txtcolor = config_get_txtlabel_txtcolor()
-        self.txtcolor = txtcolor 
-
-        if not bgcolor:
-            bgcolor = config_get_txtlabel_bgcolor()
+                
+        self.txtcolor = txtcolor
         self.bgcolor = bgcolor
 
         self.text = text
         self.image = Surface(self.rect.size)
         
-
+    
     def set_text(self, text):
         self.text = text
         self.dirty = 1
@@ -323,18 +316,32 @@ class TextLabelWidget(Widget):
         
         
     def update(self, duration):
+        
         if self.dirty == 0:
             return
         
         # TODO: is bliting on existing surf faster than creating a new surface?
-        self.image = Surface(self.rect.size) #rectangle container for the text
-        self.image.fill(self.bgcolor)
-        txtimg = self.font.render(self.text, True, self.txtcolor)
-        textpos = txtimg.get_rect(left=2,
-                                  centery=self.image.get_height() / 2)
-        self.image.blit(txtimg, textpos)
+        size = self.rect.size
+        txtcolor = self.txtcolor
+        bgcolor = self.bgcolor
+        if bgcolor: # opaque bg
+            txtimg = self.font.render(self.text, True, txtcolor, bgcolor)
+            txtimg = txtimg.convert()
+            img = Surface(size)
+            img.fill(bgcolor)
+        else: # transparent bg
+            txtimg = self.font.render(self.text, True, txtcolor)
+            txtimg = txtimg.convert_alpha()
+            img = Surface(size, SRCALPHA) # handle transparency
+            img.fill((0, 0, 0, 0)) # 0 = transparent, 255 = opaque
         
-        self.dirty = 0
+        # center the txt inside its box
+        ctr_y = size[1] / 2
+        textpos = txtimg.get_rect(left=2, centery=ctr_y)
+        img.blit(txtimg, textpos)
+        self.image = img
+        
+        #self.dirty = 0
         
         
     
@@ -345,7 +352,8 @@ class PlayerListWidget(Widget):
     Other events tell which lines should be added.
     """
     
-    def __init__(self, evManager, numlines=3, rect=None):
+    def __init__(self, evManager, numlines=3, rect=(0, 0, 100, 20),
+                 txtcolor=(255, 0, 0), bgcolor=None):
         Widget.__init__(self, evManager)
         
         # When receiving an event containing text, 
@@ -371,17 +379,15 @@ class PlayerListWidget(Widget):
         
         # gfx
         self.font = Font(None, config_get_fontsize())
-        if rect:
-            self.rect = rect
+        self.rect = rect
+        self.txtcolor = txtcolor
+        self.bgcolor = bgcolor
+        img = Surface(rect.size)
+        if bgcolor:
+            img.fill(bgcolor)
         else:
-            self.rect = Rect((0, 0), (100, config_get_fontsize() + 4)) 
-            #default width = 100px,
-            # 4px from 1px each of  border bottom,
-            # padding bottom, padding top, and border top 
-        
-        self.txtcolor = config_get_chatlog_txtcolor()
-        self.bgcolor = config_get_chatlog_bgcolor()
-        self.image = Surface(self.rect.size).fill(self.bgcolor)
+            img.set_alpha(0, RLEACCEL) # fully transparent
+        self.image = img
         
         self.maxnumlines = numlines
         self.linewidgets = deque(maxlen=numlines) # deque of TextLabelWidgets
@@ -402,7 +408,9 @@ class PlayerListWidget(Widget):
             line_height = self.rect.height / self.maxnumlines
             newline_top = lines_from_top * line_height
             newline_rect = Rect(0, newline_top, self.rect.width, line_height)
-            txtwidget = TextLabelWidget(self._em, '', rect=newline_rect)
+            txtcol, bgcol = self.txtcolor, self.bgcolor
+            txtwidget = TextLabelWidget(self._em, '', rect=newline_rect,
+                                        txtcolor=txtcol, bgcolor=bgcol)
             # this empty text will be replaced when we shift all the texts upwards
             self.linewidgets.append(txtwidget)
         
@@ -430,22 +438,36 @@ class PlayerListWidget(Widget):
         
         
     def update(self, duration):
-        """ update all the contained linewidgets """
+        """ update all the contained linewidgets
+        TODO: check that it works with transparent bg
+        """
         
         if self.dirty == 0:
             return
         
-        self.image = Surface(self.rect.size) 
-        self.image.fill(self.bgcolor)
+        # make the box
+        size = self.rect.size
+        bgcol = self.bgcolor
+        if bgcol: # only display a bg img if bgcolor specified
+            img = Surface(size)
+            img.fill(bgcol)
+            img = img.convert()
+        else: # more or less transparent
+            img = Surface(size, SRCALPHA) # handles transparency
+            transparency = 50 # 0 = transparent, 255 = opaque
+            img.fill((0, 0, 0, transparency))
+            img = img.convert_alpha()
         
+        # blit each line
         numelemts = min(len(self.texts), self.maxnumlines)
         for i in range(numelemts):
             wid = self.linewidgets[i]
             wid.set_text(self.texts[-i - 1])
             wid.update(duration)
-            self.image.blit(wid.image, wid.rect)
-
-        self.dirty = 0
+            img.blit(wid.image, wid.rect)
+            
+        self.image = img
+        #self.dirty = 0 # set by LayeredDirty
         
         
 
@@ -456,7 +478,8 @@ class PlayerListWidget(Widget):
 class ChatLogWidget(Widget):
     """ display chat messages """ 
     
-    def __init__(self, evManager, numlines=3, rect=None):
+    def __init__(self, evManager, numlines=3, rect=(0, 0, 100, 20),
+                 txtcolor=(255, 0, 0), bgcolor=None):
         Widget.__init__(self, evManager)
 
         self._em.reg_cb(ChatlogUpdatedEvent, self.on_remotechat)
@@ -466,17 +489,20 @@ class ChatLogWidget(Widget):
         self._em.reg_cb(MNameChangedEvt, self.on_namechangesuccess)
 
         self.font = Font(None, config_get_fontsize())
-        if rect:
-            self.rect = rect
-        else:
-            self.rect = Rect((0, 0), (100, (config_get_fontsize() + 4) * numlines)) 
-            #100px = default width,
-            #4px = 1px for each of border bottom,
-            # padding bottom, padding top, and border top, 
-        
-        self.txtcolor = config_get_chatlog_txtcolor()
-        self.bgcolor = config_get_chatlog_bgcolor()
-        self.image = Surface(self.rect.size).fill(self.bgcolor)
+        self.rect = rect
+        size = rect.size
+        self.txtcolor = txtcolor
+        self.bgcolor = bgcolor
+        if bgcolor: # completely opaque bg
+            img = Surface(size)
+            img.fill(self.bgcolor)
+            img = img.convert()
+        else: # more or less transparent
+            img = Surface(self.rect.size, SRCALPHA) # handles transparency
+            transparency = 50 # 0 = transparent, 255 = opaque
+            img.fill((0, 0, 0, transparency)) # black
+            img = img.convert_alpha()
+        self.image = img
         
         self.maxnumlines = numlines
         self.linewidgets = deque(maxlen=numlines) # deque of TextLabelWidgets
@@ -517,8 +543,10 @@ class ChatLogWidget(Widget):
         
             
     def addline(self, linetxt):
-        """ If there's room, add a line on top, and then shift all widget texts upwards.
-        If there's no room, only shift the texts upwards (don't add new widgets). 
+        """ If there's room, add a line on top, 
+        and then shift all widget texts upwards.
+        If there's no room, only shift the texts upwards,
+        no need to add new widgets. 
         """
         
         if len(self.linewidgets) < self.maxnumlines: 
@@ -527,7 +555,9 @@ class ChatLogWidget(Widget):
             line_height = self.rect.height / self.maxnumlines
             newline_top = lines_from_top * line_height
             newline_rect = Rect(0, newline_top, self.rect.width, line_height)
-            txtwidget = TextLabelWidget(self._em, '', rect=newline_rect)
+            tcol, bgcol = self.txtcolor, self.bgcolor
+            txtwidget = TextLabelWidget(self._em, '', rect=newline_rect,
+                                        txtcolor=tcol, bgcolor=bgcol)
             # this empty text will be replaced when we shift all the texts upwards
             self.linewidgets.append(txtwidget)
         
@@ -543,18 +573,32 @@ class ChatLogWidget(Widget):
         
         
     def update(self, duration):
-        """ update all the contained linewidgets """
+        """ update all the contained linewidgets.
+        Return right away if no text has changed.
+        """
         
-        if self.dirty == 0:
+        if self.dirty == 0: # no new text has been added
             return
         
-        self.image = Surface(self.rect.size) 
-        self.image.fill(self.bgcolor)
+        # make the box
+        size = self.rect.size
+        bgcolor = self.bgcolor
+        if bgcolor: # completely opaque bg
+            img = Surface(size)
+            img.fill(self.bgcolor)
+            img = img.convert()
+        else: # more or less transparent
+            img = Surface(size, SRCALPHA) # handles transparency
+            transparency = 50 # 0 = transparent, 255 = opaque
+            img.fill((0, 0, 0, transparency)) # black
+            img = img.convert_alpha()
         
+        # blit each line
         for wid in self.linewidgets:
             wid.update(duration)
-            self.image.blit(wid.image, wid.rect)
+            img.blit(wid.image, wid.rect)
 
+        self.image = img
         self.dirty = 0
         
         
