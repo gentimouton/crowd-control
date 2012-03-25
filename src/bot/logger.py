@@ -22,3 +22,26 @@ def config_logger(botname):
     clogger.addHandler(hdlr)
     
     return clogger
+
+##################################################
+
+
+if __name__ == "__main__":
+    import unittest
+    from logging import Logger
+    from bot.config import load_bot_config
+    
+    class TestBotConfig(unittest.TestCase):
+    
+        def setUp(self):
+            load_bot_config()
+        
+        def test_buildlogger(self):
+            # check that the returned object is a logger
+            logger = config_logger('botname')
+            self.assertIsInstance(logger, Logger)            
+            
+    #unittest.main()
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestBotConfig)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+      
