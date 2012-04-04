@@ -1,46 +1,28 @@
-A tower defense and raiding multiplayer game.
+A tower defense and raiding online multiplayer game.
+
+Install
+---
 
 
-Concept
-=======
-
-todo
+Play
+---
 
 
-Inspirations
-===========
+License: GPL
+---
 
-* Natural Selection
-* DOTA
-* Alien Swarm for the raiders' gameplay http://www.youtube.com/watch?v=804u05RHxNk&feature=relmfu
-* WoW
-* the movie 300
-* tower defense games
-* Bastion: www.youtube.com/watch?v=rfufeFECLeY&feature=related
+Copyright (C) 2012 gentimouton
 
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-Tools
-========
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-* Python3.2
-* Pygame1.9.2
-* Eclipse + PyDev
-
-See `HOWTO-Ubuntu.txt` to setup your dev platform.
-
-Assets
-==========
-
-* http://openclipart.org/
-* newsground?
-* http://freemusicarchive.org/
-* http://danosongs.com/
-* http://www.incompetech.com/m/c/royalty-free/#
-* http://www.pacdv.com/sounds/free-music.html
-* SFX: http://www.partnersinrhyme.com/pir/PIRsfx.shtml
-* SFX: http://www.audiomicro.com/free-sound-effects
-
-License
-==========
-GPL. See http://www.gnu.org/licenses/gpl.txt
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
