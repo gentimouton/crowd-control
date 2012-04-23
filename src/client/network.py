@@ -2,12 +2,12 @@ from PodSixNet.Connection import connection, ConnectionListener
 from client.events_client import SendChatEvt, NwRcvChatEvt, NwRcvNameChangeEvt, \
     NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvCharMoveEvt, SendMoveEvt, \
     NwRcvGameAdminEvt, NwRcvCreepJoinEvt, SendAtkEvt, NwRcvAtkEvt, NwRcvDeathEvt, \
-    NwRcvRezEvt, NwRcvNameChangeFailEvt, NwRcvGreetEvt
+    NwRcvRezEvt, NwRcvNameChangeFailEvt, NwRcvGreetEvt, NwRcvHpsEvt
 from common.events import TickEvent
 from common.messages import SrvGreetMsg, SrvPlyrJoinMsg, SrvPlyrLeftMsg, \
     ClNameChangeMsg, SrvNameChangeMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, SrvMoveMsg, \
     SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
-    SrvRezMsg, SrvNameChangeFailMsg
+    SrvRezMsg, SrvNameChangeFailMsg, SrvHpsMsg
 import logging
 
 log = logging.getLogger('client')
@@ -165,7 +165,16 @@ class NetworkController(ConnectionListener):
             self.ask_namechange(preferred_name)
     
     
+    ############ resurrect ###############
+    
+    def Network_hps(self, data):
+        """ A charactor was revived. """
+        name, info = unpack_msg(data['msg'], SrvHpsMsg) 
+        ev = NwRcvHpsEvt(name, info)
+        self._em.post(ev)
         
+        
+    
     ##################  move  ################    
         
     def on_sendmove(self, event):

@@ -49,7 +49,7 @@ class SAvatar(SCharactor):
         return chardic
         
     
-    ######################  atack  ###########################
+    ######################  attack  ###########################
                 
     def attack(self, defer):
         """ When a player attacks, 
@@ -105,6 +105,8 @@ class SAvatar(SCharactor):
         self._sched.schedule_action(rez_cd, self.name, self.resurrect) 
 
 
+        
+         
     #########################  move  ##############################
     
         
@@ -159,21 +161,22 @@ class SAvatar(SCharactor):
     ####################  resurrect  ####################
     
     def resurrect(self):
-        """ If dead, return avatar to entrance with full HP,
-        and broadcast the resurrection to everyone. 
+        """ Return avatar to entrance with some HP,
+        and broadcast the resurrection to everyone.
+        Rez works even when av is still alive. 
         """
-        if self.hp <= 0:
-                
-            self.hp = config_get_maxhp()
-            
-            newcell = self._mdl.world.get_entrance() # back to entrance
-            newcell.add_av(self)
-            self.cell = newcell
         
-            log.debug('Player %s resurrected' % self.name)
-            
-            avinfo = self.serialize()
-            self._nw.bc_resurrect(self.name, avinfo) # broadcast
+        self.hp = int(self.maxhp / 5)
         
+        self.cell.rm_av(self)
+        newcell = self._mdl.world.get_entrance() # back to entrance
+        newcell.add_av(self)
+        self.cell = newcell
+    
+        log.debug('Player %s resurrected' % self.name)
+        
+        avinfo = self.serialize()
+        self._nw.bc_resurrect(self.name, avinfo) # broadcast
+    
             
         

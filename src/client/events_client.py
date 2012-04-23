@@ -175,6 +175,21 @@ class MBuiltMapEvt():
         self.worldmap = worldmap
         
 
+###################  hps  #########################
+
+class NwRcvHpsEvt():
+    """ nw tells model a char changed hps """
+    def __init__(self, name, info):
+        self.name = name
+        self.info = info
+        
+class MdHpsChangeEvt():
+    """ Model tells the view a charactor changed hps. """
+    def __init__(self, ch):
+        self.charactor = ch
+
+
+    
 ###################  join  #########################
 
 

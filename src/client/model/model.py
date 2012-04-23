@@ -5,14 +5,15 @@ Local actions with far-reaching consequences are only dead-reckoned
 to the point where they do not have to be rollbacked if they are wrong. 
 """
 
-from client.model.av import Avatar
-from client.model.chatlog import ChatLog
 from client.events_client import InputMoveRequest, MNameChangedEvt, \
     NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvNameChangeEvt, InputAtkRequest, \
     NwRcvCharMoveEvt, NwRcvAtkEvt, NwRcvGameAdminEvt, NwRcvCreepJoinEvt, \
     NwRcvDeathEvt, MdAddPlayerEvt, MMyNameChangedEvent, NwRcvRezEvt, \
     RemoteCharactorAtkEvt, NwRcvGreetEvt, NwRcvNameChangeFailEvt, MNameChangeFailEvt, \
-    MGameAdminEvt, MPlayerLeftEvt, MGreetNameEvt, MBuiltMapEvt
+    MGameAdminEvt, MPlayerLeftEvt, MGreetNameEvt, MBuiltMapEvt, NwRcvHpsEvt, \
+    MdHpsChangeEvt
+from client.model.av import Avatar
+from client.model.chatlog import ChatLog
 from client.model.npc import Creep
 from common.world import World
 import logging
@@ -95,6 +96,7 @@ class Game:
         
         self._em.reg_cb(NwRcvDeathEvt, self.on_death)
         self._em.reg_cb(NwRcvRezEvt, self.on_resurrect)
+        self._em.reg_cb(NwRcvHpsEvt, self.on_hps)
         
         self._em.reg_cb(NwRcvGameAdminEvt, self.on_gameadmin)
         
@@ -190,8 +192,24 @@ class Game:
         self._em.post(ev)
         
         log.info(event.pname + ' ' + event.cmd + ' the game')
+    
+    
         
+    ###########  hps  #######################
+    
+    def on_hps(self, event):
+        """ An avatar changed hps. """
         
+        name, info = event.name, event.info
+        hp, mhp = info['hp'], info['maxhp']
+        # update the model
+        char = self.get_charactor(name)
+        char.update_hps(hp, mhp)
+        # update the view
+        ev = MdHpsChangeEvt(char)
+        self._em.post(ev)
+        
+            
     ##################  join, left  #####################################
     
     def on_playerjoin(self, event):

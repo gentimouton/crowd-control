@@ -3,12 +3,13 @@ from client.config import config_get_screensize, \
     config_get_nonwalkable_color, config_get_entrance_color, config_get_lair_color, \
     config_get_avdefault_bgcolor, config_get_myav_bgcolor, config_get_creep_bgcolor, \
     config_get_txtlabel_bgcolor, config_get_chatlog_txtcolor, \
-    config_get_txtlabel_txtcolor
+    config_get_txtlabel_txtcolor, config_get_dmgfontcolor, config_get_dmgfontsize, \
+    config_get_dmgdisplayduration
 from client.events_client import CharactorRemoveEvent, OtherAvatarPlaceEvent, \
     LocalAvatarPlaceEvent, SendMoveEvt, RemoteCharactorMoveEvent, CreepPlaceEvent, \
     MMyNameChangedEvent, CharactorRcvDmgEvt, RemoteCharactorAtkEvt, LocalAvRezEvt, \
     CharactorDeathEvt, RemoteCharactorRezEvt, SendAtkEvt, MGreetNameEvt, \
-    MBuiltMapEvt
+    MBuiltMapEvt, MdHpsChangeEvt
 from client.view.charspr import CharactorSprite, ScrollingTextSprite
 from client.view.indexablespr import IndexedLayeredUpdates
 from client.view.widgets import InputFieldWidget, ChatLogWidget, TextLabelWidget, \
@@ -55,6 +56,8 @@ class MasterView:
         self._em.reg_cb(CharactorRemoveEvent, self.on_charremove)
         # greet
         self._em.reg_cb(MBuiltMapEvt, self.on_mapbuilt)
+        # hps
+        self._em.reg_cb(MdHpsChangeEvt, self.on_hps)
         #join
         self._em.reg_cb(LocalAvatarPlaceEvent, self.on_localavplace)
         self._em.reg_cb(OtherAvatarPlaceEvent, self.on_remoteavplace)
@@ -238,8 +241,12 @@ class MasterView:
             scroll_height = celsize / 2 # how high should the text scroll until erased
             
             txt = str(dmg)
-            duration = 500 # in millis # TODO: move to config
-            ScrollingTextSprite(txt, duration, centerpos, scroll_height, self.dmg_sprites)
+            duration = config_get_dmgdisplayduration() # in millis
+            color = config_get_dmgfontcolor()
+            fontsize = config_get_dmgfontsize()
+            ScrollingTextSprite(txt, centerpos, scroll_height,
+                                duration=duration, fontsize=fontsize,
+                                color=color, groups=self.dmg_sprites)
         
       
         
@@ -408,7 +415,18 @@ class MasterView:
         self.center_screen_on_coords(eleft, etop)
         
     
-         
+    
+    ################  hps  ####################
+    
+    def on_hps(self, event):
+        """ A char changed hps. Update its life bar. """
+        
+        char = event.charactor
+        self.display_char_if_inrange(char)
+        log.info('%s changed hps to %d/%d' % (char.name, char.hp, char.maxhp))
+        
+        
+             
     ############### join #############
 
     def on_localavplace(self, event):

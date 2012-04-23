@@ -24,9 +24,14 @@ def main():
     
     em = ClientEventManager()
     
-    # These components are shared with bots. Their config is given to them. 
-    clock = CClockController(em, config_get_fps()) #main loop is in there
-    n = NetworkController(em, config_get_hostport(), config_get_nick())
+    # These components are shared with bots. Their config is given to them.
+    fps = config_get_fps() 
+    clock = CClockController(em, fps) #main loop is in there
+    
+    hostport = config_get_hostport()
+    nick = config_get_nick()
+    n = NetworkController(em, hostport, nick)
+    
     g = Game(em)
     
     # These components are specific to human clients. 

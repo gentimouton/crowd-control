@@ -6,7 +6,7 @@ from client.config import config_get_fontsize, config_get_unfocusedbtn_bgcolor, 
 from client.events_client import DownClickEvent, UpClickEvent, MoveMouseEvent, \
     UnicodeKeyPushedEvent, NonprintableKeyEvent, SubmitChat, ChatlogUpdatedEvent, \
     MdAddPlayerEvt, MPlayerLeftEvt, MNameChangedEvt, MMyNameChangedEvent, \
-    MNameChangeFailEvt, MGameAdminEvt
+    MNameChangeFailEvt, MGameAdminEvt, MdHpsChangeEvt
 from collections import deque
 from pygame.font import Font
 from pygame.locals import K_BACKSPACE, K_RETURN, RLEACCEL, SRCALPHA
@@ -487,6 +487,7 @@ class ChatLogWidget(Widget):
         self._em.reg_cb(MNameChangeFailEvt, self.on_namechangefail)
         self._em.reg_cb(MMyNameChangedEvent, self.on_namechangesuccess)
         self._em.reg_cb(MNameChangedEvt, self.on_namechangesuccess)
+        self._em.reg_cb(MdHpsChangeEvt, self.on_updatehps)
 
         self.font = Font(None, config_get_fontsize())
         self.rect = rect
@@ -512,14 +513,12 @@ class ChatLogWidget(Widget):
     def on_remotechat(self, event):
         """ display a chat msg """
         linetxt = event.pname + ': ' + event.txt        
-        self.log.debug('Chatlog widget printed chat line: ' + linetxt)
         self.addline(linetxt)
         
         
     def on_gameadmin(self, event):
         """ print in chatlog that the game has started """
         linetxt = event.pname + ' ' + event.cmd + ' the game' #game start or stop
-        self.log.debug('Chatlog widget printed game line: ' + linetxt)
         self.addline(linetxt)
         
         
@@ -530,7 +529,6 @@ class ChatLogWidget(Widget):
         """
         failname, reason = event.failname, event.reason
         linetxt = 'Can\'t change to ' + failname + ' : ' + reason 
-        self.log.debug('Chatlog widget printed namechange line: ' + linetxt)
         self.addline(linetxt)
         
         
@@ -538,9 +536,15 @@ class ChatLogWidget(Widget):
         """ Notify that the player changed name. """
         oldname, newname = event.oldname, event.newname
         linetxt = '%s -> %s' % (oldname, newname)
-        self.log.debug('Chatlog widget printed namechange line: ' + linetxt)
         self.addline(linetxt)
         
+        
+    def on_updatehps(self, event):
+        """ notify that a char changed hps. """
+        char = event.charactor
+        linetxt = '%s now has %d/%d hp' % (char.name, char.hp, char.maxhp)
+        self.addline(linetxt)
+            
             
     def addline(self, linetxt):
         """ If there's room, add a line on top, 
@@ -569,6 +573,7 @@ class ChatLogWidget(Widget):
             wid.set_text(nextlinetxt) #makes the widget dirty  
             nextlinetxt = tmptxt
         
+        self.log.debug('Chatlog widget printed line: ' + linetxt)
         self.dirty = 1 # causes all linewidgets to be updated
         
         

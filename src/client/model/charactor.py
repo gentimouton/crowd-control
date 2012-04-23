@@ -39,5 +39,12 @@ class Charactor():
         ev = CharactorRcvDmgEvt(self, dmg, fromremotechar)
         self._em.post(ev)
         
-               
-        
+    
+    
+    ############################  hp changes  ############################
+    
+    def update_hps(self, hp, mhp):
+        """ update hp and maxhp. """
+        self.hp = hp
+        self.maxhp = mhp
+

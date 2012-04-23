@@ -1,7 +1,7 @@
 from common.constants import DIRECTION_UP, DIRECTION_LEFT
 from common.world import World
 from server.av import SAvatar
-from server.config import config_get_mapname
+from server.config import config_get_mapname, config_get_gmcmdprefix
 from server.npc import SCreep
 from server.sched import Scheduler
 import logging
@@ -96,10 +96,13 @@ class SGame():
                 
         self.log.debug(pname + ' says ' + txt)
         
-        if txt and txt[0] == '/': # command
+        gmprefix = config_get_gmcmdprefix()
+        if txt and txt[0:len(gmprefix)] == gmprefix: # command
             args = txt.split()
             cmd = args[0][1:] # remove the leading '/'
-            self.exec_cmd(pname, cmd, args[1:])
+            gm_func_name = 'gm_' + cmd
+            if hasattr(self, gm_func_name):
+                getattr(self, gm_func_name)(pname, args[1:])
             
         else: # normal chat msg
             self._nw.bc_chat(pname, txt)
@@ -206,34 +209,58 @@ class SGame():
 
 
 
-    ######################### commands parsing ##############################
-
-
+    ######################### GM commands ##############################
     # TODO: FT this should be in a Commander
+
+    def gm_nick(self, pname, args):
+        """ change player name """
+        if args: # check that the user provided a new name
+            newname = args[0]
+            self.on_playernamechange(pname, newname)
     
-    def exec_cmd(self, pname, cmd, args):
-        """ Execute a player command. 
-        args[0] is not the command's name, it's the first cmd argument. 
-        """
-
-        if cmd == 'nick':
-            if args: # check that the user provided a new name
-                newname = args[0]
-                self.on_playernamechange(pname, newname)
+    def gm_rez(self, pname, args):
+        """ rez the player's avatar """
+        av = self.players[pname]
+        av.resurrect()
         
-        elif cmd == 'rez':
-            av = self.players[pname]
-            av.resurrect()
-            
-        elif cmd == 'start':
-            if self.gameon:
-                self.stopgame(pname)
-            self.startgame(pname)
+    def gm_start(self, pname, args):
+        """ start the game """
+        if self.gameon:
+            self.stopgame(pname)
+        self.startgame(pname)
 
-        elif cmd == 'stop':
-            if self.gameon:
-                self.stopgame(pname)
+    def gm_stop(self, pname, args):
+        """ stop the game """
+        if self.gameon:
+            self.stopgame(pname)
+        
+    def gm_hp(self, pname, args):
+        """ change the player's hp (and mhp if specified).
+        '/hp 1' changes hp to 1, 
+        '/hp 1/2' changes both hp to 1 and mhp to 2,
+        '/hp /2' changes mhp, and keeps sure that hp <= mhp,
+        '/hp 1/2/...' is the same as '/hp 1/2'
+        """ 
+        if args:
+            hp_strs = args[0].split('/') # len(hps) is 0 if no '/' found
+            try:
+                hp = int(hp_strs[0])
+            except ValueError: # casting str to int failed
+                hp = None # cases like '/hp not_a_number'
+            try:
+                if len(hp_strs) >= 2:
+                    mhp = int(hp_strs[1])
+                else:
+                    mhp = None
+            except ValueError: # casting str to int failed
+                mhp = None # cases like '/hp not_a_number'
+        else: # no args == full heal
+            mhp = hp = None
+        
+        av = self.players[pname]
+        av.update_hps(hp, mhp)
             
+        
 
     ########################  game commands  ###################
     
@@ -244,7 +271,7 @@ class SGame():
         self.log.info('Game started by ' + pname)
         self._nw.bc_gameadmin(pname, 'start')
 
-        numcreeps = 1
+        numcreeps = 5
         cell = self.world.get_lair()
         for x in range(numcreeps):
             cname = 'creep-%d' % x

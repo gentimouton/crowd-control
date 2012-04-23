@@ -4,7 +4,7 @@ from common.events import TickEvent
 from common.messages import SrvPlyrJoinMsg, SrvPlyrLeftMsg, ClNameChangeMsg, \
     ClChatMsg, SrvChatMsg, SrvGreetMsg, SrvNameChangeMsg, ClMoveMsg, SrvMoveMsg, \
     SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
-    SrvRezMsg, SrvNameChangeFailMsg
+    SrvRezMsg, SrvNameChangeFailMsg, SrvHpsMsg
 from server.config import config_get_hostport
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
@@ -246,7 +246,20 @@ class NetworkController(Server):
         
 
 
-
+    
+    ######################  hp changes  #####################################
+    
+    def bc_hps(self, name, info):
+        """ Broasdcast the hp changes of an avatar. """
+        dic = {"name":name,
+               'info':info}
+        mmsg = SrvHpsMsg(dic)
+        data = {"action": "hps", "msg": mmsg.d}
+        self._bc(data)
+    
+    
+    
+    
     ######################  movement  #####################################
     
     def rcv_move(self, channel, coords, facing):

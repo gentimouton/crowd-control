@@ -35,10 +35,12 @@ def config_get_screensize():
 
 def config_get_fontsize():
     return int(_dict['fontsize'])
-def config_get_scrollfontsize():
-    return int(_dict['scrollfontsize'])
-def config_get_scrollfontcolor():
-    return int_tuple(_dict['scrollfontcolor'])
+def config_get_dmgfontsize():
+    return int(_dict['dmgfontsize'])
+def config_get_dmgfontcolor():
+    return int_tuple(_dict['dmgfontcolor'])
+def config_get_dmgdisplayduration():
+    return int(_dict['dmgdisplayduration'])
 
 def config_get_hpbarfullcolor():
     return int_tuple(_dict['hpbarfullcolor'])

@@ -82,6 +82,11 @@ class SrvGreetMsg(SerializableMsg):
     attrs = ['mapname', 'pname', 'myinfo', 'onlineppl', 'creeps']
 
 
+# greet        
+class SrvHpsMsg(SerializableMsg):
+    """ sent from the server to all players when an av changed hps """
+    attrs = ['name', 'info']
+
 # movement
 class ClMoveMsg(SerializableMsg):
     """ mvt msg sent from a client to the server """        

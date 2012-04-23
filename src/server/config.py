@@ -28,6 +28,9 @@ def config_get_ailatentframes():
 def config_get_mapname():
     return _dict['mapname']
 
+def config_get_gmcmdprefix():
+    return _dict['gmcmdprefix']
+
 # network
 def config_get_hostport():
     hostport = _dict['hostport'].strip().split(':')
