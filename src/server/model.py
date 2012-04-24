@@ -208,6 +208,16 @@ class SGame():
         
 
 
+    #####################  skill  ###########################
+    
+    def on_playerskill(self, pname, skname):
+        """ A player used a skill """
+
+        # TODO: stub
+        self._nw.bc_skill(pname, skname)
+        
+        
+
 
     ######################### GM commands ##############################
     # TODO: FT this should be in a Commander

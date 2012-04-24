@@ -11,7 +11,7 @@ from client.network import NetworkController
 from client.view.view import MasterView
 from threading import current_thread
 
-    
+
 def main():
 
     load_client_config() #config contains all the constants for the game

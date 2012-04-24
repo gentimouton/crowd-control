@@ -2,12 +2,13 @@ from PodSixNet.Connection import connection, ConnectionListener
 from client.events_client import SendChatEvt, NwRcvChatEvt, NwRcvNameChangeEvt, \
     NwRcvPlayerJoinEvt, NwRcvPlayerLeftEvt, NwRcvCharMoveEvt, SendMoveEvt, \
     NwRcvGameAdminEvt, NwRcvCreepJoinEvt, SendAtkEvt, NwRcvAtkEvt, NwRcvDeathEvt, \
-    NwRcvRezEvt, NwRcvNameChangeFailEvt, NwRcvGreetEvt, NwRcvHpsEvt
+    NwRcvRezEvt, NwRcvNameChangeFailEvt, NwRcvGreetEvt, NwRcvHpsEvt, SendSkillEvt, \
+    NwRcvSkillEvt
 from common.events import TickEvent
 from common.messages import SrvGreetMsg, SrvPlyrJoinMsg, SrvPlyrLeftMsg, \
     ClNameChangeMsg, SrvNameChangeMsg, ClChatMsg, SrvChatMsg, ClMoveMsg, SrvMoveMsg, \
     SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
-    SrvRezMsg, SrvNameChangeFailMsg, SrvHpsMsg
+    SrvRezMsg, SrvNameChangeFailMsg, SrvHpsMsg, ClSkillMsg, SrvSkillMsg
 import logging
 
 log = logging.getLogger('client')
@@ -24,6 +25,7 @@ class NetworkController(ConnectionListener):
         self._em.reg_cb(SendAtkEvt, self.on_sendattack)
         self._em.reg_cb(SendChatEvt, self.on_sendchat)
         self._em.reg_cb(SendMoveEvt, self.on_sendmove)
+        self._em.reg_cb(SendSkillEvt, self.on_sendskill)
         
         self.preferrednick = nick
         host, port = hostport
@@ -238,6 +240,23 @@ class NetworkController(ConnectionListener):
         """ A charactor was revived. """
         name, info = unpack_msg(data['msg'], SrvRezMsg) 
         ev = NwRcvRezEvt(name, info)
+        self._em.post(ev)
+        
+        
+        
+    ############ resurrect ###############
+    
+    def on_sendskill(self, event):
+        """ send a skill msg to the server """
+        skname = event.skname
+        d = {'skname':skname}
+        smsg = ClSkillMsg(d)
+        self._send({"action": 'skill', "msg":smsg.d})
+        
+    def Network_skill(self, data):
+        """ A charactor used a skill. """
+        pname, skname = unpack_msg(data['msg'], SrvSkillMsg)
+        ev = NwRcvSkillEvt(pname, skname)
         self._em.post(ev)
         
         

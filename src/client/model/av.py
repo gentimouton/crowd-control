@@ -1,7 +1,7 @@
-from client.model.charactor import Charactor
 from client.events_client import LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, \
     SendMoveEvt, SendAtkEvt, LocalAvRezEvt, CharactorDeathEvt, RemoteCharactorRezEvt, \
-    RemoteCharactorMoveEvent, CharactorRemoveEvent
+    RemoteCharactorMoveEvent, CharactorRemoveEvent, SendSkillEvt
+from client.model.charactor import Charactor
 from random import randint
 from time import time
 import logging
@@ -69,6 +69,7 @@ class Avatar(Charactor):
                 target = targets[randint(0, len(targets) - 1)]
                 return target
         return None
+
 
 
     ######################  death  #################
@@ -173,3 +174,23 @@ class Avatar(Charactor):
             ev = RemoteCharactorRezEvt(self) # self stores the new position
             self._em.post(ev)
                 
+
+
+    ######################  skill  #################
+
+    def localcast_burst(self):
+        """ Cast the skill 'burst' locally. 
+        Only display animations, the damage will come from the server.
+        """
+        
+        ev = SendSkillEvt('burst')
+        self._em.post(ev)
+        # TODO: display a casting animation (to hide nw latency)
+        print('casted burts locally')
+
+    def remotecast_burst(self):
+        """ Server said the avatar casted the skill burst.
+        Effectively display the dmg. 
+        """
+        
+        print('casted burts remotely')

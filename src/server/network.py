@@ -4,7 +4,7 @@ from common.events import TickEvent
 from common.messages import SrvPlyrJoinMsg, SrvPlyrLeftMsg, ClNameChangeMsg, \
     ClChatMsg, SrvChatMsg, SrvGreetMsg, SrvNameChangeMsg, ClMoveMsg, SrvMoveMsg, \
     SrvGameAdminMsg, SrvCreepJoinedMsg, unpack_msg, ClAtkMsg, SrvAtkMsg, SrvDeathMsg, \
-    SrvRezMsg, SrvNameChangeFailMsg, SrvHpsMsg
+    SrvRezMsg, SrvNameChangeFailMsg, SrvHpsMsg, ClSkillMsg, SrvSkillMsg
 from server.config import config_get_hostport
 from uuid import uuid4
 from weakref import WeakKeyDictionary, WeakValueDictionary
@@ -31,31 +31,36 @@ class ClientChannel(Channel):
         pass
         
 
-    def Network_namechange(self, data):
-        """ change name messages """
-        # all SerializableMsg have an mtype        
-        nmsg = ClNameChangeMsg(d_src=data['msg']) 
-        self._server.rcv_namechange(self, nmsg.d['pname'])
-
+    def Network_attack(self, data):
+        """ attack messages """
+        tname, dmg = unpack_msg(data['msg'], ClAtkMsg)
+        self._server.rcv_attack(self, tname, dmg)
+        
     def Network_chat(self, data):
         """ when chat messages are received """ 
         txt, = unpack_msg(data['msg'], ClChatMsg) 
         self._server.rcv_chat(self, txt)
-        
+
+    def Network_death(self, data):
+        """ A player died. """
+        self._server.rcv_death(self)
+    
     def Network_move(self, data):
         """ movement messages """
         coords, facing = unpack_msg(data['msg'], ClMoveMsg) 
         self._server.rcv_move(self, coords, facing)
 
-    def Network_attack(self, data):
-        """ attack messages """
-        tname, dmg = unpack_msg(data['msg'], ClAtkMsg)
-        self._server.rcv_attack(self, tname, dmg)
+    def Network_namechange(self, data):
+        """ change name messages """        
+        nmsg = ClNameChangeMsg(d_src=data['msg']) 
+        self._server.rcv_namechange(self, nmsg.d['pname'])
 
-    def Network_death(self, data):
-        """ A player died. """
-        self._server.rcv_death(self)
-        
+    def Network_skill(self, data):
+        """ A player casted a skill """    
+        smsg = ClSkillMsg(d_src=data['msg']) 
+        self._server.rcv_skill(self, smsg.d['skname'])
+
+
 
 
 ########################## SERVER ############################################
@@ -363,3 +368,20 @@ class NetworkController(Server):
         self._bc(data)
         
 
+
+    ################  resurrect  ################
+    
+    def rcv_skill(self, channel, skname):
+        """ Tell the model that a player used a skill. """
+        pname = self.chan_to_name[channel]
+        self.log.debug('%s casted skill %s' % (pname, skname))
+        self.model.on_playerskill(pname, skname)
+        
+    def bc_skill(self, pname, skname):
+        """ Notify everyone of a skill cast. """
+        dic = {"pname":pname,
+               "skname":skname}
+        smsg = SrvSkillMsg(dic)
+        data = {"action": "skill", "msg": smsg.d}
+        self._bc(data)
+        

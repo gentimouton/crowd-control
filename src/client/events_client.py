@@ -38,17 +38,14 @@ class NonprintableKeyEvent():
     def __init__(self, key):
         self.key = key
         
-class InputAtkRequest():
-    """ User pushed a key to attack. """ 
-    pass
-
-
-
-
 
 
 
 ########################  attack  ##################################
+
+class InputAtkRequest():
+    """ User pushed a key to attack. """ 
+    pass
 
 class SendAtkEvt():
     """ Model to network and view. Local avatar attacks a cell. """
@@ -77,6 +74,25 @@ class RemoteCharactorAtkEvt():
         self.atker = atker
 
 
+
+#######################  cast  ############################
+
+class InputSkillRequest():
+    """ User pushed a key to use a skill. """ 
+    def __init__(self, skname):
+        self.skname = skname
+
+class SendSkillEvt():
+    """ Model asks network to send a skill msg. """ 
+    def __init__(self, skname):
+        self.skname = skname
+        
+class NwRcvSkillEvt():
+    """ Nw tells model it received a skill msg from the server. """ 
+    def __init__(self, pname, skname):
+        self.pname = pname
+        self.skname = skname
+        
     
 #################  chat  ###################################################
 

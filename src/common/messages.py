@@ -128,7 +128,13 @@ class SrvRezMsg(SerializableMsg):
     attrs = ['name', 'info']
     
     
-    
+# skill
+class ClSkillMsg(SerializableMsg):
+    """ sent from a client to the server when he's used a skill """        
+    attrs = ['skname'] 
+class SrvSkillMsg(SerializableMsg):
+    """ broadcasted by the server to notify all the clients of a skill use """        
+    attrs = ['pname', 'skname']
 
 ###################### deserialization #####################################
 

@@ -11,7 +11,7 @@ from client.events_client import InputMoveRequest, MNameChangedEvt, \
     NwRcvDeathEvt, MdAddPlayerEvt, MMyNameChangedEvent, NwRcvRezEvt, \
     RemoteCharactorAtkEvt, NwRcvGreetEvt, NwRcvNameChangeFailEvt, MNameChangeFailEvt, \
     MGameAdminEvt, MPlayerLeftEvt, MGreetNameEvt, MBuiltMapEvt, NwRcvHpsEvt, \
-    MdHpsChangeEvt
+    MdHpsChangeEvt, InputSkillRequest, NwRcvSkillEvt
 from client.model.av import Avatar
 from client.model.chatlog import ChatLog
 from client.model.npc import Creep
@@ -83,6 +83,9 @@ class Game:
 
         self._em.reg_cb(InputAtkRequest, self.on_localatk)
         self._em.reg_cb(NwRcvAtkEvt, self.on_remoteatk)
+        
+        self._em.reg_cb(InputSkillRequest, self.on_localskill)
+        self._em.reg_cb(NwRcvSkillEvt, self.on_remoteskill)
         
         self._em.reg_cb(InputMoveRequest, self.on_localavmove)
         self._em.reg_cb(NwRcvCharMoveEvt, self.on_remotemove)
@@ -358,5 +361,32 @@ class Game:
         if name == self.myname:
             self.acceptinput = True
 
- 
+
+        
+    ####################  skill  ################
+    
+    def on_localskill(self, event):
+        """ Local player wants to cast a skill. """
+        
+        skname = event.skname
+        
+        if self.acceptinput:
+            mychar = self.avs[self.myname]
+            try:
+                getattr(mychar, 'localcast_' + skname)() 
+            except AttributeError as e:
+                log.error(e)
+            
+
+    def on_remoteskill(self, event):
+        """ The server notified that someone used a skill """
+        
+        pname, skname = event.pname, event.skname
+        
+        if pname != self.myname: # local skills have already been displayed 
+            av = self.avs[pname]
+            try:
+                getattr(av, 'remotecast_' + skname)()
+            except AttributeError as e:
+                log.error(e)
             

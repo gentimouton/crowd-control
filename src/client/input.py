@@ -1,13 +1,13 @@
 from client.config import config_get_kbsensitivity
 from client.events_client import InputMoveRequest, QuitEvent, UpClickEvent, \
     DownClickEvent, MoveMouseEvent, UnicodeKeyPushedEvent, NonprintableKeyEvent, \
-    InputAtkRequest
+    InputAtkRequest, InputSkillRequest
 from common.constants import DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT, \
     DIRECTION_UP
 from common.events import TickEvent
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, \
     K_BACKSPACE, K_RETURN, MOUSEBUTTONUP, MOUSEBUTTONDOWN, MOUSEMOTION, K_RCTRL, \
-    K_LCTRL, KMOD_LSHIFT, KMOD_RSHIFT, KMOD_RALT, KMOD_ALT
+    K_LCTRL, KMOD_LSHIFT, KMOD_RSHIFT, KMOD_RALT, KMOD_ALT, K_F1, K_F2, K_F3, K_F4
 import pygame
 
 
@@ -28,7 +28,8 @@ class InputController:
     _nonprintable_keys = [K_RETURN, K_BACKSPACE]
     _atk_keys = [K_RCTRL, K_LCTRL]     
     _strafmod_keys = [KMOD_LSHIFT, KMOD_RSHIFT]
-    _rotatemod_keys = [KMOD_RALT, KMOD_ALT] 
+    _rotatemod_keys = [KMOD_RALT, KMOD_ALT]
+    _skill_keys = {K_F1:"burst1", K_F2:"", K_F3:"", K_F4:""}
         
     def __init__(self, evManager):
         self._em = evManager
@@ -59,6 +60,11 @@ class InputController:
                                     
                 elif key in self._atk_keys:
                     ev = InputAtkRequest()
+                
+                elif key in self._skill_keys:
+                    skname = self._skill_keys[key]
+                    if skname:
+                        ev = InputSkillRequest(skname)
                     
                 elif key in self._key2dir:
                     mods = pygame.key.get_mods()

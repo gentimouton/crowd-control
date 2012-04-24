@@ -124,9 +124,12 @@ def add_hpbar(img, facing, hp, mhp):
     Return the resulting img.
     """
     
-    mhp_threshold = 10000
-    if mhp < mhp_threshold:
+    if mhp < 100:
+        thickness = 2
+    elif mhp < 1000:
         thickness = 4
+    elif mhp < 10000:
+        thickness = 6
     else:
         thickness = 8
     
