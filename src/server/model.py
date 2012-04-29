@@ -1,7 +1,8 @@
 from common.constants import DIRECTION_UP, DIRECTION_LEFT
 from common.world import World
 from server.av import SAvatar
-from server.config import config_get_mapname, config_get_gmcmdprefix
+from server.config import config_get_mapname, config_get_gmcmdprefix, \
+    config_get_creepsperwave
 from server.npc import SCreep
 from server.sched import Scheduler
 import logging
@@ -284,7 +285,7 @@ class SGame():
         self.log.info('Game started by ' + pname)
         self._nw.bc_gameadmin(pname, 'start')
 
-        numcreeps = 5
+        numcreeps = config_get_creepsperwave()
         cell = self.world.get_lair()
         for x in range(numcreeps):
             cname = 'creep-%d' % x

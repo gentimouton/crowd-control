@@ -55,10 +55,10 @@ class SCreep(SCharactor):
 
 
 
-    def get_target(self):
+    def get_target(self, direction):
         """ return an avatar in the cell the creep is facing. """
         
-        target_cell = self.cell.get_adjacent_cell(self.facing)
+        target_cell = self.cell.get_adjacent_cell(direction)
         if target_cell: #only attack walkable cells
             avs = target_cell.get_avs()
             if avs: # pick a random av
@@ -131,9 +131,11 @@ class SCreep(SCharactor):
             #cell = random.choice(self.cell.get_neighbors())
             # move to a neighbor cell closer to the map entrance
             direction, cell = self.cell.get_nextcell_inpath()
-            target = self.get_target()
+            target = self.get_target(direction)
             
             if target: # only get players in that cell 
+                if direction != self.facing: # need to face my target
+                    self.move(self.cell, direction)
                 self.attack(target)
                 self.state = 'atking'
                 atkduration = 200
@@ -144,12 +146,9 @@ class SCreep(SCharactor):
                     self.state = 'moving'
                     mvtduration = 100 
                     self._sched.schedule_action(mvtduration, self.name, self.update) 
-                else: # reached entrance
-                    return
                 
         elif self.state == 'moving': # Dummy: after-move-delay
             self.state = 'idle'
-            #duration = random.randint(2, 12) * 100# pretend to 'think' for 200-1200 ms
             duration = 1000 # think for 1 sec
             self._sched.schedule_action(duration, self.name, self.update) 
 
