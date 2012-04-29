@@ -29,7 +29,7 @@ class InputController:
     _atk_keys = [K_RCTRL, K_LCTRL]     
     _strafmod_keys = [KMOD_LSHIFT, KMOD_RSHIFT]
     _rotatemod_keys = [KMOD_RALT, KMOD_ALT]
-    _skill_keys = {K_F1:"burst1", K_F2:"", K_F3:"", K_F4:""}
+    _skill_keys = {K_F1:"burst", K_F2:"", K_F3:"", K_F4:""}
         
     def __init__(self, evManager):
         self._em = evManager

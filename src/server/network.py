@@ -369,7 +369,7 @@ class NetworkController(Server):
         
 
 
-    ################  resurrect  ################
+    ################  skill  ################
     
     def rcv_skill(self, channel, skname):
         """ Tell the model that a player used a skill. """

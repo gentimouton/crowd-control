@@ -40,6 +40,8 @@ class Scheduler():
     def __str__(self):
         return 'timestep=%d' % self.timestep
     
+    def __repr__(self):
+        return self.__str__()
         
         
     def schedule_action(self, millis, actor, callback):

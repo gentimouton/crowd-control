@@ -55,8 +55,13 @@ class SCharactor():
         self.log.error('Charactor %s does not have a method to attack' % self.name)
         raise NotImplementedError
     
+    def rcv_atk(self, atker):
+        """ Should be overriden by Creep or Avatar. Return amount of dmg. """
+        self.log.error('Charactor %s does not have a method to receive atk' % self.name)
+        raise NotImplementedError
+
     def rcv_dmg(self, atker):
-        """ Should be overriden by Creep or Avatar. Return nothing. """
+        """ Should be overriden by Creep or Avatar. Return amount of dmg. """
         self.log.error('Charactor %s does not have a method to receive dmg' % self.name)
         raise NotImplementedError
 

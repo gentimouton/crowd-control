@@ -381,12 +381,10 @@ class Game:
     def on_remoteskill(self, event):
         """ The server notified that someone used a skill """
         
-        pname, skname = event.pname, event.skname
+        pname, skname = event.pname, event.skname     
+        av = self.avs[pname]
+        try:
+            getattr(av, 'remotecast_' + skname)()
+        except AttributeError as e:
+            log.error(e)
         
-        if pname != self.myname: # local skills have already been displayed 
-            av = self.avs[pname]
-            try:
-                getattr(av, 'remotecast_' + skname)()
-            except AttributeError as e:
-                log.error(e)
-            

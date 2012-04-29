@@ -50,9 +50,10 @@ def config_get_rezcd():
 
 def config_get_baseatk():
     return int(_dict['baseatk'])
-def config_get_maxhp():
-    return int(_dict['maxhp'])
-
+def config_get_creepmaxhp():
+    return int(_dict['creepmaxhp'])
+def config_get_avmaxhp():
+    return int(_dict['avmaxhp'])
 
 
     

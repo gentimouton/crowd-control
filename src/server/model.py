@@ -213,9 +213,12 @@ class SGame():
     def on_playerskill(self, pname, skname):
         """ A player used a skill """
 
-        # TODO: stub
-        self._nw.bc_skill(pname, skname)
-        
+        # TODO: refactor/cleanup
+        if skname in ['burst']:
+            av = self.players[pname]
+            av.skill_burst()
+        else:
+            self.log.warn('Skill %s not found for player %s' % (skname, pname))
         
 
 
@@ -285,7 +288,9 @@ class SGame():
         cell = self.world.get_lair()
         for x in range(numcreeps):
             cname = 'creep-%d' % x
-            creep = SCreep(self, self._sched, self._nw, cname, cell, DIRECTION_LEFT) #face left
+            delay = x * 1000
+            creep = SCreep(self, self._sched, delay, 
+                           self._nw, cname, cell, DIRECTION_LEFT) #face left
             self.creeps[cname] = creep
             
             

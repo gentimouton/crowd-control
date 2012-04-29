@@ -1,6 +1,6 @@
 from server.charactor import SCharactor
-from server.config import config_get_maxhp, config_get_baseatk, config_get_rezcd, \
-    config_get_atkcd
+from server.config import config_get_baseatk, config_get_rezcd, config_get_atkcd, \
+    config_get_avmaxhp
 from time import time
 import logging
 
@@ -21,7 +21,7 @@ class SAvatar(SCharactor):
     def __init__(self, mdl, nw, sched, pname, cell, facing):
         """ Create an Avatar """
         
-        maxhp, atk = config_get_maxhp(), config_get_baseatk()
+        maxhp, atk = config_get_avmaxhp(), config_get_baseatk()
         SCharactor.__init__(self, pname, cell, facing, maxhp, atk)
         self._mdl = mdl
         self._nw = nw
@@ -65,7 +65,7 @@ class SAvatar(SCharactor):
         targetcell = atkercell.get_adjacent_cell(self.facing)
         
         if targetcell == defer.cell:
-            dmg = defer.rcv_dmg(self, self.atk) # will do the broadcasting to everyone
+            dmg = defer.rcv_atk(self, self.atk) # will do the broadcasting to everyone
             log.debug('Player %s attacked %s for %d dmg' 
                            % (self.name, defer.name, dmg))
             self.atk_ts = now
@@ -75,7 +75,7 @@ class SAvatar(SCharactor):
             return None
         
     
-    def rcv_dmg(self, atker, dmg):
+    def rcv_atk(self, atker, dmg):
         """ Receive damage from an attacker. Return amount of dmg received. """
         self.hp -= dmg
         log.debug('Player %s received %d dmg from %s' 
@@ -179,4 +179,17 @@ class SAvatar(SCharactor):
         self._nw.bc_resurrect(self.name, avinfo) # broadcast
     
             
+    #############################  skill  ##################
+    
+    def skill_burst(self):
+        """ Burst inflicts 100% atk on all creeps in neighbor+current cells. """
         
+        cells = self.cell.get_neighbors() # distance = 1 from current cell
+        cells.append(self.cell) # also attack the current cell
+        for cell in cells:
+            for creep in cell.get_creeps():
+                creep.rcv_dmg(self, self.atk)
+        # no need to broadcast to clients the dmg: 
+        # clients will execute the skill on their side 
+        
+        self._nw.bc_skill(self.name, 'burst')

@@ -1,6 +1,6 @@
 from client.events_client import LocalAvatarPlaceEvent, OtherAvatarPlaceEvent, \
     SendMoveEvt, SendAtkEvt, LocalAvRezEvt, CharactorDeathEvt, RemoteCharactorRezEvt, \
-    RemoteCharactorMoveEvent, CharactorRemoveEvent, SendSkillEvt
+    RemoteCharactorMoveEvent, CharactorRemoveEvent, SendSkillEvt, LocalDmgsEvt
 from client.model.charactor import Charactor
 from random import randint
 from time import time
@@ -51,7 +51,13 @@ class Avatar(Charactor):
         if target: # found a target
             # send the atk event to the server
             # and notify the view to display the dmg
-            ev = SendAtkEvt(target, target.name, self.atk) 
+            dmg = self.atk # TODO: minus target def
+            # notify view
+            dmgs = {target: dmg}
+            ev = LocalDmgsEvt(dmgs)
+            self._em.post(ev)
+            # send on nw
+            ev = SendAtkEvt(target.name, dmg) 
             self._em.post(ev)
         
         else:
@@ -179,18 +185,45 @@ class Avatar(Charactor):
     ######################  skill  #################
 
     def localcast_burst(self):
-        """ Cast the skill 'burst' locally. 
-        Only display animations, the damage will come from the server.
+        """ Cast the skill 'burst' locally.  
+        Display animation and damage locally, 
+        but the model update will come from a server msg. 
         """
         
+        creeps_dmgs = self._get_bursted_creeps()
+        ev = LocalDmgsEvt(creeps_dmgs)
+        self._em.post(ev)
+        
+        # send over the network
         ev = SendSkillEvt('burst')
         self._em.post(ev)
-        # TODO: display a casting animation (to hide nw latency)
-        print('casted burts locally')
+
 
     def remotecast_burst(self):
-        """ Server said the avatar casted the skill burst.
-        Effectively display the dmg. 
+        """ Server said a remote char casted the skill burst.
+        Update the model.
+        If another char casted the skill, display the dmg.
         """
+
+        fromremotechar = not self.islocal
+        creeps_dmgs = self._get_bursted_creeps()
         
-        print('casted burts remotely')
+        # model update - actual dmg will be computed by the charactor
+        for creep in creeps_dmgs.keys():
+            creep.rcv_dmg(self.atk, fromremotechar)
+        
+    
+    def _get_bursted_creeps(self):
+        """ Burst inflicts 100% atk on all creeps in neighbor+current cells.
+        """
+              
+        cells = self.cell.get_neighbors() # distance = 1 from current cell
+        cells.append(self.cell) # also attack the current cell
+        creeps_dmgs = {} # {creep:dmg}
+        for cell in cells:
+            for creep in cell.get_creeps():
+                dmg = self.atk # TODO: minus creep.def
+                creeps_dmgs[creep] = dmg
+                
+        return creeps_dmgs
+                

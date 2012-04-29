@@ -8,8 +8,8 @@ from client.config import config_get_screensize, \
 from client.events_client import CharactorRemoveEvent, OtherAvatarPlaceEvent, \
     LocalAvatarPlaceEvent, SendMoveEvt, RemoteCharactorMoveEvent, CreepPlaceEvent, \
     MMyNameChangedEvent, CharactorRcvDmgEvt, RemoteCharactorAtkEvt, LocalAvRezEvt, \
-    CharactorDeathEvt, RemoteCharactorRezEvt, SendAtkEvt, MGreetNameEvt, \
-    MBuiltMapEvt, MdHpsChangeEvt
+    CharactorDeathEvt, RemoteCharactorRezEvt, MGreetNameEvt, \
+    MBuiltMapEvt, MdHpsChangeEvt, LocalDmgsEvt
 from client.view.charspr import CharactorSprite, ScrollingTextSprite
 from client.view.indexablespr import IndexedLayeredUpdates
 from client.view.widgets import InputFieldWidget, ChatLogWidget, TextLabelWidget, \
@@ -46,8 +46,8 @@ class MasterView:
         self._em.reg_cb(TickEvent, self.on_tick)
 
         # attack
-        self._em.reg_cb(SendAtkEvt, self.on_localavatk)
-        self._em.reg_cb(RemoteCharactorAtkEvt, self.on_charatks)
+        self._em.reg_cb(LocalDmgsEvt, self.on_localdmgs)
+        self._em.reg_cb(RemoteCharactorAtkEvt, self.on_remotecharatk)
         self._em.reg_cb(CharactorRcvDmgEvt, self.on_charrcvdmg)
         # creepjoin
         self._em.reg_cb(CreepPlaceEvent, self.add_creep)        
@@ -298,21 +298,24 @@ class MasterView:
     ########### attack ###############
     
                 
-    def on_localavatk(self, event):
+    def on_localdmgs(self, event):
         """ Local avatar attacked: only display dmg, but 
         dont update defender's HP bar: the HP update comes from a server msg.
         """
         
-        defer, dmg = event.defer, event.dmg
-        self.display_dmg_if_inrange(defer, dmg)        
+        dmgs = event.dmgs
+        for defer, dmg in dmgs.items():
+            self.display_dmg_if_inrange(defer, dmg)        
         
             
-    def on_charatks(self, event):
+    def on_remotecharatk(self, event):
         """ Display the charactor attacking. 
-        The dmg are displayed by a char RECEIVING dmg. """
+        The dmg are displayed by a char RECEIVING dmg,
+        not by the char attacking.
+        """
     
-        log.info('%s attacked' % event.atker.name) 
-        # TODO: FT display the charactor attacking instead of log.info
+        log.debug('%s attacked' % event.atker.name) 
+        # TODO: FT display the charactor attacking instead of logging
 
     
     def on_charrcvdmg(self, event):
@@ -350,7 +353,7 @@ class MasterView:
                 
         char = event.charactor
         self.display_char_if_inrange(char)
-        log.info('%s died' % char.name)
+        log.debug('%s died' % char.name)
 
 
     def on_charremove(self, event):
@@ -423,7 +426,7 @@ class MasterView:
         
         char = event.charactor
         self.display_char_if_inrange(char)
-        log.info('%s changed hps to %d/%d' % (char.name, char.hp, char.maxhp))
+        log.debug('%s changed hps to %d/%d' % (char.name, char.hp, char.maxhp))
         
         
              
@@ -507,7 +510,7 @@ class MasterView:
         
         char = event.charactor
         self.display_char_if_inrange(char)
-        log.info('%s resurrected' % event.charactor.name)
+        log.debug('%s resurrected' % event.charactor.name)
         
 
 

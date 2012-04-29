@@ -1,16 +1,17 @@
 from random import randint
 from server.charactor import SCharactor
-from server.config import config_get_maxhp, config_get_baseatk
+from server.config import config_get_baseatk, \
+    config_get_creepmaxhp
 import logging
 
 log = logging.getLogger('server')
 
 class SCreep(SCharactor):
 
-    def __init__(self, mdl, sched, nw, cname, cell, facing):
+    def __init__(self, mdl, sched, delay, nw, cname, cell, facing):
         """ Starting state is idle. """
 
-        hp, atk = config_get_maxhp(), config_get_baseatk()
+        hp, atk = config_get_creepmaxhp(), config_get_baseatk()
         SCharactor.__init__(self, cname, cell, facing, hp, atk)
         
         self.cell = cell
@@ -19,7 +20,7 @@ class SCreep(SCharactor):
         self._mdl = mdl
         self._sched = sched
         self._nw = nw
-        self._sched.schedule_action(500, self.name, self.update) # trigger a move in 500 ms
+        self._sched.schedule_action(delay, self.name, self.update)
         
         self.state = 'idle'
         
@@ -73,12 +74,14 @@ class SCreep(SCharactor):
         No need to check if target is in range: update() did it. 
         """
         
-        dmg = defer.rcv_dmg(self, self.atk) # takes care of broadcasting on network 
+        dmg = defer.rcv_atk(self, self.atk) # takes care of broadcasting on network 
         return dmg
+
         
-        
-    def rcv_dmg(self, atker, dmg):
-        """ Receive damage from an attacker. Return amount of dmg received. """
+    def rcv_atk(self, atker, dmg):
+        """ Receive damage from a direct attack by an attacker. 
+        Return amount of dmg received. 
+        """
         
         self.hp -= dmg
         log.debug('Creep %s received %d dmg from %s' 
@@ -91,7 +94,15 @@ class SCreep(SCharactor):
         
         return dmg
         
-            
+      
+    def rcv_dmg(self, atker, dmg):
+        """ Receive dmg from a skill by an atker. """
+        
+        self.hp -= dmg
+        if self.hp <= 0:
+            self.die()
+        return dmg
+        
     
     def die(self):
         """ Notify all players when a creep dies. """

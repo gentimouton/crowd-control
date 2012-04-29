@@ -114,7 +114,7 @@ class World():
         while fifo: # until empty 
             cell = fifo.popleft()
             dist = cell.entrance_dist
-            for direction, c in cell.get_neighbors():
+            for c in cell.get_neighbors():
                 if c.entrance_dist == None:
                     c.entrance_dist = dist + 1
                     fifo.append(c)
@@ -175,18 +175,24 @@ class Cell():
 
 
     def __str__(self):
-        return '%s, %d occs' % (self.coords, len(self._avs) + len(self._creeps))
+        return self.__repr__()
     
+    def __repr__(self):
+        return '<Cell %s, %d occs>' % (self.coords, len(self._avs) + len(self._creeps))
+
     
-    def get_neighbors(self):
-        """ Return a dict {direction: cell} of the neighbor cells. """
+    def get_neighbors(self, withdirs=False):
+        """ Return a a list of the cells neighboring a cell. """
         directions = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT]
-        adjcells = []
+        adjcells = {}
         for direc in directions:
             cell = self.get_adjacent_cell(direc)
             if cell:
-                adjcells.append((direc, cell)) # append a tuple
-        return adjcells
+                adjcells[direc] = cell
+        if not withdirs:
+            return list(adjcells.values())
+        else:
+            return adjcells
         
         
          
@@ -212,17 +218,19 @@ class Cell():
         
         
     def get_nextcell_inpath(self):
-        """ Return the direction to the cell on the path towards the map entrance
+        """ Return the direction to the cell on the path towards the entrance,
         and the cell itself.
-        In other words, return a tuple (direction, cell)
+        Return a tuple (direction, cell)
         """
-        neighbors = self.get_neighbors()
+        nbs = self.get_neighbors(withdirs=True)
+        # transform dict into list of tuples
+        neighbors = [(direc, cell) for direc, cell in nbs.items()]
         random.shuffle(neighbors) #shuffle for randomness
         if not neighbors:#no adjacent cell is walkable
             return None 
         else: # return the cell closest to entrance + the direction to that cell
             return min(neighbors, key=lambda tup: tup[1].entrance_dist)
-            
+
             
     def set_entrance(self, value):
         self.isentrance = value

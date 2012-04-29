@@ -48,12 +48,16 @@ class InputAtkRequest():
     pass
 
 class SendAtkEvt():
-    """ Model to network and view. Local avatar attacks a cell. """
-    def __init__(self, defer, targetname, dmg):
-        self.defer = defer # used by the view only
-        self.tname = targetname # used by the network only
+    """ Model to network. Local avatar attacks a cell. """
+    def __init__(self, targetname, dmg):
+        self.tname = targetname
         self.dmg = dmg
 
+class LocalDmgsEvt():
+    """ Model to view when chars receives dmg locally. """
+    def __init__(self, dmgs):
+        self.dmgs = dmgs # dict of {defender:dmg}
+        
 class NwRcvAtkEvt():
     """ Network received an attack message """
     def __init__(self, attacker, defender , damage):
