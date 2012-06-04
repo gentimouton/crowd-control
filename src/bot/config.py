@@ -31,6 +31,9 @@ def config_get_fps():
 def config_get_movefreq():
     return int(_dict['movefreq'])
 
+def config_get_atkfreq():
+    return int(_dict['atkfreq'])
+
 
 # --- network
 

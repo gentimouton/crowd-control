@@ -1,10 +1,9 @@
 from collections import deque
 from common.constants import DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, \
-    DIRECTION_RIGHT
+    DIRECTION_RIGHT, DIRECTIONS
 import logging
 import os
 import random
-
 
 class World():
     
@@ -183,9 +182,8 @@ class Cell():
     
     def get_neighbors(self, withdirs=False):
         """ Return a a list of the cells neighboring a cell. """
-        directions = [DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT]
         adjcells = {}
-        for direc in directions:
+        for direc in DIRECTIONS:
             cell = self.get_adjacent_cell(direc)
             if cell:
                 adjcells[direc] = cell

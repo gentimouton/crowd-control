@@ -22,10 +22,10 @@ def main():
     
     evManager = ClientEventManager()
 
-    ic = BotInputController(evManager) # simulate inputs    
     clock = CClockController(evManager, config_get_fps()) #the main loop is in there
     g = Game(evManager)
     n = NetworkController(evManager, config_get_hostport(), config_get_nick())
+    ic = BotInputController(evManager, g) # simulate inputs    
     
     clock.start()
     

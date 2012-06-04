@@ -58,8 +58,7 @@ class SAvatar(SCharactor):
         
         now = time()
         if (now - self.atk_ts) * 1000 < self.atk_cd:
-            log.warn('Player %s has lots of jitter or speed hacks his attack' 
-                      % self.name)
+            log.warn('Player %s has lots of jitter or speed hacks' % self.name)
         
         atkercell = self.cell
         targetcell = atkercell.get_adjacent_cell(self.facing)
